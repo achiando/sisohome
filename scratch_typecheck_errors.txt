@@ -1,0 +1,47 @@
+
+> @workspace/ui@0.0.0 typecheck /home/tijwa/projects/work/tijwa/sisohomes/packages/ui
+> tsc --noEmit
+
+src/components/address-picker.tsx(4,21): error TS2307: Cannot find module 'next/dynamic' or its corresponding type declarations.
+src/components/address-picker.tsx(5,24): error TS2307: Cannot find module 'react-leaflet' or its corresponding type declarations.
+src/components/address-picker.tsx(6,46): error TS2307: Cannot find module 'leaflet' or its corresponding type declarations.
+src/components/address-picker.tsx(18,10): error TS2307: Cannot find module 'leaflet' or its corresponding type declarations.
+src/components/address-picker.tsx(32,16): error TS2307: Cannot find module 'react-leaflet' or its corresponding type declarations.
+src/components/address-picker.tsx(36,16): error TS2307: Cannot find module 'react-leaflet' or its corresponding type declarations.
+src/components/address-picker.tsx(40,16): error TS2307: Cannot find module 'react-leaflet' or its corresponding type declarations.
+src/components/address-picker.tsx(43,36): error TS2307: Cannot find module 'react-leaflet' or its corresponding type declarations.
+src/components/alert-dialog.tsx(160,3): error TS2322: Type '"default"' is not assignable to type '"sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null'.
+src/components/bulk-upload/bulk-upload-dialog.tsx(4,27): error TS2307: Cannot find module 'next/navigation' or its corresponding type declarations.
+src/components/bulk-upload/bulk-upload-dialog.tsx(53,8): error TS2307: Cannot find module '../../../lib/bulk-upload/sample' or its corresponding type declarations.
+src/components/bulk-upload/bulk-upload-dialog.tsx(54,35): error TS2307: Cannot find module '../../../types/components/forms' or its corresponding type declarations.
+src/components/color-picker.tsx(4,20): error TS2307: Cannot find module '../../lib/utils' or its corresponding type declarations.
+src/components/combobox.tsx(74,13): error TS2322: Type '{ size: "icon-xs"; variant: "ghost"; render: Element; "data-slot": string; className: string; disabled: boolean; }' is not assignable to type 'IntrinsicAttributes & Omit<ButtonProps & RefAttributes<HTMLButtonElement>, "type" | "size"> & VariantProps<...> & { ...; }'.
+  Property 'render' does not exist on type 'IntrinsicAttributes & Omit<ButtonProps & RefAttributes<HTMLButtonElement>, "type" | "size"> & VariantProps<...> & { ...; }'.
+src/components/drawer.tsx(4,43): error TS2307: Cannot find module 'vaul' or its corresponding type declarations.
+src/components/filter/filter-provider.tsx(11,57): error TS2307: Cannot find module 'next/navigation' or its corresponding type declarations.
+src/components/filter/filter-provider.tsx(65,27): error TS7006: Parameter 'value' implicitly has an 'any' type.
+src/components/filter/filter-provider.tsx(65,34): error TS7006: Parameter 'key' implicitly has an 'any' type.
+src/components/list/column-helpers.tsx(4,27): error TS2307: Cannot find module '@tanstack/react-table' or its corresponding type declarations.
+src/components/list/column-helpers.tsx(43,14): error TS7031: Binding element 'row' implicitly has an 'any' type.
+src/components/list/column-helpers.tsx(89,14): error TS7031: Binding element 'row' implicitly has an 'any' type.
+src/components/list/column-helpers.tsx(152,14): error TS7031: Binding element 'row' implicitly has an 'any' type.
+src/components/list/universallist.tsx(10,8): error TS2307: Cannot find module '@tanstack/react-table' or its corresponding type declarations.
+src/components/list/universallist.tsx(148,36): error TS7006: Parameter 'header' implicitly has an 'any' type.
+src/components/pagination.tsx(52,7): error TS2322: Type '{ variant: "outline" | "ghost"; size: "sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null; className: string; nativeButton: boolean; render: Element; }' is not assignable to type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+  Property 'nativeButton' does not exist on type 'IntrinsicAttributes & ButtonProps & RefAttributes<HTMLButtonElement>'.
+src/components/pagination.tsx(73,7): error TS2322: Type '"default"' is not assignable to type '"sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null | undefined'.
+src/components/pagination.tsx(91,7): error TS2322: Type '"default"' is not assignable to type '"sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null | undefined'.
+src/components/phone-input.tsx(4,53): error TS2307: Cannot find module 'react-phone-number-input' or its corresponding type declarations.
+src/components/questionnaire.tsx(211,3): error TS2322: Type '"default"' is not assignable to type '"sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null'.
+src/components/questionnaire.tsx(236,3): error TS2322: Type '"default"' is not assignable to type '"sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null'.
+src/components/questionnaire.tsx(261,3): error TS2322: Type '"default"' is not assignable to type '"sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null'.
+src/components/questionnaire.tsx(262,3): error TS2322: Type '"default"' is not assignable to type '"text" | "primary" | "secondary" | "outline" | "subtle" | "destructive" | "ghost" | null'.
+src/components/questionnaire.tsx(286,3): error TS2322: Type '"default"' is not assignable to type '"sm" | "md" | "lg" | "icon" | "icon-sm" | "icon-xs" | null'.
+src/components/questionnaire.tsx(287,3): error TS2322: Type '"default"' is not assignable to type '"text" | "primary" | "secondary" | "outline" | "subtle" | "destructive" | "ghost" | null'.
+src/components/section-nav.tsx(4,18): error TS2307: Cannot find module 'next/link' or its corresponding type declarations.
+src/components/toast.tsx(3,64): error TS2307: Cannot find module 'sonner' or its corresponding type declarations.
+src/lib/bulk-upload/sample.ts(1,38): error TS2307: Cannot find module '../../components/ui/bulk-upload/bulk-upload.types' or its corresponding type declarations.
+src/types/components/universallist.ts(1,27): error TS2307: Cannot find module '@tanstack/react-table' or its corresponding type declarations.
+/home/tijwa/projects/work/tijwa/sisohomes/packages/ui:
+ ERR_PNPM_RECURSIVE_RUN_FIRST_FAIL  @workspace/ui@0.0.0 typecheck: `tsc --noEmit`
+Exit status 2
