@@ -321,7 +321,7 @@ export function FormField({
             <Switch
               id={id}
               checked={(value as boolean) ?? false}
-              onCheckedChange={(v) => onChange(v === true || v === 'indeterminate')}
+              onCheckedChange={(v) => onChange(v)}
               disabled={field.disabled}
             />
             {field.toggleLabel && (

@@ -240,16 +240,16 @@ export function ResponsiveDataListing<T>({
       {/* Main Content Area */}
       {loading ? (
         <>
-          {/* Desktop Skeleton Table */}
+          {/* Desktop Table Skeleton */}
           <div className="hidden md:block overflow-hidden rounded-2xl border border-border/80 bg-card shadow-md">
-            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
                   <tr className="border-b border-border/80 bg-muted/50 font-medium text-xs text-muted-foreground uppercase tracking-wider">
                     {columns.map((col, idx) => (
                       <th
                         key={idx}
-                        className={cn('px-4 py-4 font-semibold', col.headerClassName || col.className)}
+                        className="px-4 py-4 font-semibold"
                       >
                         {col.header}
                       </th>
@@ -257,17 +257,11 @@ export function ResponsiveDataListing<T>({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border/60">
-                  {Array.from({ length: skeletonCount }).map((_, rIdx) => (
-                    <tr key={rIdx} className="hover:bg-muted/20 transition-colors">
-                      {columns.map((col, cIdx) => (
-                        <td key={cIdx} className={cn('px-4 py-4 align-middle', col.className)}>
-                          <Skeleton
-                            variant="text"
-                            className={cn(
-                              'h-4',
-                              cIdx === 0 ? 'w-3/4' : cIdx === 1 ? 'w-1/2' : 'w-2/3'
-                            )}
-                          />
+                  {[...Array(5)].map((_, idx) => (
+                    <tr key={idx}>
+                      {columns.map((_, cIdx) => (
+                        <td key={cIdx} className="px-4 py-4">
+                          <Skeleton className="h-4 w-full rounded-lg" />
                         </td>
                       ))}
                     </tr>
@@ -277,10 +271,23 @@ export function ResponsiveDataListing<T>({
             </div>
           </div>
 
-          {/* Mobile App Cards Skeleton (md:hidden) */}
+          {/* Mobile Card Skeleton */}
           <div className="space-y-4 md:hidden">
-            {Array.from({ length: skeletonCount }).map((_, idx) => (
-              <ResponsiveMobileCardSkeleton key={idx} />
+            {[...Array(5)].map((_, idx) => (
+              <div key={idx} className="rounded-2xl border border-border/60 bg-card p-4 space-y-3">
+                <div className="flex items-start gap-3">
+                  <Skeleton className="h-14 w-14 shrink-0 rounded-xl" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4 rounded-lg" />
+                    <Skeleton className="h-3 w-1/2 rounded-lg" />
+                  </div>
+                  <Skeleton className="h-6 w-16 shrink-0 rounded-lg" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <Skeleton className="h-12 rounded-xl" />
+                  <Skeleton className="h-12 rounded-xl" />
+                </div>
+              </div>
             ))}
           </div>
         </>

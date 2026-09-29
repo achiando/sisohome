@@ -1,4 +1,5 @@
 import React from "react"
+import type { Country } from "react-phone-number-input"
 
 // ─── Field Column Span ────────────────────────────────────────────────────────
 export type ColSpan = 1 | 2 | 3 | 4 | "full"
@@ -49,7 +50,7 @@ export interface TextField extends BaseFieldDef {
 export interface PhoneField extends BaseFieldDef {
   type: "phone"
   /** Default country code (ISO 3166-1 alpha-2, e.g., "KE" for Kenya) */
-  defaultCountry?: string
+  defaultCountry?: Country
 }
 
 export interface TextareaField extends BaseFieldDef {

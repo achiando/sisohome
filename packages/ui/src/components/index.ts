@@ -31,3 +31,5 @@ export * from "./nav-item"
 export * from "./tooltip"
 export * from "./toast"
 export * from "./shared"
+
+export { CardAction } from "./card"

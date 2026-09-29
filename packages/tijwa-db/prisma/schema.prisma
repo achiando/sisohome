@@ -1,0 +1,137 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============================================================================
+// TIJWAWELDERS DATABASE - MINIMAL MODEL
+// ============================================================================
+
+// ============================================================================
+// ADMIN USERS & AUTH
+// ============================================================================
+
+model Admin {
+  id        String   @id @default(uuid()) @db.Uuid
+  email     String   @unique
+  password  String
+  name      String
+  isActive  Boolean  @default(true) @map("is_active")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("admins")
+  @@index([email])
+  @@index([isActive])
+}
+
+// ============================================================================
+// CATEGORIES
+// ============================================================================
+
+model Category {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  products Product[]
+
+  @@map("categories")
+  @@index([slug])
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+// ============================================================================
+// PRODUCTS
+// ============================================================================
+
+model Product {
+  id            String   @id @default(uuid()) @db.Uuid
+  categoryId    String   @map("category_id") @db.Uuid
+  name          String
+  slug          String   @unique
+  shortDesc     String   @map("short_desc")
+  description   String?  @db.Text
+  specifications Json?
+  priceRange    String?  @map("price_range")
+  minPrice      Float?   @map("min_price")
+  maxPrice      Float?   @map("max_price")
+  images        Json?    // Array of image objects
+  isActive      Boolean  @default(true) @map("is_active")
+  isFeatured    Boolean  @default(false) @map("is_featured")
+  sortOrder     Int      @default(0) @map("sort_order")
+  seoTitle      String?  @map("seo_title")
+  seoDesc       String?  @map("seo_desc")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@map("products")
+  @@index([slug])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([sortOrder])
+}
+
+// ============================================================================
+// PROJECTS
+// ============================================================================
+
+model Project {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  slug        String   @unique
+  type        String   // Residential, Commercial, Structural, etc.
+  location    String?
+  description String?  @db.Text
+  images      Json?    // Array of image objects
+  isActive    Boolean  @default(true) @map("is_active")
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  sortOrder   Int      @default(0) @map("sort_order")
+  seoTitle    String?  @map("seo_title")
+  seoDesc     String?  @map("seo_desc")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("projects")
+  @@index([slug])
+  @@index([type])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([sortOrder])
+}
+
+// ============================================================================
+// PROJECT IMAGES
+// ============================================================================
+
+model ProjectImage {
+  id         String   @id @default(uuid()) @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  imageUrl   String   @map("image_url")
+  altText    String?  @map("alt_text")
+  caption    String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  @@map("project_images")
+  @@index([projectId])
+  @@index([sortOrder])
+}

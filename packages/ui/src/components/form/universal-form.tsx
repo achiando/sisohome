@@ -256,7 +256,7 @@ function WizardForm(props: WizardFormProps) {
             </div>
           )}
 
-          {/* Step-level error display */
+          {/* Step-level error display */}
           {localErrors._step && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
               <p className="text-sm text-destructive">{localErrors._step}</p>
@@ -310,7 +310,7 @@ function WizardForm(props: WizardFormProps) {
             </div>
           )}
 
-          {/* Step-level error display */
+          {/* Step-level error display */}
           {localErrors._step && (
             <div className="rounded-lg border border-destructive/50 bg-destructive/10 p-3">
               <p className="text-sm text-destructive">{localErrors._step}</p>

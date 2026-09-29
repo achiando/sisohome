@@ -1,24 +1,39 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
+  "globalEnv": ["SESSION_SECRET"],
   "tasks": {
     "build": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^db:generate"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
-      "outputs": [".next/**", "!.next/cache/**"]
+      "outputs": [".next/**", "!.next/cache/**"],
+      "passThroughEnv": ["DATABASE_URL"]
+    },
+    "db:generate": {
+      "dependsOn": ["^db:generate"],
+      "inputs": ["prisma/schema.prisma", "prisma7.config.ts", ".env*"],
+      "outputs": ["generated/prisma/**"],
+      "passThroughEnv": ["DATABASE_URL"]
+    },
+    "db:seed": {
+      "dependsOn": ["db:generate"],
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL", "ADMIN_EMAIL", "ADMIN_PASSWORD"]
     },
     "lint": {
-      "dependsOn": ["^lint"]
+      "dependsOn": ["^lint", "^db:generate"]
     },
     "format": {
       "dependsOn": ["^format"]
     },
     "typecheck": {
-      "dependsOn": ["^typecheck"]
+      "dependsOn": ["^typecheck", "^db:generate"]
     },
     "dev": {
+      "dependsOn": ["^db:generate"],
       "cache": false,
-      "persistent": true
+      "persistent": true,
+      "passThroughEnv": ["DATABASE_URL"]
     }
   }
 }
