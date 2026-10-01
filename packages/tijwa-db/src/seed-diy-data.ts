@@ -97,7 +97,10 @@ const fmtOhms = (o: number) =>
   o >= 1e6 ? `${o / 1e6} MΩ` : o >= 1e3 ? `${o / 1e3} kΩ` : `${o} Ω`
 
 const codeOhms = (o: number) => {
-  if (o >= 1e6) return `${o / 1e6}m`
+  if (o >= 1e6) {
+    const m = o / 1e6
+    return Number.isInteger(m) ? `${m}m` : String(m).replace(".", "m")
+  }
   if (o >= 1e3) {
     const k = o / 1e3
     return Number.isInteger(k) ? `${k}k` : String(k).replace(".", "k")
@@ -145,30 +148,63 @@ export const diyCategories: DiySeedCategory[] = [
 /* ---- Resistors: 1/4 W, 100 per pack ---- */
 const ohmHints: Record<number, string> = {
   10: "low-value current sensing and snubbers",
+  12: "current sensing and snubber networks",
+  18: "series damping and protection",
   22: "series damping and low-current limiting",
+  33: "gate resistors and current limiting",
   47: "series terminations and current sensing",
+  56: "gate resistors and LED limiting",
+  82: "LED limiting on 3.3 V boards",
   100: "LED limiting on 3.3 V boards",
+  120: "LED limiting and gate resistors",
   150: "bright LED limiting on 5 V",
+  180: "IR LED limiting and dividers",
   220: "the standard LED current-limiting value on 5 V boards",
+  270: "LED limiting and sensor outputs",
   330: "LED limiting with a softer glow",
+  390: "LED limiting and transistor bases",
   470: "LED limiting and transistor base resistors",
+  560: "dividers and LED limiting",
   680: "LED limiting and gentle dimming",
+  820: "dividers and current sensing",
   1000: "transistor bases, LED limiting and general signal work",
+  1200: "transistor bases and dividers",
   1500: "voltage dividers and base resistors",
+  1800: "base resistors and current sense",
   2200: "I2C pull-ups and transistor bases",
+  2700: "dividers and sensor bias",
   3300: "voltage dividers and logic-level shifting",
+  3900: "pull-ups and dividers",
   4700: "I2C and 1-Wire pull-ups (DS18B20, DHT)",
+  5600: "dividers and timing networks",
   6800: "dividers and timing networks",
+  8200: "timing and filter networks",
   10000: "pull-ups, pull-downs and voltage dividers",
+  12000: "pull-ups and dividers",
   15000: "dividers and filter networks",
+  18000: "bias and timing networks",
   22000: "bias networks and timing",
+  27000: "bias networks and filters",
   33000: "high-impedance dividers",
+  39000: "high-impedance dividers",
   47000: "high-impedance dividers and timing",
+  56000: "timing and bias networks",
   68000: "timing and bias networks",
+  82000: "timing and filter networks",
   100000: "timing circuits and high-impedance inputs",
+  120000: "timing and high-impedance inputs",
+  150000: "timing circuits and dimming",
+  180000: "long time constants",
   220000: "long time constants and bias",
+  270000: "long time constants and bias",
+  330000: "high-impedance inputs",
+  390000: "very high-impedance inputs",
   470000: "very high-impedance inputs",
+  560000: "very high-impedance inputs",
+  680000: "very high-impedance inputs",
+  820000: "very high-impedance inputs",
   1000000: "very high-impedance inputs and long time constants",
+  2200000: "leakage-sensitive, very high-impedance inputs",
 }
 const ohms = Object.keys(ohmHints).map(Number)
 
@@ -196,8 +232,10 @@ push("electronics-components",
 
 /* ---- Ceramic capacitors, 50 per pack ---- */
 const ceramics: [string, string][] = [
-  ["10 pF", "10p"], ["22 pF", "22p"], ["100 pF", "100p"],
-  ["1 nF", "1n"], ["10 nF", "10n"], ["100 nF", "100n"], ["1 µF", "1u"],
+  ["10 pF", "10p"], ["22 pF", "22p"], ["47 pF", "47p"], ["100 pF", "100p"],
+  ["330 pF", "330p"], ["470 pF", "470p"],
+  ["1 nF", "1n"], ["2.2 nF", "2n2"], ["4.7 nF", "4n7"], ["10 nF", "10n"],
+  ["22 nF", "22n"], ["47 nF", "47n"], ["100 nF", "100n"], ["1 µF", "1u"],
 ]
 push("electronics-components",
   r("ceramic-capacitor-kit", "Ceramic Capacitor Kit (100 pcs)", "Kit", 350,
@@ -214,7 +252,7 @@ push("electronics-components",
 )
 
 /* ---- Electrolytic capacitors, 20 per pack ---- */
-const electros = [1, 4.7, 10, 22, 47, 100, 220, 470, 1000, 2200]
+const electros = [0.47, 1, 3.3, 4.7, 10, 15, 22, 33, 47, 68, 100, 150, 220, 330, 470, 1000, 2200, 4700]
 push("electronics-components",
   r("electrolytic-capacitor-kit", "Electrolytic Capacitor Kit (120 pcs)", "Kit", 450,
     "Assorted 1 µF to 1000 µF electrolytic capacitors.",
@@ -247,7 +285,7 @@ for (const size of [5, 3]) {
 }
 
 /* ---- Screws, standoffs, heat shrink, cable ties ---- */
-const screws: [string, number[]][] = [["M2.5", [6, 10, 12]], ["M3", [6, 10, 16, 20, 30]], ["M4", [10, 20]]]
+const screws: [string, number[]][] = [["M2", [4, 6, 8, 10]], ["M2.5", [6, 10, 12]], ["M3", [6, 10, 16, 20, 30]], ["M4", [10, 20]], ["M5", [10, 16, 20, 30]]]
 for (const [thread, lengths] of screws) {
   push("enclosures-hardware",
     ...lengths.map((len) =>
@@ -262,20 +300,20 @@ for (const [thread, lengths] of screws) {
   )
 }
 push("enclosures-hardware",
-  ...[6, 10, 15, 20, 30].map((len) =>
+  ...[6, 8, 10, 12, 15, 20, 25, 30, 40].map((len) =>
     r(`standoff-m3-${len}mm-pack-20`, `M3 Male-Female Standoff ${len} mm (Pack of 20)`, "Pack of 20", 250,
       `20 brass M3 standoffs, ${len} mm.`, "Lift boards off a base plate or enclosure floor.",
       [["Thread", "M3"], ["Length", `${len} mm`], ["Material", "Brass"]], "standoff spacer"),
   ),
-  ...[100, 150, 200, 300].map((len) =>
+  ...[50, 100, 150, 200, 250, 300, 370].map((len) =>
     r(`cable-tie-${len}mm-pack-100`, `Nylon Cable Ties ${len} mm (Pack of 100)`, "Pack of 100", len >= 200 ? 200 : 150,
       `100 nylon cable ties, ${len} mm.`, "Bundle wiring inside enclosures and on chassis.",
       [["Length", `${len} mm`], ["Material", "Nylon"]], "cable tie"),
   ),
 )
 push("electrical",
-  ...[1, 2, 3, 4, 6, 8].map((d) =>
-    r(`heat-shrink-${d}mm-pack-10`, `Heat Shrink Tubing ${d} mm × 10 cm (Pack of 10)`, "Pack of 10", 120,
+  ...[1, 2, 3, 4, 5, 6, 8, 10, 12, 16].map((d) =>
+    r(`heat-shrink-${d}mm-pack-10`, `Heat Shrink Tubing ${d} mm × 10 cm (Pack of 10)`, "Pack of 10", d >= 10 ? 150 : 120,
       `10 black heat-shrink tubes, ${d} mm, 10 cm long.`,
       "Slide over a wire before soldering, then shrink for an insulated joint.",
       [["Diameter", `${d} mm`], ["Shrink ratio", "2:1"]], "heat shrink tubing"),
@@ -285,6 +323,146 @@ push("electrical",
       `5 m of solid-core 22 AWG hookup wire in ${c}.`, "Breadboard and perfboard wiring; colour-code your rails.",
       [["Gauge", "22 AWG solid core"], ["Length", "5 m"]], "hookup wire"),
   ),
+  ...(["red", "black", "yellow", "green", "blue", "white"] as const).map((c) =>
+    r(`hookup-wire-24awg-${c}-5m`, `Hookup Wire 24 AWG ${c[0].toUpperCase() + c.slice(1)} (5 m roll)`, "Roll", 100,
+      `5 m of solid-core 24 AWG hookup wire in ${c}.`,
+      "Thinner than 22 AWG — fits tight breadboard rows and fine signal wiring.",
+      [["Gauge", "24 AWG solid core"], ["Length", "5 m"]], "hookup wire"),
+  ),
+  r("silicone-wire-24awg-1m-pair", "Silicone Stranded Wire 24 AWG (Red + Black, 1 m each)", "Pair", 150,
+    "Flexible stranded leads that stay soft.", "Servo extensions, battery leads and anything that moves.",
+    [["Gauge", "24 AWG stranded silicone"], ["Length", "2 × 1 m"]], "silicone wire"),
+  r("fuse-blade-assortment-40", "Blade Fuse Assortment ATO/ATC (40 pcs)", "Kit", 400,
+    "5 A to 30 A blade fuses in a compartment case.",
+    "Protect 12 V supply leads to motors, pumps and LED strips.",
+    [["Contents", "5 – 30 A assorted", 40], ["Type", "ATO/ATC blade"]], "blade fuse"),
+  r("fuse-holder-blade-pack-5", "Blade Fuse Holder (Pack of 5)", "Pack of 5", 250,
+    "Inline holders for blade fuses.", "Add one close to the battery on every 12 V build.",
+    [["Fits", "ATO/ATC"], ["Rating", "30 A"]], "fuse holder"),
+  r("usb-c-cable-1m", "USB-C Data Cable 1 m", "Each", 300,
+    "Power and program modern USB-C boards.", "Make sure the cable carries data, not just power.",
+    [["Length", "1 m"], ["Type", "USB 2.0"]], "USB-C cable"),
+  r("solar-panel-6v-3w", "6 V 3 W Mini Solar Panel", "Each", 1200,
+    "Sized for small battery-charging builds.",
+    "Daylight power for sensors; use a charge controller when charging batteries.",
+    [["Power", "3 W"], ["Output", "6 V"]], "solar panel"),
+  r("aa-alkaline-pack-4", "AA Alkaline Battery (Pack of 4)", "Pack of 4", 300,
+    "Fresh AA cells for portable projects.", "Runs sensor nodes and small motors; recycle when flat.",
+    [["Voltage", "1.5 V"], ["Type", "Alkaline"]], "AA battery"),
+  r("aaa-alkaline-pack-4", "AAA Alkaline Battery (Pack of 4)", "Pack of 4", 250,
+    "Fresh AAA cells for compact builds.", "Fits the smaller 2× and 4×AAA holders.",
+    [["Voltage", "1.5 V"], ["Type", "Alkaline"]], "AAA battery"),
+  r("9v-battery-pack-2", "9 V PP3 Alkaline Battery (Pack of 2)", "Pack of 2", 350,
+    "Snap-on 9 V batteries for UNO builds.", "Pairs with the 9 V battery clip for portable power.",
+    [["Voltage", "9 V"], ["Type", "Alkaline"]], "9V battery"),
+)
+
+/* ---- Metal-film 1% resistors, film capacitors, inductors, LED extras ---- */
+const metalFilm = [100, 330, 1000, 4700, 10000, 100000]
+push("electronics-components",
+  ...metalFilm.map((o) =>
+    r(`resistor-mf-${codeOhms(o)}-pack-50`, `${fmtOhms(o)} Resistor — 1/4 W Metal Film 1% (Pack of 50)`, "Pack of 50", 150,
+      `50 metal-film ${fmtOhms(o)} resistors, 1/4 W, ±1%.`,
+      "Tighter tolerance than carbon film for dividers, sensor circuits and anything calibration matters.",
+      [["Value", fmtOhms(o)], ["Power rating", "1/4 W"], ["Tolerance", "±1%"], ["Type", "Metal film, through-hole"]],
+      "metal film resistor"),
+  ),
+  ...([["10 nF", "10n"], ["33 nF", "33n"], ["100 nF", "100n"], ["220 nF", "220n"], ["1 µF", "1u"], ["2.2 µF", "2u2"]] as [string, string][]).map(([label, code]) =>
+    r(`film-cap-${code}-pack-20`, `${label} Film Capacitor (Pack of 20)`, "Pack of 20", 150,
+      `20 polyester film capacitors, ${label}, 50 V.`,
+      "Stable where ceramic capacitance drifts — timing, coupling and audio filters.",
+      [["Value", label], ["Voltage", "50 V"], ["Type", "Polyester film"]], "film capacitor"),
+  ),
+  ...([["10 µH", "10uh"], ["47 µH", "47uh"], ["100 µH", "100uh"], ["330 µH", "330uh"], ["1 mH", "1mh"]] as [string, string][]).map(([label, code]) =>
+    r(`inductor-${code}-pack-10`, `${label} Power Inductor (Pack of 10)`, "Pack of 10", 150,
+      `10 axial power inductors, ${label}.`,
+      "Filtering and energy storage in switching supplies and oscillator tanks.",
+      [["Value", label], ["Type", "Axial, ferrite core"], ["Tolerance", "±10%"]], "power inductor"),
+  ),
+  ...ledColours.map(([c, label]) =>
+    r(`led-10mm-${c}-pack-20`, `${label} LED 10 mm (Pack of 20)`, "Pack of 20", 220,
+      `20 ${label.toLowerCase()} 10 mm through-hole LEDs.`,
+      "Larger lens for indicator panels and light effects — always use a series resistor.",
+      [["Colour", label], ["Size", "10 mm"], ["Leads", "Through-hole, 2.54 mm"]], "10mm LED"),
+  ),
+  r("ir-led-5mm-940nm-pack-10", "IR LED 5 mm 940 nm (Pack of 10)", "Pack of 10", 200,
+    "Infrared emitters for remotes and light barriers.",
+    "Pair with an IR receiver or phototransistor; the beam is invisible to the eye.",
+    [["Wavelength", "940 nm"], ["Size", "5 mm"]], "infrared LED"),
+  r("uv-led-5mm-pack-10", "UV LED 5 mm (Pack of 10)", "Pack of 10", 300,
+    "Near-ultraviolet LEDs.", "Curing resin, fluorescent effects and counterfeit-note checks.",
+    [["Wavelength", "≈ 400 nm"], ["Size", "5 mm"]], "ultraviolet LED"),
+  r("rgb-led-common-anode-pack-5", "RGB LED 5 mm Common Anode (Pack of 5)", "Pack of 5", 200,
+    "Four-pin RGB LEDs with a shared positive lead.", "Colour mixing with PWM — one resistor per channel.",
+    [["Type", "Common anode"], ["Pins", "4"]], "RGB LED"),
+  r("led-bicolor-rg-pack-10", "Bi-Colour Red/Green LED 3 mm (Pack of 10)", "Pack of 10", 250,
+    "Two colours in one small package.", "Status indicators: red for fault, green for OK.",
+    [["Colours", "Red / green"], ["Size", "3 mm"], ["Pins", "3"]], "bi-color LED"),
+  r("led-holder-5mm-pack-20", "5 mm LED Holder Bezel (Pack of 20)", "Pack of 20", 150,
+    "Panel bezels for 5 mm LEDs.", "Snap an LED neatly into a drilled panel.",
+    [["Fits", "5 mm LED"], ["Mount", "8 mm hole"]], "LED holder"),
+  r("led-holder-10mm-pack-10", "10 mm LED Holder Bezel (Pack of 10)", "Pack of 10", 150,
+    "Panel bezels for 10 mm LEDs.", "Neat indicators on boxes and dashboards.",
+    [["Fits", "10 mm LED"], ["Mount", "12 mm hole"]], "LED holder"),
+  r("crystal-8mhz-pack-5", "8 MHz Crystal HC-49S (Pack of 5)", "Pack of 5", 150,
+    "Clock crystals for 8 MHz ATmega and PIC builds.", "Use with two 22 pF load capacitors.",
+    [["Frequency", "8 MHz"], ["Package", "HC-49S"]], "quartz crystal"),
+  r("crystal-32768hz-pack-5", "32.768 kHz Watch Crystal (Pack of 5)", "Pack of 5", 150,
+    "Tuning-fork crystals for real-time clocks.", "The standard clock source for RTC circuits.",
+    [["Frequency", "32.768 kHz"], ["Load capacitance", "12.5 pF"]], "watch crystal"),
+  r("potentiometer-500r-pack-5", "500 Ω Rotary Potentiometer (Pack of 5)", "Pack of 5", 250,
+    "Low-value linear pots for LED dimming.", "Fine brightness control with little heat.",
+    [["Value", "500 Ω"], ["Taper", "Linear (B)"]], "potentiometer"),
+  r("potentiometer-4k7-pack-5", "4.7 kΩ Rotary Potentiometer (Pack of 5)", "Pack of 5", 250,
+    "Linear 4.7 kΩ pots.", "Sensor calibration and gain adjustment.",
+    [["Value", "4.7 kΩ"], ["Taper", "Linear (B)"]], "potentiometer"),
+  r("potentiometer-50k-pack-5", "50 kΩ Rotary Potentiometer (Pack of 5)", "Pack of 5", 250,
+    "Linear 50 kΩ pots.", "Audio and timing controls between the common 10 k and 100 k values.",
+    [["Value", "50 kΩ"], ["Taper", "Linear (B)"]], "potentiometer"),
+)
+
+push("enclosures-hardware",
+  ...(["M2", "M2.5", "M3", "M4", "M5"] as const).map((thread) =>
+    r(`washer-${thread.toLowerCase().replace(".", "")}-pack-100`, `${thread} Flat Washer (Pack of 100)`, "Pack of 100", 150,
+      `100 ${thread} zinc flat washers.`,
+      "Spread the load under screw heads so lids and standoffs do not crush.",
+      [["Thread", thread], ["Material", "Zinc-plated steel"]], "flat washer"),
+  ),
+  ...[10, 20, 30].map((len) =>
+    r(`standoff-nylon-m3-${len}mm-pack-20`, `Nylon M3 Standoff ${len} mm (Pack of 20)`, "Pack of 20", 200,
+      `20 insulating nylon M3 standoffs, ${len} mm.`,
+      "Electrically isolate a board from a metal base plate.",
+      [["Thread", "M3"], ["Length", `${len} mm`], ["Material", "Nylon"]], "nylon standoff"),
+  ),
+  ...["PG9", "PG11", "PG13.5"].map((size) =>
+    r(`cable-gland-${size.toLowerCase().replace(".", "")}-pack-5`, `Cable Gland ${size} (Pack of 5)`, "Pack of 5", 250,
+      `5 ${size} cable glands for thicker leads.`, "Strain relief and dust sealing where PG7 is too small.",
+      [["Size", size]], "cable gland"),
+  ),
+  r("screw-self-tapping-2x8-pack-50", "Self-Tapping Screw 2×8 mm (Pack of 50)", "Pack of 50", 150,
+    "Thread-forming screws for plastic enclosures.", "Bite into plastic bosses without needing a nut.",
+    [["Thread", "2×8 mm"], ["Head", "Pan, Phillips"]], "self-tapping screw"),
+  r("screw-self-tapping-3x12-pack-50", "Self-Tapping Screw 3×12 mm (Pack of 50)", "Pack of 50", 200,
+    "Larger thread-forming screws.", "Fix brackets and standoffs into thicker plastic walls.",
+    [["Thread", "3×12 mm"], ["Head", "Pan, Phillips"]], "self-tapping screw"),
+)
+
+push("prototyping",
+  r("ribbon-cable-10way-1m", "IDC Ribbon Cable 10-Way (1 m)", "Roll", 250,
+    "Flat ten-conductor cable for IDC connectors.", "Clean bus wiring between boards, displays and keypads.",
+    [["Conductors", "10"], ["Length", "1 m"]], "ribbon cable"),
+  r("jumper-wires-mm-10cm-pack-40", "Male-to-Male Jumper Wires 10 cm (Pack of 40)", "Pack of 40", 120,
+    "Short jumpers for tidy breadboards.", "Keeps low-profile wiring out of the way of the work.",
+    [["Type", "Male-male"], ["Length", "10 cm"]], "jumper wires"),
+  r("jumper-wires-mm-30cm-pack-20", "Male-to-Male Jumper Wires 30 cm (Pack of 20)", "Pack of 20", 120,
+    "Long jumpers for spread-out builds.", "Reach from a bench supply across to the board.",
+    [["Type", "Male-male"], ["Length", "30 cm"]], "jumper wires"),
+  r("copper-clad-board-5x7", "Copper-Clad Board 5×7 cm (Single-Sided)", "Each", 200,
+    "Blank PCB stock for etching your own layout.", "Toner-transfer or photoresist methods at home.",
+    [["Size", "5×7 cm"], ["Copper", "Single-sided, 1 oz"]], "copper clad board"),
+  r("copper-clad-board-9x15", "Copper-Clad Board 9×15 cm (Single-Sided)", "Each", 400,
+    "Larger blank PCB stock.", "Etch several small boards from one piece.",
+    [["Size", "9×15 cm"], ["Copper", "Single-sided, 1 oz"]], "copper clad board"),
 )
 
 /* ================================================================== */
