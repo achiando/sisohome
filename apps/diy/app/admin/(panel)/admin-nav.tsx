@@ -2,10 +2,14 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Package } from "lucide-react"
+import { FolderKanban, Package, Tags } from "lucide-react"
 import { NavItem } from "@workspace/ui/components/nav-item"
 
-const links = [{ href: "/admin/products", label: "Products", icon: Package }]
+const links = [
+  { href: "/admin/products", label: "Products", icon: Package },
+  { href: "/admin/projects", label: "Projects", icon: FolderKanban },
+  { href: "/admin/categories", label: "Categories", icon: Tags },
+]
 
 export function AdminNav() {
   const pathname = usePathname()

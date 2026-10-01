@@ -9,6 +9,7 @@ import { Button } from "@workspace/ui/components/button"
 import { UniversalForm } from "@workspace/ui/components/form"
 import { Input } from "@workspace/ui/components/input"
 import { createProduct, updateProduct } from "./actions"
+import { ImagesEditor } from "@/components/admin/images-editor"
 import {
   parseProductImages,
   type ProductImageInput,
@@ -28,7 +29,8 @@ export interface ProductFormProduct {
   slug: string
   shortDesc: string
   description: string | null
-  priceRange: string | null
+  unit: string | null
+  price: number | null
   sortOrder: number
   isFeatured: boolean
   isActive: boolean
@@ -146,80 +148,6 @@ function SpecificationsEditor({
   )
 }
 
-function ImagesEditor({
-  value,
-  onChange,
-}: {
-  value: unknown
-  onChange: (next: unknown) => void
-  error?: string
-}) {
-  const rows: ImageRow[] = Array.isArray(value)
-    ? (value as ImageRow[]).map((row) => ({
-        url: String(row.url ?? ""),
-        alt: String(row.alt ?? ""),
-      }))
-    : []
-
-  const update = (index: number, patch: Partial<ImageRow>) => {
-    onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)))
-  }
-
-  return (
-    <div className="space-y-3">
-      {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          No images yet. Add the product photography you want on the site.
-        </p>
-      ) : null}
-
-      {rows.map((row, index) => (
-        <div
-          key={index}
-          className="grid grid-cols-1 gap-3 rounded-xl border border-border/70 bg-background p-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-end"
-        >
-          <Input
-            id={`image-url-${index}`}
-            label="Image URL"
-            inputSize="sm"
-            placeholder="https://..."
-            value={row.url}
-            onChange={(e) => update(index, { url: e.target.value })}
-          />
-          <Input
-            id={`image-alt-${index}`}
-            label="Alt text"
-            inputSize="sm"
-            placeholder="Steel sliding gate installed at a property"
-            value={row.alt}
-            onChange={(e) => update(index, { alt: e.target.value })}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Remove image ${index + 1}`}
-            onClick={() => onChange(rows.filter((_, i) => i !== index))}
-            className="mb-1"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
-
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        leftIcon={Plus}
-        onClick={() => onChange([...rows, { url: "", alt: "" }])}
-      >
-        Add image
-      </Button>
-    </div>
-  )
-}
-
 export function ProductForm({
   product,
   categories,
@@ -237,7 +165,8 @@ export function ProductForm({
     categoryId: product?.categoryId ?? categories[0]?.id ?? "",
     shortDesc: product?.shortDesc ?? "",
     description: product?.description ?? "",
-    priceRange: product?.priceRange ?? "",
+    unit: product?.unit ?? "",
+    price: product?.price ?? "",
     sortOrder: product?.sortOrder ?? 0,
     isFeatured: product?.isFeatured ?? false,
     isActive: product?.isActive ?? true,
@@ -271,7 +200,8 @@ export function ProductForm({
       categoryId: String(source.categoryId ?? ""),
       shortDesc: String(source.shortDesc ?? ""),
       description: String(source.description ?? ""),
-      priceRange: String(source.priceRange ?? ""),
+      unit: String(source.unit ?? ""),
+      price: String(source.price ?? ""),
       sortOrder: Number(source.sortOrder ?? 0),
       isFeatured: source.isFeatured === true,
       isActive: source.isActive !== false,
@@ -380,6 +310,14 @@ export function ProductForm({
                   })),
                 },
                 {
+                  name: "unit",
+                  label: "Sell as",
+                  type: "text",
+                  colSpan: 2,
+                  helperText:
+                    "How it's sold: Each, Kit, Set, Pack, or Pack of 100. Blank means not confirmed yet.",
+                },
+                {
                   name: "sortOrder",
                   label: "Sort order",
                   type: "number",
@@ -450,15 +388,16 @@ export function ProductForm({
             {
               id: "options",
               title: "Pricing & visibility",
-              description: "Optional pricing text and how the product is shown.",
+              description: "Listed price and how the product is shown.",
               columns: 4,
               fields: [
                 {
-                  name: "priceRange",
-                  label: "Price range",
-                  type: "text",
+                  name: "price",
+                  label: "Price (KSh)",
+                  type: "number",
                   colSpan: 2,
-                  helperText: "Only when real figures are known. Leave blank otherwise.",
+                  helperText:
+                    "Required. The price shown on cards, product pages and quotes.",
                 },
                 {
                   name: "isFeatured",

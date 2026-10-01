@@ -15,7 +15,7 @@ export default async function EditProductPage({
 }) {
   const { id } = await params
 
-  const product = await prisma.product.findUnique({
+  const product = await prisma.diyProduct.findUnique({
     where: { id },
     include: { category: { select: { id: true, name: true, slug: true } } },
   })
@@ -39,7 +39,8 @@ export default async function EditProductPage({
     slug: product.slug,
     shortDesc: product.shortDesc,
     description: product.description,
-    priceRange: product.priceRange,
+    unit: product.unit,
+    price: product.price,
     sortOrder: product.sortOrder,
     isFeatured: product.isFeatured,
     isActive: product.isActive,

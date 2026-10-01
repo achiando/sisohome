@@ -8,7 +8,7 @@ export const metadata: Metadata = {
 }
 
 export default async function AdminProductsPage() {
-  const products = await prisma.product.findMany({
+  const products = await prisma.diyProduct.findMany({
     include: { category: { select: { id: true, name: true, slug: true } } },
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
   })

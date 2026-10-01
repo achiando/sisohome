@@ -1,5 +1,4 @@
 import { prisma } from './db'
-import { notFound } from 'next/navigation'
 
 export type ProductWithCategory = {
   id: string
@@ -8,10 +7,9 @@ export type ProductWithCategory = {
   slug: string
   shortDesc: string
   description: string | null
+  unit: string | null
   specifications: any
-  priceRange: string | null
-  minPrice: number | null
-  maxPrice: number | null
+  price: number | null
   images: any
   category: {
     id: string
@@ -23,7 +21,7 @@ export type ProductWithCategory = {
 }
 
 export async function getAllProducts() {
-  return await prisma.product.findMany({
+  return await prisma.diyProduct.findMany({
     where: { isActive: true },
     include: {
       category: {
@@ -39,7 +37,7 @@ export async function getAllProducts() {
 }
 
 export async function getFeaturedProducts() {
-  return await prisma.product.findMany({
+  return await prisma.diyProduct.findMany({
     where: { 
       isActive: true,
       isFeatured: true,
@@ -59,7 +57,7 @@ export async function getFeaturedProducts() {
 }
 
 export async function getProductBySlug(slug: string): Promise<ProductWithCategory | null> {
-  const product = await prisma.product.findUnique({
+  const product = await prisma.diyProduct.findUnique({
     where: { 
       slug,
       isActive: true,
@@ -79,7 +77,7 @@ export async function getProductBySlug(slug: string): Promise<ProductWithCategor
 }
 
 export async function getProductsByCategory(categorySlug: string) {
-  return await prisma.product.findMany({
+  return await prisma.diyProduct.findMany({
     where: { 
       isActive: true,
       category: { slug: categorySlug },
@@ -107,14 +105,14 @@ export type CategoryList = {
 }
 
 export async function getAllCategories(): Promise<CategoryList[]> {
-  return await prisma.category.findMany({
+  return await prisma.diyCategory.findMany({
     where: { isActive: true },
     orderBy: { sortOrder: 'asc' },
   })
 }
 
 export async function getCategoryCounts(): Promise<Record<string, number>> {
-  const rows = await prisma.product.findMany({
+  const rows = await prisma.diyProduct.findMany({
     where: { isActive: true },
     select: { category: { select: { slug: true } } },
   })
@@ -126,7 +124,7 @@ export async function getCategoryCounts(): Promise<Record<string, number>> {
 }
 
 export async function getCategoryBySlug(slug: string) {
-  return await prisma.category.findUnique({
+  return await prisma.diyCategory.findUnique({
     where: { 
       slug,
       isActive: true,
@@ -135,7 +133,7 @@ export async function getCategoryBySlug(slug: string) {
 }
 
 export async function getRelatedProducts(categoryId: string, excludeId: string) {
-  return await prisma.product.findMany({
+  return await prisma.diyProduct.findMany({
     where: { 
       isActive: true,
       categoryId,
@@ -152,5 +150,45 @@ export async function getRelatedProducts(categoryId: string, excludeId: string) 
     },
     orderBy: { sortOrder: 'asc' },
     take: 4,
+  })
+}
+
+export async function searchProducts(q: string, take = 10) {
+  if (!q) return []
+  return await prisma.diyProduct.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        { name: { contains: q, mode: 'insensitive' } },
+        { shortDesc: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    include: {
+      category: {
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+        },
+      },
+    },
+    orderBy: { sortOrder: 'asc' },
+    take,
+  })
+}
+
+export async function searchCategories(q: string, take = 5): Promise<CategoryList[]> {
+  if (!q) return []
+  return await prisma.diyCategory.findMany({
+    where: {
+      isActive: true,
+      OR: [
+        { name: { contains: q, mode: 'insensitive' } },
+        { description: { contains: q, mode: 'insensitive' } },
+      ],
+    },
+    orderBy: { sortOrder: 'asc' },
+    take,
   })
 }

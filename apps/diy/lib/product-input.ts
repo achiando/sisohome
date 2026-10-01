@@ -5,13 +5,24 @@ export type ProductImageInput = {
   alt: string
 }
 
+export const PRODUCT_UNITS = [
+  "Each",
+  "Pair",
+  "Pack",
+  "Set",
+  "Meter",
+  "Roll",
+  "Kit",
+] as const
+
 export interface ProductInput {
   name: string
   slug: string
   categoryId: string
   shortDesc: string
   description: string
-  priceRange: string
+  unit: string
+  price: string
   sortOrder: number
   isFeatured: boolean
   isActive: boolean

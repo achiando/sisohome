@@ -8,21 +8,9 @@ import type {
   ProductInput,
   ProductSaveResult,
 } from "@/lib/product-input"
+import { PRODUCT_UNITS } from "@/lib/product-input"
 import type { SpecificationItem } from "@/lib/specifications"
-
-const SLUG_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/
-
-function cleanText(value: unknown): string {
-  return typeof value === "string" ? value.trim() : ""
-}
-
-function slugify(value: string): string {
-  return value
-    .toLowerCase()
-    .replace(/['\u2019]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-}
+import { SLUG_PATTERN, cleanText, sanitizeImages, slugify } from "@/lib/validate"
 
 function sanitizeSpecifications(
   raw: unknown,
@@ -63,46 +51,14 @@ function sanitizeSpecifications(
   return items
 }
 
-function sanitizeImages(
-  raw: unknown,
-  fieldErrors: Record<string, string>,
-): ProductImageInput[] {
-  if (!Array.isArray(raw)) return []
-
-  const items: ProductImageInput[] = []
-
-  for (const entry of raw) {
-    if (!entry || typeof entry !== "object") continue
-
-    const item = entry as { url?: unknown; alt?: unknown }
-    const url = cleanText(item.url)
-    const alt = cleanText(item.alt)
-
-    if (!url && !alt) continue
-
-    if (!/^https?:\/\//i.test(url)) {
-      fieldErrors.images = "Image URLs must start with http:// or https://."
-      continue
-    }
-
-    if (!alt) {
-      fieldErrors.images = "Describe each image so it works for search and screen readers."
-      continue
-    }
-
-    items.push({ url, alt })
-  }
-
-  return items
-}
-
 interface ValidatedProduct {
   name: string
   slug: string
   categoryId: string
   shortDesc: string
   description: string | null
-  priceRange: string | null
+  unit: string | null
+  price: number | null
   sortOrder: number
   isFeatured: boolean
   isActive: boolean
@@ -136,7 +92,7 @@ async function validateProduct(
   if (!categoryId) {
     fieldErrors.categoryId = "Choose a category."
   } else {
-    const category = await prisma.category.findUnique({
+    const category = await prisma.diyCategory.findUnique({
       where: { id: categoryId },
       select: { id: true },
     })
@@ -145,6 +101,29 @@ async function validateProduct(
 
   if (!shortDesc) {
     fieldErrors.shortDesc = "Add a short description."
+  }
+
+  const unit = cleanText(input.unit)
+  const isPackOfN = /^Pack of \d+$/.test(unit)
+  if (
+    unit &&
+    !PRODUCT_UNITS.includes(unit as (typeof PRODUCT_UNITS)[number]) &&
+    !isPackOfN
+  ) {
+    fieldErrors.unit = "Use a standard unit or 'Pack of N' (e.g. Pack of 100)."
+  }
+
+  const rawPrice = cleanText(input.price)
+  let price: number | null = null
+  if (!rawPrice) {
+    fieldErrors.price = "Enter a price."
+  } else {
+    const parsedPrice = Number(rawPrice)
+    if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+      fieldErrors.price = "Enter a valid price in KSh."
+    } else {
+      price = parsedPrice
+    }
   }
 
   const parsedSortOrder = Number(input.sortOrder)
@@ -164,7 +143,8 @@ async function validateProduct(
       categoryId,
       shortDesc,
       description: cleanText(input.description) || null,
-      priceRange: cleanText(input.priceRange) || null,
+      unit: unit || null,
+      price,
       sortOrder,
       isFeatured: input.isFeatured === true,
       isActive: input.isActive !== false,
@@ -180,7 +160,7 @@ async function assertSlugAvailable(
   slug: string,
   editingId?: string,
 ): Promise<ProductSaveResult | null> {
-  const existing = await prisma.product.findUnique({
+  const existing = await prisma.diyProduct.findUnique({
     where: { slug },
     select: { id: true },
   })
@@ -201,7 +181,7 @@ export async function createProduct(input: ProductInput): Promise<ProductSaveRes
   const conflict = await assertSlugAvailable(result.valid.slug)
   if (conflict) return conflict
 
-  await prisma.product.create({ data: { ...result.valid } })
+  await prisma.diyProduct.create({ data: { ...result.valid } })
   revalidatePath("/", "layout")
   return { ok: true }
 }
@@ -212,7 +192,7 @@ export async function updateProduct(
 ): Promise<ProductSaveResult> {
   await requireAdmin()
 
-  const existing = await prisma.product.findUnique({
+  const existing = await prisma.diyProduct.findUnique({
     where: { id },
     select: { id: true },
   })
@@ -226,7 +206,7 @@ export async function updateProduct(
   const conflict = await assertSlugAvailable(result.valid.slug, id)
   if (conflict) return conflict
 
-  await prisma.product.update({ where: { id }, data: { ...result.valid } })
+  await prisma.diyProduct.update({ where: { id }, data: { ...result.valid } })
   revalidatePath("/", "layout")
   return { ok: true }
 }
@@ -234,7 +214,7 @@ export async function updateProduct(
 export async function deleteProduct(id: string): Promise<ProductSaveResult> {
   await requireAdmin()
 
-  const existing = await prisma.product.findUnique({
+  const existing = await prisma.diyProduct.findUnique({
     where: { id },
     select: { id: true },
   })
@@ -242,7 +222,7 @@ export async function deleteProduct(id: string): Promise<ProductSaveResult> {
     return { ok: false, error: "That product no longer exists." }
   }
 
-  await prisma.product.delete({ where: { id } })
+  await prisma.diyProduct.delete({ where: { id } })
   revalidatePath("/", "layout")
   return { ok: true }
 }

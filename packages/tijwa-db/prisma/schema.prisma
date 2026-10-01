@@ -135,3 +135,99 @@ model ProjectImage {
   @@index([projectId])
   @@index([sortOrder])
 }
+
+// ============================================================================
+// DIY CATALOGUE (apps/diy) — same database, separate tables from welding
+// ============================================================================
+
+model DiyCategory {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String
+  slug        String   @unique
+  description String?
+  sortOrder   Int      @default(0) @map("sort_order")
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products DiyProduct[]
+
+  @@map("diy_categories")
+  @@index([slug])
+  @@index([sortOrder])
+  @@index([isActive])
+}
+
+model DiyProduct {
+  id            String   @id @default(uuid()) @db.Uuid
+  categoryId    String   @map("category_id") @db.Uuid
+  name          String
+  slug          String   @unique
+  shortDesc     String   @map("short_desc")
+  description   String?  @db.Text
+  unit          String?
+  specifications Json?
+  price         Float?
+  images        Json?
+  isActive      Boolean  @default(true) @map("is_active")
+  isFeatured    Boolean  @default(false) @map("is_featured")
+  sortOrder     Int      @default(0) @map("sort_order")
+  seoTitle      String?  @map("seo_title")
+  seoDesc       String?  @map("seo_desc")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  category     DiyCategory         @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  projectLinks DiyProjectProduct[]
+
+  @@map("diy_products")
+  @@index([slug])
+  @@index([categoryId])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([sortOrder])
+}
+
+model DiyProject {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String
+  slug        String   @unique
+  category    String?
+  shortDesc   String?  @map("short_desc")
+  description String?  @db.Text
+  steps       Json?
+  images      Json?
+  isActive    Boolean  @default(true) @map("is_active")
+  isFeatured  Boolean  @default(false) @map("is_featured")
+  sortOrder   Int      @default(0) @map("sort_order")
+  seoTitle    String?  @map("seo_title")
+  seoDesc     String?  @map("seo_desc")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  products DiyProjectProduct[]
+
+  @@map("diy_projects")
+  @@index([slug])
+  @@index([category])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([sortOrder])
+}
+
+model DiyProjectProduct {
+  id         String   @id @default(uuid()) @db.Uuid
+  projectId  String   @map("project_id") @db.Uuid
+  productId  String   @map("product_id") @db.Uuid
+  quantity   Int      @default(1)
+  isRequired Boolean  @default(true) @map("is_required")
+  sortOrder  Int      @default(0) @map("sort_order")
+
+  project DiyProject @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  product DiyProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, productId])
+  @@map("diy_project_products")
+  @@index([projectId])
+  @@index([productId])
+}
