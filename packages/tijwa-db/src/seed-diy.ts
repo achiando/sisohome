@@ -121,6 +121,7 @@ function validateSeed() {
 /* ------------------------------------------------------------------ */
 
 const COMMONS_API = "https://commons.wikimedia.org/w/api.php"
+const OPENVERSE_API = "https://api.openverse.org/v1/images/"
 const UA = "TijwaDIYSeedBot/1.0 (https://tijwa.co.ke; contact@tijwa.co.ke)"
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
 const stripHtml = (s = "") => s.replace(/<[^>]*>/g, "").trim()
@@ -134,7 +135,14 @@ type Credit = {
   license: string
 }
 
-async function searchCommons(query: string) {
+type SearchHit = {
+  fetchUrl: string
+  pageUrl: string
+  author: string
+  license: string
+}
+
+async function searchCommons(query: string): Promise<SearchHit | null> {
   const url = new URL(COMMONS_API)
   url.search = new URLSearchParams({
     action: "query",
@@ -159,7 +167,7 @@ async function searchCommons(query: string) {
     .split(/\s+/)
     .filter((w) => w.length > 2)
 
-  return pages
+  const found = pages
     .map((pg) => ({ pg, info: pg.imageinfo?.[0] }))
     .find(({ pg, info }) => {
       if (info?.mime !== "image/jpeg" || !(info.width >= 600) || !info.thumburl)
@@ -169,6 +177,108 @@ async function searchCommons(query: string) {
       const title = String(pg.title).toLowerCase()
       return words.length === 0 || words.some((w) => title.includes(w))
     })
+  if (!found) return null
+  const meta = found.info.extmetadata
+  return {
+    fetchUrl: found.info.thumburl,
+    pageUrl: found.info.descriptionurl ?? "",
+    author: stripHtml(meta?.Artist?.value),
+    license: meta?.LicenseShortName?.value ?? "",
+  }
+}
+
+/* Openverse fallback: aggregates Flickr, museums and other CC sources.
+   Anonymous limits: 20/min, 200/day — callers must sleep between calls. */
+async function searchOpenverse(query: string): Promise<SearchHit | null> {
+  const url = new URL(OPENVERSE_API)
+  url.search = new URLSearchParams({
+    q: query,
+    page_size: "20",
+    license_type: "commercial",
+    extension: "jpg",
+  }).toString()
+
+  const res = await fetch(url, { headers: { "User-Agent": UA } })
+  if (!res.ok) return null
+  const json: any = await res.json()
+  const words = query
+    .toLowerCase()
+    .split(/\s+/)
+    .filter((w) => w.length > 2)
+
+  const usable = (r: any) =>
+    r.url && !(r.width && r.width < 600) && !/-nd\b/i.test(String(r.license ?? ""))
+  const matches = (r: any) => {
+    const hay = [r.title, ...(r.tags ?? []).map((t: any) => t?.name ?? "")]
+      .join(" ")
+      .toLowerCase()
+    return words.some((w) => hay.includes(w))
+  }
+  const results: any[] = json?.results ?? []
+  const chosen = results.find((r) => usable(r) && matches(r)) ?? results.find(usable)
+  if (!chosen) return null
+  return {
+    fetchUrl: chosen.url,
+    pageUrl: chosen.foreign_landing_url ?? chosen.url,
+    author: String(chosen.creator ?? "").trim(),
+    license: String(chosen.license ?? "").toUpperCase(),
+  }
+}
+
+/* Niche part numbers (e.g. "CD4017") have no stock photo on either source.
+   Reuse a close family photo so every product card has a working image;
+   credits.json records the reuse. Remove an entry once a real photo is added. */
+const IMAGE_FALLBACKS: Record<string, string> = {
+  "mosfet-irlz44n-pack-5": "mosfet-irfz44n-pack-5",
+  "mosfet-irf540n-pack-5": "mosfet-irf3205-pack-3",
+  "cd4017-counter-pack-3": "cd4011-quad-nand-pack-5",
+  "pc817-optocoupler-pack-10": "4n25-optocoupler-pack-10",
+  "transistor-tip32c-pack-5": "transistor-tip31c-pack-5",
+  "transistor-tip125-pack-5": "tip120-darlington-pack-5",
+  "transistor-2sd880-pack-5": "transistor-bd139-pack-5",
+  "transistor-2n7000-pack-10": "transistor-2n2222a-pack-10",
+  "lm2576-5v-regulator-pack-3": "lm2596-buck-converter",
+  "tlc555-timer-pack-5": "ne555-timer-pack-5",
+  "74hc08-quad-and-pack-5": "74hc00-quad-nand-pack-5",
+  "74hc32-quad-or-pack-5": "74hc02-quad-nor-pack-5",
+  "74hc132-quad-nand-schmitt-pack-5": "74hc14-schmitt-pack-3",
+  "74hc138-decoder-pack-3": "74hc245-bus-transceiver-pack-3",
+  "74hc4511-bcd-driver-pack-3": "74hc574-octal-latch-pack-3",
+  "cd4026-counter-pack-5": "cd4011-quad-nand-pack-5",
+  "cd4060-oscillator-pack-5": "cd4011-quad-nand-pack-5",
+  "moc3021-optocoupler-pack-5": "4n25-optocoupler-pack-10",
+  "usb-c-breakout-pack-3": "usb-micro-breakout-pack-3",
+  "jsn-sr04t-waterproof-ultrasonic": "hc-sr04-ultrasonic-sensor-2",
+  "vl53l0x-tof-sensor": "vl53l1x-tof-sensor",
+  "mq2-gas-sensor-module": "mq3-alcohol-sensor",
+  "mq135-air-quality-sensor": "mq3-alcohol-sensor",
+  "mq7-co-sensor": "mq3-alcohol-sensor",
+  "flame-sensor-module": "ir-obstacle-sensor-fc51",
+  "tcrt5000-line-tracker-module": "line-tracking-array-4ch",
+  "max30102-pulse-oximeter": "pulse-sensor-analog",
+  "esp32-devkit-v1": "esp32-s3-devkitc-1",
+  "relay-module-2-channel": "relay-module-4-channel",
+  "tm1637-4-digit-display": "tm1650-4digit-module",
+  "microsd-card-module": "esp32-cam-module",
+  "joystick-module-2-axis": "joystick-shield-uno",
+  "ads1115-adc-module": "mcp4725-dac",
+  "dfplayer-mini-mp3": "lm386-audio-amp-pack-3",
+  "pam8403-amp-pack-2": "lm386-audio-amp-pack-3",
+  "mcp23017-expander": "shift-register-74hc595-module",
+  "tca9548a-i2c-mux": "oled-096-i2c-module",
+  "max485-rs485": "mcp2515-can",
+  "ac-dimmer-triac-module": "relay-srd-05vdc-pack-5",
+  "hc-06-bluetooth-module": "hc-05-bluetooth-module",
+  "sim800l-gsm-module": "hc-05-bluetooth-module",
+  "hc-12-serial-radio": "hc-05-bluetooth-module",
+  "rf-relay-module-433": "rf-433mhz-pair",
+  "rf-encoder-pt2262-kit": "rf-remote-4button-433",
+  "wireless-door-sensor-433": "wireless-pir-tx-433",
+  "dupont-crimp-pins-pack-100": "dupont-crimp-connector-kit-620",
+  "lever-connector-kit-30": "screw-terminal-2p-pack-10",
+  "usb-power-tester": "usb-micro-cable-1m",
+  "u-nuts-m3-pack-10": "washer-m3-pack-100",
+  "pan-tilt-bracket-sg90": "sg90-micro-servo",
 }
 
 async function fetchImages() {
@@ -192,44 +302,88 @@ async function fetchImages() {
     if (!FORCE && (await fs.stat(dest).catch(() => null))) continue
 
     const query = diyImageQueries[product.slug]
+
+    // Sample images only: for known niche part numbers skip the network
+    // entirely and reuse a close family photo so the card is never broken.
+    const fallbackSlug = IMAGE_FALLBACKS[product.slug]
+    if (fallbackSlug) {
+      const src = path.join(IMAGE_DIR, `${fallbackSlug}.jpg`)
+      if (await fs.stat(src).catch(() => null)) {
+        await fs.copyFile(src, dest)
+        const origin = credits.find((c) => c.slug === fallbackSlug)
+        credits = credits.filter((c) => c.slug !== product.slug)
+        credits.push({
+          slug: product.slug,
+          query,
+          file,
+          source: origin?.source
+            ? `${origin.source} (reused from ${fallbackSlug})`
+            : `reused from ${fallbackSlug}.jpg`,
+          author: origin?.author ?? "",
+          license: origin?.license ?? "",
+        })
+        saved++
+        continue
+      }
+    }
+
+    let failure: string | null = null
     try {
       let hit = byQuery.get(query)
       if (!hit) {
-        const found = await searchCommons(query)
+        let found = await searchCommons(query)
         await sleep(400)
         if (!found) {
-          missing.push(`${product.slug}  (query: "${query}")`)
-          continue
+          found = await searchOpenverse(query)
+          await sleep(3100) // Openverse anon limit: 20/min
         }
-        const imgRes = await fetch(found.info.thumburl, {
-          headers: { "User-Agent": UA },
-        })
-        if (!imgRes.ok) throw new Error(`download ${imgRes.status}`)
-        const meta = found.info.extmetadata
-        hit = {
-          bytes: Buffer.from(await imgRes.arrayBuffer()),
-          source: found.info.descriptionurl ?? "",
-          author: stripHtml(meta?.Artist?.value),
-          license: meta?.LicenseShortName?.value ?? "",
+        if (!found) {
+          failure = `query: "${query}"`
+        } else {
+          const imgRes = await fetch(found.fetchUrl, {
+            headers: { "User-Agent": UA },
+          }).then(async (r) =>
+            // Flickr CDN rejects bot UAs with 403; retry with a browser UA
+            r.status === 403
+              ? fetch(found.fetchUrl, {
+                  headers: {
+                    "User-Agent":
+                      "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120 Safari/537.36",
+                  },
+                })
+              : r
+          )
+          if (!imgRes.ok) throw new Error(`download ${imgRes.status}`)
+          hit = {
+            bytes: Buffer.from(await imgRes.arrayBuffer()),
+            source: found.pageUrl,
+            author: found.author,
+            license: found.license,
+          }
+          byQuery.set(query, hit)
+          await sleep(400)
         }
-        byQuery.set(query, hit)
-        await sleep(400)
       }
 
-      await fs.writeFile(dest, hit.bytes)
-      credits = credits.filter((c) => c.slug !== product.slug)
-      credits.push({
-        slug: product.slug,
-        query,
-        file,
-        source: hit.source,
-        author: hit.author,
-        license: hit.license,
-      })
-      saved++
+      if (hit) {
+        await fs.writeFile(dest, hit.bytes)
+        credits = credits.filter((c) => c.slug !== product.slug)
+        credits.push({
+          slug: product.slug,
+          query,
+          file,
+          source: hit.source,
+          author: hit.author,
+          license: hit.license,
+        })
+        saved++
+        continue
+      }
     } catch (err) {
-      missing.push(`${product.slug}  (error: ${(err as Error).message})`)
+      failure = `error: ${(err as Error).message}`
     }
+
+    missing.push(`${product.slug}  (${failure ?? "no image source"})`)
   }
 
   await fs.writeFile(creditsPath, JSON.stringify(credits, null, 2))
