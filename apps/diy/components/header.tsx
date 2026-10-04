@@ -12,8 +12,6 @@ import { useEffect, useState } from "react"
 const navLinks = [
   { href: "/products", label: "Products" },
   { href: "/projects", label: "Projects" },
-  { href: "/about", label: "About" },
-  { href: "/contact", label: "Contact" },
 ]
 
 export function Header() {

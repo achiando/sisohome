@@ -1,4 +1,5 @@
 import type { Metadata } from "next"
+import { AnnouncementBar } from "@/components/announcement-bar"
 import { Header } from "@/components/header"
 import { Footer } from "@/components/footer"
 
@@ -16,6 +17,7 @@ export default function SiteLayout({
 }>) {
   return (
     <div className="flex min-h-screen flex-col">
+      <AnnouncementBar />
       <Header />
       <main className="flex-1">{children}</main>
       <Footer />

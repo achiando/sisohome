@@ -131,3 +131,8 @@ export function getWhatsAppBaseLink(): string {
   const phoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "254XXXXXXXXXX"
   return `https://wa.me/${phoneNumber}`
 }
+
+export function getWhatsAppLinkWithMessage(message: string): string {
+  const phoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "254XXXXXXXXXX"
+  return `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`
+}

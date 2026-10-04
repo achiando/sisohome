@@ -11,8 +11,6 @@ const navigation = [
   { name: "Products", href: "/products" },
   { name: "Projects", href: "/projects" },
   { name: "Quote", href: "/quote" },
-  { name: "About", href: "/about" },
-  { name: "Contact", href: "/contact" },
 ]
 
 export function MobileNavigation() {

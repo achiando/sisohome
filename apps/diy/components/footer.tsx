@@ -3,10 +3,13 @@ import { Button } from "@workspace/ui/components/button"
 import { Separator } from "@workspace/ui/components/separator"
 import { getAllCategories } from "@/lib/products"
 import { getWhatsAppBaseLink } from "@/lib/quote-basket"
+import { getPhoneDisplay, getPhoneTel } from "@/lib/contact"
 
 export async function Footer() {
   const categories = await getAllCategories()
   const whatsappLink = getWhatsAppBaseLink()
+  const phoneDisplay = getPhoneDisplay()
+  const phoneTel = getPhoneTel()
 
   return (
     <footer className="border-t bg-background">
@@ -69,22 +72,22 @@ export async function Footer() {
                   Your Quote
                 </Link>
               </li>
-              <li>
-                <Link href="/about" className="text-muted-foreground hover:text-foreground">
-                  About
-                </Link>
-              </li>
-              <li>
-                <Link href="/contact" className="text-muted-foreground hover:text-foreground">
-                  Contact
-                </Link>
-              </li>
             </ul>
           </div>
 
           <div className="space-y-4">
             <h4 className="text-sm font-semibold">Contact</h4>
             <ul className="space-y-2 text-sm">
+              {phoneTel && (
+                <li className="text-muted-foreground">
+                  <a
+                    href={phoneTel}
+                    className="hover:text-foreground"
+                  >
+                    {phoneDisplay}
+                  </a>
+                </li>
+              )}
               <li className="text-muted-foreground">
                 <a
                   href={whatsappLink}
@@ -94,6 +97,21 @@ export async function Footer() {
                 >
                   WhatsApp
                 </a>
+              </li>
+              <li className="text-muted-foreground">
+                <a href="mailto:info@tijwawelders.com" className="hover:text-foreground">
+                  info@tijwawelders.com
+                </a>
+              </li>
+              <li>
+                <Link href="/about" className="text-muted-foreground hover:text-foreground">
+                  About
+                </Link>
+              </li>
+              <li>
+                <Link href="/contact" className="text-muted-foreground hover:text-foreground">
+                  Contact
+                </Link>
               </li>
             </ul>
             <Link href="/quote">

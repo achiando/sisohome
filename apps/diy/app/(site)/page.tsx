@@ -17,13 +17,14 @@ import {
 } from "@/lib/projects"
 import { ProductCard } from "@/components/product-card"
 import { ProjectCard } from "@/components/project-card"
+import { FlaskConical, Hammer } from "lucide-react"
 import { CategoryChips } from "@/components/category-chips"
 import {
   HomeHeroCarousel,
   type HeroDeal,
   type HeroSlide,
 } from "@/components/home-hero-carousel"
-import { getWhatsAppBaseLink } from "@/lib/quote-basket"
+import { getWhatsAppBaseLink, getWhatsAppLinkWithMessage } from "@/lib/quote-basket"
 import { formatKsh } from "@/lib/money"
 
 export const revalidate = 60
@@ -271,6 +272,68 @@ export default async function HomePage() {
                 </CardContent>
               </Card>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Help CTAs — project support and lab supply */}
+      <section className="bg-background py-12 md:py-16">
+        <div className="container mx-auto px-4">
+          <div className="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-2">
+            <Card className="h-full">
+              <CardContent className="flex h-full flex-col p-6 md:p-8">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <Hammer className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <h2 className="mb-2 text-xl font-bold md:text-2xl">
+                  Need support making your project?
+                </h2>
+                <p className="mb-6 flex-1 text-sm text-muted-foreground md:text-base">
+                  Tell us what you are trying to build and we will help you
+                  work out the parts, quantities and practical next steps.
+                </p>
+                <a
+                  href={getWhatsAppLinkWithMessage(
+                    "Hello TijwaWelders DIY, I would like support with a project I am building. Here is what I have in mind:",
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
+                >
+                  <Button variant="primary" size="lg" className="w-full sm:w-auto">
+                    Get Project Support on WhatsApp
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+
+            <Card className="h-full">
+              <CardContent className="flex h-full flex-col p-6 md:p-8">
+                <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                  <FlaskConical className="h-5 w-5" aria-hidden="true" />
+                </div>
+                <h2 className="mb-2 text-xl font-bold md:text-2xl">
+                  Looking to equip a lab?
+                </h2>
+                <p className="mb-6 flex-1 text-sm text-muted-foreground md:text-base">
+                  Schools, training centres and institutions — tell us what your
+                  lab needs and we will put together a quotation for the
+                  equipment and components.
+                </p>
+                <a
+                  href={getWhatsAppLinkWithMessage(
+                    "Hello TijwaWelders DIY, I would like a quotation for supplying a lab. Here are the details:",
+                  )}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full sm:w-auto"
+                >
+                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                    Request a Lab Quote
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
           </div>
         </div>
       </section>
