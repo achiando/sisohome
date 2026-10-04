@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Search } from "lucide-react"
+import { Search, ShoppingBasket } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
@@ -72,13 +72,32 @@ export function Header() {
             <Search className="h-5 w-5" aria-hidden="true" />
           </Link>
 
-          <Link href="/quote" className="relative">
+          {/* Mobile: basket icon with badge counter */}
+          <Link
+            href="/quote"
+            aria-label={
+              quoteCount > 0
+                ? `Your quote, ${quoteCount} item${quoteCount === 1 ? "" : "s"}`
+                : "Your quote"
+            }
+            className="relative -mr-1 rounded-xl p-2.5 hover:bg-muted md:hidden"
+          >
+            <ShoppingBasket className="h-6 w-6" aria-hidden="true" />
+            {quoteCount > 0 && (
+              <Badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs text-white">
+                {quoteCount > 99 ? "99+" : quoteCount}
+              </Badge>
+            )}
+          </Link>
+
+          {/* Desktop: Get a Quote button */}
+          <Link href="/quote" className="relative hidden md:block">
             <Button variant="primary" size="md">
               Get a Quote
             </Button>
             {quoteCount > 0 && (
-              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-primary text-white text-xs">
-                {quoteCount}
+              <Badge className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs text-white">
+                {quoteCount > 99 ? "99+" : quoteCount}
               </Badge>
             )}
           </Link>

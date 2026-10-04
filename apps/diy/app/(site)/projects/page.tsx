@@ -87,7 +87,7 @@ export default async function ProjectsPage({ searchParams }: ProjectsPageProps) 
       )}
 
       {shown.length > 0 ? (
-        <div className="mb-16 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <div className="mb-16 grid grid-cols-2 gap-3 md:gap-6 lg:grid-cols-3">
           {shown.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}

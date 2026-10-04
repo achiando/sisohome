@@ -17,29 +17,35 @@ export function ProjectCard({ project }: { project: ProjectListItem }) {
               src={first.url}
               alt={first.alt || project.title}
               fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              sizes="(min-width: 1024px) 33vw, 50vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">Image coming soon</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">Image coming soon</p>
             </div>
           )}
         </div>
 
-        <CardContent className="flex flex-col gap-2 p-6">
-          <div className="flex flex-wrap gap-2">
+        <CardContent className="flex flex-col gap-1.5 p-3 sm:gap-2 sm:p-6">
+          <div className="hidden flex-wrap gap-2 sm:flex">
             {project.category && (
               <Badge variant="neutral" shape="pill" className="self-start">
                 {project.category}
               </Badge>
             )}
           </div>
-          <h3 className="text-lg font-semibold">{project.title}</h3>
+          <h3 className="line-clamp-2 text-sm font-semibold sm:text-lg">
+            {project.title}
+          </h3>
           {project.shortDesc && (
-            <p className="text-sm text-muted-foreground line-clamp-2">{project.shortDesc}</p>
+            <p className="line-clamp-1 text-xs text-muted-foreground sm:line-clamp-2 sm:text-sm">
+              {project.shortDesc}
+            </p>
           )}
-          <span className="mt-2 text-sm font-medium text-primary">View project →</span>
+          <span className="mt-1 text-xs font-medium text-primary sm:mt-2 sm:text-sm">
+            View project →
+          </span>
         </CardContent>
       </Link>
     </Card>

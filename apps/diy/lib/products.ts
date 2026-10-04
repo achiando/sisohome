@@ -76,7 +76,7 @@ export async function getProductBySlug(slug: string): Promise<ProductWithCategor
   return product
 }
 
-export async function getProductsByCategory(categorySlug: string) {
+export async function getProductsByCategory(categorySlug: string, take?: number) {
   return await prisma.diyProduct.findMany({
     where: { 
       isActive: true,
@@ -92,6 +92,7 @@ export async function getProductsByCategory(categorySlug: string) {
       },
     },
     orderBy: { sortOrder: 'asc' },
+    ...(take ? { take } : {}),
   })
 }
 

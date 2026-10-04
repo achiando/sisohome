@@ -26,43 +26,49 @@ export function ProductCard({ product }: { product: ProductWithCategory }) {
               src={imageUrl}
               alt={imageAlt}
               fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              sizes="(min-width: 1024px) 33vw, 50vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
             <div className="flex h-full items-center justify-center">
-              <p className="text-sm text-muted-foreground">Image coming soon</p>
+              <p className="text-xs text-muted-foreground sm:text-sm">Image coming soon</p>
             </div>
           )}
         </div>
 
-        <CardContent className="flex flex-1 flex-col gap-2 p-6">
-          <Badge variant="neutral" shape="pill" className="self-start">
+        <CardContent className="flex flex-1 flex-col gap-1.5 p-3 sm:gap-2 sm:p-6">
+          <Badge variant="neutral" shape="pill" className="hidden self-start sm:inline-flex">
             {product.category.name}
           </Badge>
-          <h3 className="text-lg font-semibold">{product.name}</h3>
-          <p className="text-sm text-muted-foreground line-clamp-2">{product.shortDesc}</p>
-          <div className="mt-auto flex items-end justify-between gap-3 pt-2">
+          <h3 className="line-clamp-2 text-sm font-semibold sm:text-lg">
+            {product.name}
+          </h3>
+          <p className="line-clamp-1 text-xs text-muted-foreground sm:line-clamp-2 sm:text-sm">
+            {product.shortDesc}
+          </p>
+          <div className="mt-auto flex items-end justify-between gap-2 pt-1.5 sm:gap-3 sm:pt-2">
             <div>
               {price ? (
-                <p className="text-xl font-bold text-primary">{price}</p>
+                <p className="text-base font-bold text-primary sm:text-xl">{price}</p>
               ) : (
-                <p className="text-sm font-medium text-muted-foreground">
+                <p className="text-xs font-medium text-muted-foreground sm:text-sm">
                   Price on request
                 </p>
               )}
               {showUnit && (
-                <p className="text-xs text-muted-foreground">per {product.unit}</p>
+                <p className="text-[11px] text-muted-foreground sm:text-xs">
+                  per {product.unit}
+                </p>
               )}
             </div>
-            <span className="text-sm font-medium text-primary group-hover:underline">
+            <span className="hidden text-sm font-medium text-primary group-hover:underline sm:inline">
               View →
             </span>
           </div>
         </CardContent>
       </Link>
 
-      <div className="px-6 pb-6">
+      <div className="px-3 pb-3 sm:px-6 sm:pb-6">
         <AddToQuoteButton product={product} />
       </div>
     </Card>
