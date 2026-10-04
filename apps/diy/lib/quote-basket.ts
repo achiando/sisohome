@@ -6,7 +6,17 @@ export interface QuoteItem {
   quantity: number
   unit: string | null
   price: string | null
+  priceCents?: number | null
   sourceProject: string | null
+}
+
+export function getItemPriceCents(item: QuoteItem): number | null {
+  if (typeof item.priceCents === "number" && Number.isFinite(item.priceCents)) {
+    return item.priceCents
+  }
+  if (!item.price) return null
+  const numeric = Number(item.price.replace(/[^\d.]/g, ""))
+  return Number.isFinite(numeric) ? Math.round(numeric * 100) : null
 }
 
 const QUOTE_BASKET_KEY = "tijwa_diy_quote_basket"
@@ -108,7 +118,7 @@ export function generateWhatsAppMessage(items: QuoteItem[]): string {
     ? `I would like a quotation for the products needed for the ${firstProject}:`
     : "I would like a quotation for:"
 
-  const message = `Hello TijwaWelders DIY,
+  const message = `Hello ODHERU Electronics,
 
 ${heading}
 

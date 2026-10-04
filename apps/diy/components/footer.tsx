@@ -14,10 +14,12 @@ export async function Footer() {
   return (
     <footer className="border-t bg-background">
       <div className="container mx-auto px-4 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           <div className="space-y-4">
             <h3 className="text-lg font-bold">
-              TijwaWelders <span className="text-primary">DIY</span>
+              <span className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight text-slate-950">
+                ODHERU <span className="text-amber-600">ELECTRONICS</span>
+              </span>
             </h3>
             <p className="text-sm text-muted-foreground">
               Tools, electronics components and project parts with practical
@@ -41,7 +43,10 @@ export async function Footer() {
                 ))
               ) : (
                 <li>
-                  <Link href="/products" className="text-muted-foreground hover:text-foreground">
+                  <Link
+                    href="/products"
+                    className="text-muted-foreground hover:text-foreground"
+                  >
                     All Products
                   </Link>
                 </li>
@@ -53,22 +58,34 @@ export async function Footer() {
             <h4 className="text-sm font-semibold">Quick Links</h4>
             <ul className="space-y-2 text-sm">
               <li>
-                <Link href="/products" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/products"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   Products
                 </Link>
               </li>
               <li>
-                <Link href="/projects" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/projects"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   Projects
                 </Link>
               </li>
               <li>
-                <Link href="/search" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/search"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   Search
                 </Link>
               </li>
               <li>
-                <Link href="/quote" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/quote"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   Your Quote
                 </Link>
               </li>
@@ -80,10 +97,7 @@ export async function Footer() {
             <ul className="space-y-2 text-sm">
               {phoneTel && (
                 <li className="text-muted-foreground">
-                  <a
-                    href={phoneTel}
-                    className="hover:text-foreground"
-                  >
+                  <a href={phoneTel} className="hover:text-foreground">
                     {phoneDisplay}
                   </a>
                 </li>
@@ -99,17 +113,26 @@ export async function Footer() {
                 </a>
               </li>
               <li className="text-muted-foreground">
-                <a href="mailto:info@tijwawelders.com" className="hover:text-foreground">
+                <a
+                  href="mailto:info@tijwawelders.com"
+                  className="hover:text-foreground"
+                >
                   info@tijwawelders.com
                 </a>
               </li>
               <li>
-                <Link href="/about" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/about"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   About
                 </Link>
               </li>
               <li>
-                <Link href="/contact" className="text-muted-foreground hover:text-foreground">
+                <Link
+                  href="/contact"
+                  className="text-muted-foreground hover:text-foreground"
+                >
                   Contact
                 </Link>
               </li>
@@ -124,8 +147,11 @@ export async function Footer() {
 
         <Separator className="my-8" />
 
-        <div className="flex flex-col md:flex-row justify-between items-center text-sm text-muted-foreground">
-          <p>&copy; {new Date().getFullYear()} TijwaWelders DIY. All rights reserved.</p>
+        <div className="flex flex-col items-center justify-between text-sm text-muted-foreground md:flex-row">
+          <p>
+            &copy; {new Date().getFullYear()} ODHERU Electronics. All rights
+            reserved.
+          </p>
         </div>
       </div>
     </footer>

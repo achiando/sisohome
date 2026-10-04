@@ -8,7 +8,7 @@ import { MessageCircle, Mail, ClipboardList } from "lucide-react"
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Contact TijwaWelders DIY for product and project quotations. WhatsApp is the fastest way to reach us; email is the fallback.",
+    "Contact ODHERU Electronics for product and project quotations. WhatsApp is the fastest way to reach us; email is the fallback.",
   alternates: { canonical: "/contact" },
 }
 
@@ -25,8 +25,8 @@ export default function ContactPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">Contact TijwaWelders DIY</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl">
+        <h1 className="mb-4 text-4xl font-bold">Contact ODHERU Electronics</h1>
+        <p className="max-w-2xl text-xl text-muted-foreground">
           Quotations are handled by a real person. WhatsApp is the fastest
           route; email works when you prefer to write things down.
         </p>
@@ -38,8 +38,8 @@ export default function ContactPage() {
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <MessageCircle className="h-5 w-5" aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold mb-2">WhatsApp</h2>
-            <p className="text-muted-foreground mb-4">
+            <h2 className="mb-2 text-xl font-bold">WhatsApp</h2>
+            <p className="mb-4 text-muted-foreground">
               Primary contact channel — usually the quickest reply
             </p>
             <a
@@ -60,8 +60,8 @@ export default function ContactPage() {
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <Mail className="h-5 w-5" aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Email</h2>
-            <p className="text-muted-foreground mb-4">
+            <h2 className="mb-2 text-xl font-bold">Email</h2>
+            <p className="mb-4 text-muted-foreground">
               For detailed requests and attachments
             </p>
             <a href="mailto:info@tijwawelders.com" className="block">
@@ -77,8 +77,8 @@ export default function ContactPage() {
             <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <ClipboardList className="h-5 w-5" aria-hidden="true" />
             </div>
-            <h2 className="text-xl font-bold mb-2">Your Quote</h2>
-            <p className="text-muted-foreground mb-4">
+            <h2 className="mb-2 text-xl font-bold">Your Quote</h2>
+            <p className="mb-4 text-muted-foreground">
               Already picked products? Send the quote you assembled
             </p>
             <Link href="/quote" className="block">
@@ -91,14 +91,14 @@ export default function ContactPage() {
       </div>
 
       <section className="mb-16 max-w-3xl">
-        <h2 className="text-2xl font-semibold mb-4">What to include</h2>
-        <p className="text-muted-foreground mb-4">
+        <h2 className="mb-4 text-2xl font-semibold">What to include</h2>
+        <p className="mb-4 text-muted-foreground">
           The more complete the first message, the faster we can price it.
         </p>
         <ul className="space-y-3">
           {quoteTips.map((tip) => (
             <li key={tip} className="flex items-start">
-              <span className="text-primary mr-2" aria-hidden="true">
+              <span className="mr-2 text-primary" aria-hidden="true">
                 ✓
               </span>
               <span className="text-muted-foreground">{tip}</span>
@@ -107,11 +107,11 @@ export default function ContactPage() {
         </ul>
       </section>
 
-      <section className="bg-muted/50 rounded-2xl p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Not sure where to start?</h2>
-        <p className="text-muted-foreground mb-6">
-          Browse the catalog or open a project — add items as you go, then
-          send everything in one message
+      <section className="rounded-2xl bg-muted/50 p-8 text-center">
+        <h2 className="mb-4 text-2xl font-bold">Not sure where to start?</h2>
+        <p className="mb-6 text-muted-foreground">
+          Browse the catalog or open a project — add items as you go, then send
+          everything in one message
         </p>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link href="/products">

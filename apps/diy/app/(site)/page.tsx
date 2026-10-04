@@ -24,7 +24,10 @@ import {
   type HeroDeal,
   type HeroSlide,
 } from "@/components/home-hero-carousel"
-import { getWhatsAppBaseLink, getWhatsAppLinkWithMessage } from "@/lib/quote-basket"
+import {
+  getWhatsAppBaseLink,
+  getWhatsAppLinkWithMessage,
+} from "@/lib/quote-basket"
 import { formatKsh } from "@/lib/money"
 
 export const revalidate = 60
@@ -51,16 +54,30 @@ const whyPoints = [
 ]
 
 const browseSections = [
-  { slug: "sensors", title: "Sensors", blurb: "Distance, temperature, gas, motion and more" },
-  { slug: "electronics-components", title: "Electronics Components", blurb: "Resistors, capacitors, diodes and ICs" },
-  { slug: "tools-workshop", title: "Tools & Workshop", blurb: "Soldering, hand tools and bench essentials" },
+  {
+    slug: "sensors",
+    title: "Sensors",
+    blurb: "Distance, temperature, gas, motion and more",
+  },
+  {
+    slug: "electronics-components",
+    title: "Electronics Components",
+    blurb: "Resistors, capacitors, diodes and ICs",
+  },
+  {
+    slug: "tools-workshop",
+    title: "Tools & Workshop",
+    blurb: "Soldering, hand tools and bench essentials",
+  },
 ]
 
-function productImages(product: ProductWithCategory): { url: string; alt?: string }[] {
+function productImages(
+  product: ProductWithCategory
+): { url: string; alt?: string }[] {
   if (!Array.isArray(product.images)) return []
   return (product.images as { url?: string; alt?: string }[]).filter(
     (image): image is { url: string; alt?: string } =>
-      Boolean(image) && typeof image.url === "string",
+      Boolean(image) && typeof image.url === "string"
   )
 }
 
@@ -70,9 +87,12 @@ export default async function HomePage() {
   const featuredProducts = await getFeaturedProducts()
   const featuredProjects = await getFeaturedProjects()
   const allProjects = featuredProjects.length > 0 ? [] : await getAllProjects()
-  const projects: ProjectListItem[] = [...featuredProjects, ...allProjects].slice(0, 6)
+  const projects: ProjectListItem[] = [
+    ...featuredProjects,
+    ...allProjects,
+  ].slice(0, 6)
   const browseProducts = await Promise.all(
-    browseSections.map((section) => getProductsByCategory(section.slug, 6)),
+    browseSections.map((section) => getProductsByCategory(section.slug, 6))
   )
 
   const totalProducts = Object.values(counts).reduce((sum, n) => sum + n, 0)
@@ -90,7 +110,9 @@ export default async function HomePage() {
   })
 
   const sensorProduct = browseProducts[0]?.[0]
-  const sensorHeroImage = sensorProduct ? productImages(sensorProduct)[0] : undefined
+  const sensorHeroImage = sensorProduct
+    ? productImages(sensorProduct)[0]
+    : undefined
   const projectHeroImage = parseProjectImages(projects[0]?.images)[0]
 
   const slides: HeroSlide[] = [
@@ -134,7 +156,7 @@ export default async function HomePage() {
         <section className="border-b bg-background">
           <div className="container mx-auto px-4 py-4">
             <div className="mb-3 flex items-center gap-3">
-              <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              <h2 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
                 Shop by category
               </h2>
               <span className="h-px flex-1 bg-border" aria-hidden="true" />
@@ -197,7 +219,9 @@ export default async function HomePage() {
         return (
           <section
             key={section.slug}
-            className={index % 2 === 1 ? "bg-muted/50 py-12 md:py-16" : "py-12 md:py-16"}
+            className={
+              index % 2 === 1 ? "bg-muted/50 py-12 md:py-16" : "py-12 md:py-16"
+            }
           >
             <div className="container mx-auto px-4">
               <div className="mb-6 flex flex-wrap items-end justify-between gap-4 md:mb-8">
@@ -237,7 +261,8 @@ export default async function HomePage() {
                   Build Something With It
                 </h2>
                 <p className="text-sm text-muted-foreground md:text-base">
-                  Practical projects with the products you need, listed with quantities
+                  Practical projects with the products you need, listed with
+                  quantities
                 </p>
               </div>
               <Link
@@ -261,7 +286,7 @@ export default async function HomePage() {
       <section className="bg-muted/50 py-12 md:py-16">
         <div className="container mx-auto px-4">
           <h2 className="mb-8 text-center text-2xl font-bold md:mb-10 md:text-3xl">
-            Why TijwaWelders DIY
+            Why ODHERU Electronics
           </h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
             {whyPoints.map((point) => (
@@ -289,18 +314,22 @@ export default async function HomePage() {
                   Need support making your project?
                 </h2>
                 <p className="mb-6 flex-1 text-sm text-muted-foreground md:text-base">
-                  Tell us what you are trying to build and we will help you
-                  work out the parts, quantities and practical next steps.
+                  Tell us what you are trying to build and we will help you work
+                  out the parts, quantities and practical next steps.
                 </p>
                 <a
                   href={getWhatsAppLinkWithMessage(
-                    "Hello TijwaWelders DIY, I would like support with a project I am building. Here is what I have in mind:",
+                    "Hello ODHERU Electronics, I would like support with a project I am building. Here is what I have in mind:"
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto"
                 >
-                  <Button variant="primary" size="lg" className="w-full sm:w-auto">
+                  <Button
+                    variant="primary"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                  >
                     Get Project Support on WhatsApp
                   </Button>
                 </a>
@@ -322,13 +351,17 @@ export default async function HomePage() {
                 </p>
                 <a
                   href={getWhatsAppLinkWithMessage(
-                    "Hello TijwaWelders DIY, I would like a quotation for supplying a lab. Here are the details:",
+                    "Hello ODHERU Electronics, I would like a quotation for supplying a lab. Here are the details:"
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="w-full sm:w-auto"
                 >
-                  <Button variant="outline" size="lg" className="w-full sm:w-auto">
+                  <Button
+                    variant="outline"
+                    size="lg"
+                    className="w-full sm:w-auto"
+                  >
                     Request a Lab Quote
                   </Button>
                 </a>

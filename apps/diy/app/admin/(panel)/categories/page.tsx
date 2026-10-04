@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db"
 import { CategoriesList, type AdminCategory } from "./categories-list"
 
 export const metadata: Metadata = {
-  title: "Categories - TijwaWelders DIY Admin",
+  title: "Categories - ODHERU Electronics Admin",
 }
 
 export default async function AdminCategoriesPage() {
@@ -14,7 +14,9 @@ export default async function AdminCategoriesPage() {
     prisma.diyProduct.groupBy({ by: ["categoryId"], _count: true }),
   ])
 
-  const countByCategory = new Map(counts.map((row) => [row.categoryId, row._count]))
+  const countByCategory = new Map(
+    counts.map((row) => [row.categoryId, row._count])
+  )
 
   const rows: AdminCategory[] = categories.map((category) => ({
     id: category.id,

@@ -1,6 +1,12 @@
 import type { Metadata } from "next"
 import { redirect } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@workspace/ui/components/card"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@workspace/ui/components/card"
 import { getSession } from "@/lib/session"
 import { LoginForm } from "./login-form"
 
@@ -15,7 +21,7 @@ export default async function AdminLoginPage() {
   return (
     <Card className="rounded-2xl shadow-lg">
       <CardHeader className="gap-1">
-        <CardTitle className="text-xl">TijwaWelders DIY Admin</CardTitle>
+        <CardTitle className="text-xl">ODHERU Electronics Admin</CardTitle>
         <CardDescription>Sign in to manage the catalogue.</CardDescription>
       </CardHeader>
       <CardContent>

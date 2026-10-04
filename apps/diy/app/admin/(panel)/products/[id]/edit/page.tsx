@@ -5,7 +5,7 @@ import { getAllCategories } from "@/lib/products"
 import { ProductForm, type ProductFormProduct } from "../../product-form"
 
 export const metadata: Metadata = {
-  title: "Edit Product - TijwaWelders DIY Admin",
+  title: "Edit Product - ODHERU Electronics Admin",
 }
 
 export default async function EditProductPage({
@@ -28,8 +28,13 @@ export default async function EditProductPage({
     name: category.name,
   }))
 
-  if (!categoryOptions.some((category) => category.id === product.category.id)) {
-    categoryOptions.push({ id: product.category.id, name: product.category.name })
+  if (
+    !categoryOptions.some((category) => category.id === product.category.id)
+  ) {
+    categoryOptions.push({
+      id: product.category.id,
+      name: product.category.name,
+    })
   }
 
   const formProduct: ProductFormProduct = {

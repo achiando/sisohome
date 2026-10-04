@@ -29,6 +29,10 @@ export function AnnouncementBar() {
   return (
     <div className="bg-primary text-primary-foreground">
       <div className="container mx-auto flex h-10 items-center justify-between gap-4 px-4 text-xs">
+
+      <p aria-live="polite" className="truncate text-right font-medium">
+          {messages[index]}
+        </p>
         <div className="flex h-full shrink-0 items-center gap-4">
           {phoneTel && (
             <a
@@ -52,9 +56,6 @@ export function AnnouncementBar() {
           </a>
         </div>
 
-        <p aria-live="polite" className="truncate text-right font-medium">
-          {messages[index]}
-        </p>
       </div>
     </div>
   )

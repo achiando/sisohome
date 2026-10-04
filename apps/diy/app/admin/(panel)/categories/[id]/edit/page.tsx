@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 import { CategoryForm, type CategoryFormCategory } from "../../category-form"
 
 export const metadata: Metadata = {
-  title: "Edit Category - TijwaWelders DIY Admin",
+  title: "Edit Category - ODHERU Electronics Admin",
 }
 
 export default async function EditCategoryPage({

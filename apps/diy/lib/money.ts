@@ -4,3 +4,5 @@ export function formatKsh(cents: number | null | undefined): string | null {
   }
   return `KSh ${(cents / 100).toLocaleString("en-KE", { maximumFractionDigits: 2 })}`
 }
+
+export const VAT_RATE = 0.16

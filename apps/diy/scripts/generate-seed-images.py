@@ -201,7 +201,7 @@ def render(filename, label, kicker, palette_name, motif_name, variant=0):
         y += 78
 
     d.line([(64, H - 74), (148, H - 74)], fill=(*accent, 255), width=4)
-    d.text((64, H - 58), "TijwaWelders DIY", font=word_font, fill=(226, 232, 240, 255))
+    d.text((64, H - 58), "ODHERU Electronics", font=word_font, fill=(226, 232, 240, 255))
 
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, filename)

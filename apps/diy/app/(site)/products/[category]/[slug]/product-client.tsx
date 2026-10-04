@@ -48,6 +48,7 @@ export function ProductClient({
       quantity,
       unit: product.unit,
       price: formatKsh(product.priceCents),
+      priceCents: product.priceCents,
       sourceProject: null,
     }
 

@@ -5,8 +5,8 @@ import { Footer } from "@/components/footer"
 
 export const metadata: Metadata = {
   title: {
-    default: "TijwaWelders DIY - Products, Projects & Quotations",
-    template: "%s | TijwaWelders DIY",
+    default: "ODHERU Electronics - Products, Projects & Quotations",
+    template: "%s | ODHERU Electronics",
   },
 }
 

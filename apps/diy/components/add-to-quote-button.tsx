@@ -31,6 +31,7 @@ export function AddToQuoteButton({
       quantity: 1,
       unit: product.unit,
       price: formatKsh(product.priceCents),
+      priceCents: product.priceCents,
       sourceProject: null,
     }
 
@@ -52,7 +53,7 @@ export function AddToQuoteButton({
     >
       <Icon className="size-4" aria-hidden="true" />
       <span className="hidden sm:inline">
-        {added ? "Added to Quote" : "Add to Quote"}
+        {added ? "Added to Cart" : "Add to Cart"}
       </span>
     </Button>
   )

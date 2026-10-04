@@ -3,7 +3,7 @@ import { getAllCategories } from "@/lib/products"
 import { ProductForm } from "../product-form"
 
 export const metadata: Metadata = {
-  title: "Add Product - TijwaWelders DIY Admin",
+  title: "Add Product - ODHERU Electronics Admin",
 }
 
 export default async function NewProductPage() {
@@ -11,7 +11,10 @@ export default async function NewProductPage() {
 
   return (
     <ProductForm
-      categories={categories.map((category) => ({ id: category.id, name: category.name }))}
+      categories={categories.map((category) => ({
+        id: category.id,
+        name: category.name,
+      }))}
     />
   )
 }

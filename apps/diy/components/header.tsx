@@ -26,19 +26,25 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+      <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <Link href="/" className="flex items-center space-x-2">
-          <span className="text-xl font-bold tracking-tight">
-            TijwaWelders <span className="text-primary">DIY</span>
+          {/* <span className="text-xl font-bold tracking-tight">
+            Tijwa <span className="text-primary">DIY</span>
+          </span> */}
+          <span className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight text-slate-950">
+            ODHERU <span className="text-amber-600">ELECTRONICS</span>
           </span>
         </Link>
 
-        <nav className="hidden md:flex items-center space-x-6" aria-label="Main navigation">
+        <nav
+          className="hidden items-center space-x-6 md:flex"
+          aria-label="Main navigation"
+        >
           {navLinks.map((link) => (
             <Link
               key={link.href}
               href={link.href}
-              className="text-sm font-medium hover:text-primary transition-colors"
+              className="text-sm font-medium transition-colors hover:text-primary"
             >
               {link.label}
             </Link>
@@ -65,7 +71,7 @@ export function Header() {
           <Link
             href="/search"
             aria-label="Search products and projects"
-            className="lg:hidden p-2"
+            className="p-2 lg:hidden"
           >
             <Search className="h-5 w-5" aria-hidden="true" />
           </Link>
@@ -82,7 +88,7 @@ export function Header() {
           >
             <ShoppingBasket className="h-6 w-6" aria-hidden="true" />
             {quoteCount > 0 && (
-              <Badge className="absolute -right-1 -top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs text-white">
+              <Badge className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs text-white">
                 {quoteCount > 99 ? "99+" : quoteCount}
               </Badge>
             )}
@@ -91,10 +97,10 @@ export function Header() {
           {/* Desktop: Get a Quote button */}
           <Link href="/quote" className="relative hidden md:block">
             <Button variant="primary" size="md">
-              Get a Quote
+              Cart
             </Button>
             {quoteCount > 0 && (
-              <Badge className="absolute -right-2 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs text-white">
+              <Badge className="absolute -top-2 -right-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-destructive px-1 text-xs text-white">
                 {quoteCount > 99 ? "99+" : quoteCount}
               </Badge>
             )}

@@ -2,12 +2,18 @@ import Link from "next/link"
 import type { Metadata } from "next"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
-import { Search, ClipboardList, MessageCircle, Wrench, FolderKanban } from "lucide-react"
+import {
+  Search,
+  ClipboardList,
+  MessageCircle,
+  Wrench,
+  FolderKanban,
+} from "lucide-react"
 
 export const metadata: Metadata = {
   title: "About",
   description:
-    "TijwaWelders DIY is a product discovery and quotation platform for DIY tools, electronics and project parts. Browse, build a quote and request pricing on WhatsApp.",
+    "ODHERU Electronics is a product discovery and quotation platform for DIY tools, electronics and project parts. Browse, build a quote and request pricing on WhatsApp.",
   alternates: { canonical: "/about" },
 }
 
@@ -38,35 +44,35 @@ export default function AboutPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">About TijwaWelders DIY</h1>
-        <p className="text-xl text-muted-foreground max-w-2xl">
+        <h1 className="mb-4 text-4xl font-bold">About ODHERU Electronics</h1>
+        <p className="max-w-2xl text-xl text-muted-foreground">
           A product discovery and quotation platform for people who build,
           repair and automate things.
         </p>
       </div>
 
       <section className="mb-16 max-w-3xl">
-        <h2 className="text-2xl font-semibold mb-4">What DIY Is</h2>
-        <p className="text-muted-foreground mb-4">
+        <h2 className="mb-4 text-2xl font-semibold">What DIY Is</h2>
+        <p className="mb-4 text-muted-foreground">
           DIY is the technical catalog arm of TijwaWelders: tools, workshop
-          equipment, electronics components, modules, sensors, wiring, power
-          and other project parts — organised so you can find what a job
-          actually needs instead of guessing.
+          equipment, electronics components, modules, sensors, wiring, power and
+          other project parts — organised so you can find what a job actually
+          needs instead of guessing.
         </p>
-        <p className="text-muted-foreground mb-4">
-          Alongside the catalog, the Projects section shows complete builds
-          with their steps and the exact parts involved, so a project page can
-          become a quote in one click.
+        <p className="mb-4 text-muted-foreground">
+          Alongside the catalog, the Projects section shows complete builds with
+          their steps and the exact parts involved, so a project page can become
+          a quote in one click.
         </p>
         <p className="text-muted-foreground">
-          DIY is not an online store with a checkout. You browse and assemble
-          a quote here; pricing and availability are confirmed by a person on
+          DIY is not an online store with a checkout. You browse and assemble a
+          quote here; pricing and availability are confirmed by a person on
           WhatsApp.
         </p>
       </section>
 
       <section className="mb-16">
-        <h2 className="text-2xl font-semibold mb-6">How It Works</h2>
+        <h2 className="mb-6 text-2xl font-semibold">How It Works</h2>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {steps.map((step, index) => (
             <Card key={step.title} variant="outlined">
@@ -74,10 +80,10 @@ export default function AboutPage() {
                 <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                   <step.icon className="h-5 w-5" aria-hidden="true" />
                 </div>
-                <p className="text-xs font-semibold uppercase text-muted-foreground mb-1">
+                <p className="mb-1 text-xs font-semibold text-muted-foreground uppercase">
                   Step {index + 1}
                 </p>
-                <h3 className="font-semibold mb-1">{step.title}</h3>
+                <h3 className="mb-1 font-semibold">{step.title}</h3>
                 <p className="text-sm text-muted-foreground">{step.body}</p>
               </CardContent>
             </Card>
@@ -86,15 +92,15 @@ export default function AboutPage() {
       </section>
 
       <section className="mb-16">
-        <h2 className="text-2xl font-semibold mb-6">What You&apos;ll Find</h2>
+        <h2 className="mb-6 text-2xl font-semibold">What You&apos;ll Find</h2>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
           <Card variant="outlined">
             <CardContent className="p-6">
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <Wrench className="h-5 w-5" aria-hidden="true" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Products</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="mb-2 text-lg font-semibold">Products</h3>
+              <p className="mb-4 text-sm text-muted-foreground">
                 Browse by category — sensors, modules, prototyping parts,
                 electrical, tools and more — with clear specifications on each
                 product.
@@ -112,8 +118,8 @@ export default function AboutPage() {
               <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                 <FolderKanban className="h-5 w-5" aria-hidden="true" />
               </div>
-              <h3 className="text-lg font-semibold mb-2">Projects</h3>
-              <p className="text-sm text-muted-foreground mb-4">
+              <h3 className="mb-2 text-lg font-semibold">Projects</h3>
+              <p className="mb-4 text-sm text-muted-foreground">
                 Practical builds explained step by step, each linked to the
                 products it uses — add a project&apos;s parts to your quote in
                 one action.
@@ -128,9 +134,11 @@ export default function AboutPage() {
         </div>
       </section>
 
-      <section className="bg-muted/50 rounded-2xl p-8 text-center">
-        <h2 className="text-2xl font-bold mb-4">Questions or a project in mind?</h2>
-        <p className="text-muted-foreground mb-6">
+      <section className="rounded-2xl bg-muted/50 p-8 text-center">
+        <h2 className="mb-4 text-2xl font-bold">
+          Questions or a project in mind?
+        </h2>
+        <p className="mb-6 text-muted-foreground">
           WhatsApp is the fastest way to reach us — email works too
         </p>
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row">

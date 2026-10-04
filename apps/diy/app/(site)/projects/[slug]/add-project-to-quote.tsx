@@ -16,6 +16,7 @@ type ProjectProduct = {
   quantity: number
   unit: string | null
   price: string | null
+  priceCents?: number | null
 }
 
 type ProjectPayload = {
@@ -39,6 +40,7 @@ export function AddProjectToQuote({ project }: { project: ProjectPayload }) {
       quantity: product.quantity,
       unit: product.unit,
       price: product.price,
+      priceCents: product.priceCents ?? null,
       sourceProject: project.title,
     }))
 

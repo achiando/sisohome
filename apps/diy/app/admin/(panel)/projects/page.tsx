@@ -4,7 +4,7 @@ import { firstProductImageUrl } from "@/lib/product-input"
 import { ProjectsList, type AdminProject } from "./projects-list"
 
 export const metadata: Metadata = {
-  title: "Projects - TijwaWelders DIY Admin",
+  title: "Projects - ODHERU Electronics Admin",
 }
 
 export default async function AdminProjectsPage() {

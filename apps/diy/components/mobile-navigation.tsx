@@ -3,9 +3,18 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
-import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@workspace/ui/components/sheet"
+import {
+  Sheet,
+  SheetContent,
+  SheetTrigger,
+  SheetTitle,
+} from "@workspace/ui/components/sheet"
 import { Badge } from "@workspace/ui/components/badge"
-import { getQuoteBasketCount, getWhatsAppBaseLink, QUOTE_BASKET_EVENT } from "@/lib/quote-basket"
+import {
+  getQuoteBasketCount,
+  getWhatsAppBaseLink,
+  QUOTE_BASKET_EVENT,
+} from "@/lib/quote-basket"
 
 const navigation = [
   { name: "Products", href: "/products" },
@@ -27,23 +36,36 @@ export function MobileNavigation() {
   return (
     <Sheet open={isOpen} onOpenChange={setIsOpen}>
       <SheetTrigger asChild>
-        <button className="md:hidden p-2 -mr-2" aria-label="Open menu">
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+        <button className="-mr-2 p-2 md:hidden" aria-label="Open menu">
+          <svg
+            className="h-6 w-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+            aria-hidden="true"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 6h16M4 12h16M4 18h16"
+            />
           </svg>
         </button>
       </SheetTrigger>
       <SheetContent side="right" className="w-80">
-        <SheetTitle className="text-xl font-bold">TijwaWelders DIY</SheetTitle>
+        <SheetTitle className="text-xl font-bold">
+          ODHERU Electronics
+        </SheetTitle>
 
-        <nav className="flex-1 mt-6" aria-label="Mobile navigation">
+        <nav className="mt-6 flex-1" aria-label="Mobile navigation">
           <ul className="space-y-4">
             {navigation.map((item) => (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   onClick={() => setIsOpen(false)}
-                  className="text-lg font-medium hover:text-primary transition-colors block"
+                  className="block text-lg font-medium transition-colors hover:text-primary"
                 >
                   {item.name}
                 </Link>
@@ -63,12 +85,16 @@ export function MobileNavigation() {
               WhatsApp
             </Button>
           </a>
-          <Link href="/quote" onClick={() => setIsOpen(false)} className="relative block">
+          <Link
+            href="/quote"
+            onClick={() => setIsOpen(false)}
+            className="relative block"
+          >
             <Button variant="outline" size="lg" className="w-full">
               Get a Quote
             </Button>
             {quoteCount > 0 && (
-              <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-primary text-white text-xs">
+              <Badge className="absolute -top-2 -right-2 flex h-5 w-5 items-center justify-center rounded-full bg-primary text-xs text-white">
                 {quoteCount}
               </Badge>
             )}
