@@ -1,4 +1,5 @@
 import { prisma } from "./db"
+import { tokenizeQuery } from "./search"
 
 export { parseProjectImages, type ProjectImage } from "./project-images"
 
@@ -165,17 +166,26 @@ export type SearchResult = {
 }
 
 export async function searchProjects(q: string, take = 10): Promise<ProjectListItem[]> {
-  if (!q) return []
+  const tokens = tokenizeQuery(q)
+  if (tokens.length === 0) return []
+  const perToken = tokens.map((variants) => ({
+    OR: variants.flatMap((v) => [
+      { title: { contains: v, mode: "insensitive" as const } },
+      { shortDesc: { contains: v, mode: "insensitive" as const } },
+      { description: { contains: v, mode: "insensitive" as const } },
+      { category: { contains: v, mode: "insensitive" as const } },
+      { slug: { contains: v, mode: "insensitive" as const } },
+    ]),
+  }))
+  const exact = await prisma.diyProject.findMany({
+    where: { isActive: true, AND: perToken },
+    select: listItemSelect,
+    orderBy: { sortOrder: "asc" },
+    take,
+  })
+  if (exact.length > 0) return exact
   return await prisma.diyProject.findMany({
-    where: {
-      isActive: true,
-      OR: [
-        { title: { contains: q, mode: "insensitive" } },
-        { shortDesc: { contains: q, mode: "insensitive" } },
-        { description: { contains: q, mode: "insensitive" } },
-        { category: { contains: q, mode: "insensitive" } },
-      ],
-    },
+    where: { isActive: true, OR: perToken },
     select: listItemSelect,
     orderBy: { sortOrder: "asc" },
     take,

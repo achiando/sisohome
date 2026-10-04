@@ -1,4 +1,5 @@
 import { prisma } from './db'
+import { tokenizeQuery } from './search'
 
 export type ProductWithCategory = {
   id: string
@@ -154,41 +155,68 @@ export async function getRelatedProducts(categoryId: string, excludeId: string) 
   })
 }
 
+function productTokenWhere(tokens: string[][]) {
+  const perToken = tokens.map((variants) => ({
+    OR: variants.flatMap((v) => [
+      { name: { contains: v, mode: 'insensitive' as const } },
+      { shortDesc: { contains: v, mode: 'insensitive' as const } },
+      { description: { contains: v, mode: 'insensitive' as const } },
+      { category: { name: { contains: v, mode: 'insensitive' as const } } },
+      { category: { slug: { contains: v, mode: 'insensitive' as const } } },
+    ]),
+  }))
+  return {
+    all: { AND: perToken },
+    any: { OR: perToken },
+  }
+}
+
 export async function searchProducts(q: string, take = 10) {
-  if (!q) return []
-  return await prisma.diyProduct.findMany({
-    where: {
-      isActive: true,
-      OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { shortDesc: { contains: q, mode: 'insensitive' } },
-        { description: { contains: q, mode: 'insensitive' } },
-      ],
-    },
-    include: {
-      category: {
-        select: {
-          id: true,
-          name: true,
-          slug: true,
-        },
+  const tokens = tokenizeQuery(q)
+  if (tokens.length === 0) return []
+  const where = productTokenWhere(tokens)
+  const include = {
+    category: {
+      select: {
+        id: true,
+        name: true,
+        slug: true,
       },
     },
+  }
+  const exact = await prisma.diyProduct.findMany({
+    where: { isActive: true, ...where.all },
+    include,
+    orderBy: { sortOrder: 'asc' },
+    take,
+  })
+  if (exact.length > 0) return exact
+  return await prisma.diyProduct.findMany({
+    where: { isActive: true, ...where.any },
+    include,
     orderBy: { sortOrder: 'asc' },
     take,
   })
 }
 
 export async function searchCategories(q: string, take = 5): Promise<CategoryList[]> {
-  if (!q) return []
+  const tokens = tokenizeQuery(q)
+  if (tokens.length === 0) return []
+  const perToken = tokens.map((variants) => ({
+    OR: variants.flatMap((v) => [
+      { name: { contains: v, mode: 'insensitive' as const } },
+      { description: { contains: v, mode: 'insensitive' as const } },
+      { slug: { contains: v, mode: 'insensitive' as const } },
+    ]),
+  }))
+  const exact = await prisma.diyCategory.findMany({
+    where: { isActive: true, AND: perToken },
+    orderBy: { sortOrder: 'asc' },
+    take,
+  })
+  if (exact.length > 0) return exact
   return await prisma.diyCategory.findMany({
-    where: {
-      isActive: true,
-      OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { description: { contains: q, mode: 'insensitive' } },
-      ],
-    },
+    where: { isActive: true, OR: perToken },
     orderBy: { sortOrder: 'asc' },
     take,
   })
