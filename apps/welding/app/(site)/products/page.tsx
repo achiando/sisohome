@@ -12,6 +12,9 @@ import { ProductCard } from "@/components/product-card"
 export const metadata = {
   title: "Products - TijwaWelders Steel Fabrication",
   description: "Browse our premium steel gates, doors, windows, railings, and custom metal fabrication products. Request quotations for your project.",
+  alternates: {
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/products`,
+  },
 }
 
 export default async function ProductsPage() {

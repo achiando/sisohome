@@ -5,6 +5,9 @@ import { Card, CardContent } from "@workspace/ui/components/card"
 export const metadata = {
   title: "Services - TijwaWelders Fabrication Services",
   description: "Professional welding and fabrication services. Gate fabrication, steel doors, structural steel, installation, and metal repairs.",
+  alternates: {
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/services`,
+  },
 }
 
 export default function ServicesPage() {

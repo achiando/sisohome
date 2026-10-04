@@ -9,11 +9,13 @@ import {
   type ProductWithCategory,
 } from "@/lib/products"
 import { getFeaturedProjects, type ProjectWithImages } from "@/lib/projects"
+import { getAllGuides } from "@/lib/guides"
 
 export default async function HomePage() {
   const categories = await getAllCategories()
   const featuredProducts = await getFeaturedProducts()
   const featuredProjects = await getFeaturedProjects()
+  const guides = await getAllGuides()
 
   // Use first featured project image for hero if available
   const firstProjectImages = featuredProjects[0]?.images
@@ -31,7 +33,7 @@ export default async function HomePage() {
   return (
     <div className="flex flex-col">
       {/* Hero Section */}
-      <section className="relative flex min-h-screen items-center justify-center bg-black">
+      <section className="relative flex min-h-screen items-center justify-center bg-background">
         {heroImage ? (
           <div className="absolute inset-0">
             <Image
@@ -42,10 +44,10 @@ export default async function HomePage() {
               priority
               quality={90}
             />
-            <div className="absolute inset-0 bg-black/50" />
+            <div className="absolute inset-0 bg-black/50 dark:bg-black/70" />
           </div>
         ) : (
-          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900" />
+          <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950" />
         )}
 
         <div className="relative z-10 container mx-auto px-4 text-center">
@@ -220,16 +222,11 @@ export default async function HomePage() {
           </p>
 
           <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-            {[
-              "Gauge 16 vs Gauge 18",
-              'What is a 3/4" Tube?',
-              "Choosing Steel for a Gate",
-              "Common Steel Sections",
-            ].map((guide) => (
-              <Link key={guide} href="/guides">
+            {guides.slice(0, 4).map((guide) => (
+              <Link key={guide.slug} href={`/guides/${guide.slug}`}>
                 <Card className="transition-shadow hover:shadow-md">
                   <CardContent className="p-4 text-center">
-                    <p className="text-sm font-medium">{guide}</p>
+                    <p className="text-sm font-medium">{guide.title}</p>
                   </CardContent>
                 </Card>
               </Link>
@@ -245,7 +242,7 @@ export default async function HomePage() {
       </section>
 
       {/* Final CTA */}
-      <section className="bg-gradient-to-br from-slate-900 to-slate-800 py-20">
+      <section className="bg-gradient-to-br from-slate-900 to-slate-800 dark:from-slate-950 dark:to-slate-900 py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="mb-4 text-3xl font-bold text-white">
             Have a Project in Mind?

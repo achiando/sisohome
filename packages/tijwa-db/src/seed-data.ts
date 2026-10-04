@@ -28,6 +28,7 @@ export type SeedProduct = {
   sortOrder: number
   seoTitle: string
   seoDesc: string
+  priceRange?: string
 }
 
 export type SeedProject = {
@@ -147,6 +148,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Sliding Gates | TijwaWelders",
     seoDesc:
       "Steel sliding gates fabricated to your opening in 3/4 inch or 1 inch tube, gauge 16 or gauge 18.",
+    priceRange: "KES 25,000 - KES 45,000",
   },
   {
     categorySlug: "gates",
@@ -171,6 +173,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Pedestrian Gates | TijwaWelders",
     seoDesc:
       "Pedestrian gates fabricated from 3/4 inch square tube with gauge 16 or gauge 18 infill.",
+    priceRange: "KES 8,000 - KES 15,000",
   },
   {
     categorySlug: "gates",
@@ -191,6 +194,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Security Gates | TijwaWelders",
     seoDesc:
       "Security gates with close-spaced gauge 16 or gauge 18 infill on a 1 inch square tube frame.",
+    priceRange: "KES 20,000 - KES 40,000",
   },
   {
     categorySlug: "gates",
@@ -211,6 +215,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Swing Gates | TijwaWelders",
     seoDesc:
       "Double leaf swing gates fabricated from 1 inch square tube in gauge 16 or gauge 18.",
+    priceRange: "KES 30,000 - KES 55,000",
   },
 
   {
@@ -240,6 +245,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Security Doors | TijwaWelders",
     seoDesc:
       "Steel security doors with gauge 16 or gauge 18 sheet skin on a 1 inch square tube frame.",
+    priceRange: "KES 18,000 - KES 35,000",
   },
   {
     categorySlug: "doors",
@@ -258,6 +264,7 @@ export const products: SeedProduct[] = [
     sortOrder: 2,
     seoTitle: "Steel Door Frames | TijwaWelders",
     seoDesc: "Steel door frames fabricated to your measured door opening.",
+    priceRange: "KES 6,000 - KES 12,000",
   },
   {
     categorySlug: "doors",
@@ -278,6 +285,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Double Doors | TijwaWelders",
     seoDesc:
       "Double leaf steel doors fabricated from 1 inch square tube with gauge 16 or gauge 18 skin.",
+    priceRange: "KES 35,000 - KES 60,000",
   },
 
   {
@@ -306,6 +314,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Window Grills | TijwaWelders",
     seoDesc:
       "Window grills fabricated from 3/4 inch square tube with gauge 16 or gauge 18 bar infill.",
+    priceRange: "KES 3,500 - KES 8,000",
   },
   {
     categorySlug: "windows",
@@ -324,6 +333,7 @@ export const products: SeedProduct[] = [
     sortOrder: 2,
     seoTitle: "Steel Window Frames | TijwaWelders",
     seoDesc: "Steel window frames fabricated to your measured window opening.",
+    priceRange: "KES 5,000 - KES 10,000",
   },
   {
     categorySlug: "windows",
@@ -347,6 +357,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Expanded Metal Window Screens | TijwaWelders",
     seoDesc:
       "Expanded metal window screens welded into 3/4 inch square tube frames.",
+    priceRange: "KES 2,500 - KES 5,000",
   },
 
   {
@@ -374,6 +385,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Balcony Railings | TijwaWelders",
     seoDesc:
       "Balcony railings fabricated from 1 inch square tube with gauge 16 or gauge 18 infill.",
+    priceRange: "KES 4,000 - KES 8,000 per meter",
   },
   {
     categorySlug: "railings",
@@ -392,6 +404,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Stair Railings | TijwaWelders",
     seoDesc:
       "Stair railings fabricated from 1 inch and 3/4 inch square tube to your stair measurement.",
+    priceRange: "KES 5,000 - KES 10,000 per meter",
   },
   {
     categorySlug: "railings",
@@ -411,6 +424,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Handrails | TijwaWelders",
     seoDesc:
       "Steel handrails fabricated from 1 inch rail tube on 3/4 inch square tube posts.",
+    priceRange: "KES 3,000 - KES 6,000 per meter",
   },
 
   {
@@ -443,6 +457,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Structural Steel Beams | TijwaWelders",
     seoDesc:
       "Structural steel beams fabricated from plate and section, cut and welded to your drawing.",
+    priceRange: "KES 8,000 - KES 15,000 per meter",
   },
   {
     categorySlug: "structural",
@@ -462,6 +477,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Steel Columns | TijwaWelders",
     seoDesc:
       "Steel columns fabricated from plate and section, cut and welded to your drawing.",
+    priceRange: "KES 10,000 - KES 20,000 per meter",
   },
 
   {
@@ -487,6 +503,7 @@ export const products: SeedProduct[] = [
     seoTitle: "Custom Steel Fabrication | TijwaWelders",
     seoDesc:
       "Custom steel fabrication from your drawing, sketch or sample in square tube, sheet or plate.",
+    priceRange: "Request Quote",
   },
 ]
 

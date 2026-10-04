@@ -25,11 +25,16 @@ export async function generateMetadata({ params }: CategoryPageProps) {
     }
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"
+
   return {
     title: `${category.name} | TijwaWelders`,
     description:
       category.description ||
       `Browse ${category.name} fabricated by TijwaWelders. Request a quotation for your project.`,
+    alternates: {
+      canonical: `${baseUrl}/products/${categorySlug}`,
+    },
   }
 }
 

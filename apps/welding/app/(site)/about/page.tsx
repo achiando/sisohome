@@ -4,6 +4,9 @@ import { Button } from "@workspace/ui/components/button"
 export const metadata = {
   title: "About TijwaWelders - Steel Fabrication Experts",
   description: "Learn about TijwaWelders - your trusted partner for steel gates, doors, railings, and custom metal fabrication in Kenya.",
+  alternates: {
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/about`,
+  },
 }
 
 export default function AboutPage() {

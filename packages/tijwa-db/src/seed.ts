@@ -54,6 +54,7 @@ async function seedProducts(categoryIds: Map<string, string>) {
       sortOrder: product.sortOrder,
       seoTitle: product.seoTitle,
       seoDesc: product.seoDesc,
+      priceRange: product.priceRange,
       isActive: true,
       category: { connect: { id: categoryId } },
     }

@@ -19,9 +19,14 @@ export async function generateMetadata({ params }: ProjectPageProps) {
     }
   }
 
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"
+
   return {
     title: project.seoTitle || `${project.title} | TijwaWelders Projects`,
     description: project.seoDesc || project.description || `${project.title} by TijwaWelders.`,
+    alternates: {
+      canonical: `${baseUrl}/projects/${slug}`,
+    },
   }
 }
 

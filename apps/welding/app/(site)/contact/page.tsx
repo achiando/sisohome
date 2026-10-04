@@ -4,6 +4,9 @@ import { Card, CardContent } from "@workspace/ui/components/card"
 export const metadata = {
   title: "Contact TijwaWelders - Get a Quote",
   description: "Contact TijwaWelders for steel fabrication quotes. WhatsApp, phone, and email contact information for your project.",
+  alternates: {
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/contact`,
+  },
 }
 
 export default function ContactPage() {

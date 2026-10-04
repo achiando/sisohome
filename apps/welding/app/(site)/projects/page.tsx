@@ -6,6 +6,9 @@ import { getAllProjects, type ProjectWithImages } from "@/lib/projects"
 export const metadata = {
   title: "Projects - TijwaWelders Portfolio",
   description: "View our real fabrication work and projects. Steel gates, doors, railings, and structural installations across Kenya.",
+  alternates: {
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/projects`,
+  },
 }
 
 export default async function ProjectsPage() {
