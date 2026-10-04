@@ -480,7 +480,7 @@ export function ProjectForm({
                   type: "custom",
                   colSpan: "full",
                   render: ({ value, onChange }) => (
-                    <ImagesEditor value={value} onChange={onChange} />
+                    <ImagesEditor value={value} onChange={onChange} folder="projects" />
                   ),
                 },
               ],
