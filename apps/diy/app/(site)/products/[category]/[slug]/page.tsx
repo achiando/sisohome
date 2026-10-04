@@ -1,7 +1,11 @@
 import type { Metadata } from "next"
 import { notFound } from "next/navigation"
 import { getProductBySlug, getRelatedProducts } from "@/lib/products"
-import { getProjectsUsingProduct, type ProjectListItem } from "@/lib/projects"
+import {
+  getProjectsUsingProduct,
+  getFeaturedProjects,
+  type ProjectListItem,
+} from "@/lib/projects"
 import { jsonLdScript, productJsonLd } from "@/lib/seo"
 import { Breadcrumbs } from "@/components/breadcrumbs"
 import { ProductClient } from "./product-client"
@@ -37,7 +41,13 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
   }
 
   const relatedProducts = await getRelatedProducts(product.categoryId, product.id)
-  const relatedProjects = await getProjectsUsingProduct(product.id)
+
+  let relatedProjects = await getProjectsUsingProduct(product.id, 8)
+  let projectsTitle = "Projects Using This Product"
+  if (relatedProjects.length === 0) {
+    relatedProjects = (await getFeaturedProjects()).slice(0, 8)
+    projectsTitle = "Projects to Explore"
+  }
 
   const images = Array.isArray(product.images)
     ? (product.images as { url?: string }[])
@@ -72,6 +82,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
           product={product}
           relatedProducts={relatedProducts}
           relatedProjects={relatedProjects}
+          projectsTitle={projectsTitle}
         />
       </div>
     </>

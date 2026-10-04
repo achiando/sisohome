@@ -150,7 +150,7 @@ export async function getRelatedProducts(categoryId: string, excludeId: string) 
       },
     },
     orderBy: { sortOrder: 'asc' },
-    take: 4,
+    take: 12,
   })
 }
 

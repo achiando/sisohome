@@ -2,7 +2,8 @@ import Link from "next/link"
 import Image from "next/image"
 import { Badge } from "@workspace/ui/components/badge"
 import { Card, CardContent } from "@workspace/ui/components/card"
-import { parseProjectImages, type ProjectListItem } from "@/lib/projects"
+import { parseProjectImages } from "@/lib/project-images"
+import type { ProjectListItem } from "@/lib/projects"
 
 export function ProjectCard({ project }: { project: ProjectListItem }) {
   const images = parseProjectImages(project.images)

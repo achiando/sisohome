@@ -12,6 +12,7 @@ import {
 import {
   getFeaturedProjects,
   getAllProjects,
+  parseProjectImages,
   type ProjectListItem,
 } from "@/lib/projects"
 import { ProductCard } from "@/components/product-card"
@@ -87,10 +88,15 @@ export default async function HomePage() {
     }
   })
 
+  const sensorProduct = browseProducts[0]?.[0]
+  const sensorHeroImage = sensorProduct ? productImages(sensorProduct)[0] : undefined
+  const projectHeroImage = parseProjectImages(projects[0]?.images)[0]
+
   const slides: HeroSlide[] = [
     {
       eyebrow: "Featured Deals",
       gradient: "bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900",
+      backgroundImageUrl: deals[0]?.imageUrl ?? null,
       title: "Deals for makers and repairers",
       body: "Featured products with prices, plus everything you need for your next build. Add to your quote and get the full quotation in one WhatsApp message.",
       primary: { label: "Browse Products", href: "/products" },
@@ -104,6 +110,7 @@ export default async function HomePage() {
     {
       eyebrow: `${totalProducts} products · ${categories.length} categories`,
       gradient: "bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900",
+      backgroundImageUrl: sensorHeroImage?.url ?? null,
       title: "Find the exact part you need",
       body: "From resistors and sensors to tools and enclosures — browse the full catalog by category and add what you need to your quote.",
       primary: { label: "Browse Categories", href: "/products" },
@@ -111,6 +118,7 @@ export default async function HomePage() {
     {
       eyebrow: "Projects",
       gradient: "bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900",
+      backgroundImageUrl: projectHeroImage?.url ?? null,
       title: "Build something with it",
       body: "Step-by-step projects that list every product you need, with quantities — add them all to your quote in one tap.",
       primary: { label: "Explore Projects", href: "/projects" },

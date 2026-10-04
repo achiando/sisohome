@@ -21,6 +21,7 @@ export interface HeroSlide {
   title: string
   body: string
   gradient: string
+  backgroundImageUrl?: string | null
   primary: { label: string; href: string }
   secondary?: { label: string; href: string; external?: boolean }
   deals?: HeroDeal[]
@@ -104,13 +105,25 @@ export function HomeHeroCarousel({ slides }: { slides: HeroSlide[] }) {
         {slides.map((slide, i) => (
           <div
             key={slide.title}
-            className={cn("w-full shrink-0", slide.gradient)}
+            className={cn("relative w-full shrink-0", slide.gradient)}
             aria-hidden={i !== index}
             inert={i !== index}
           >
+            {slide.backgroundImageUrl && (
+              <div className="absolute inset-0" aria-hidden="true">
+                <Image
+                  src={slide.backgroundImageUrl}
+                  alt=""
+                  fill
+                  sizes="100vw"
+                  className="object-cover opacity-30"
+                />
+                <div className="absolute inset-0 bg-gradient-to-r from-black/70 via-black/40 to-black/10" />
+              </div>
+            )}
             <div
               className={cn(
-                "grid gap-8 px-6 pb-16 pt-8 sm:px-10 sm:pb-14 sm:pt-10 md:min-h-[400px] md:items-center",
+                "relative z-10 grid min-h-[340px] items-center gap-6 px-5 pb-14 pt-6 sm:px-10 sm:pt-9 md:min-h-[420px]",
                 slide.deals?.length ? "md:grid-cols-2" : "md:grid-cols-1",
               )}
             >

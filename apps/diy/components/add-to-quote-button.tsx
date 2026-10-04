@@ -39,16 +39,21 @@ export function AddToQuoteButton({
     setTimeout(() => setAdded(false), 2500)
   }
 
+  const Icon = added ? Check : Plus
+
   return (
     <Button
       type="button"
       variant={added ? "secondary" : "primary"}
       size="md"
       className="w-full"
-      leftIcon={added ? Check : Plus}
+      aria-label={added ? "Added to quote" : "Add to quote"}
       onClick={handleAdd}
     >
-      {added ? "Added to Quote" : "Add to Quote"}
+      <Icon className="size-4" aria-hidden="true" />
+      <span className="hidden sm:inline">
+        {added ? "Added to Quote" : "Add to Quote"}
+      </span>
     </Button>
   )
 }
