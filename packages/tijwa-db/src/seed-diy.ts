@@ -441,7 +441,7 @@ async function seedDatabase() {
         shortDesc: product.shortDesc,
         description: product.description,
         unit: product.unit,
-        price: product.price,
+        priceCents: Math.round(product.price * 100),
         specifications: product.specifications,
         images: product.images,
         isFeatured: product.isFeatured,

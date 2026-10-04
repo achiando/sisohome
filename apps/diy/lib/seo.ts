@@ -31,7 +31,7 @@ export function productJsonLd(product: {
   description: string
   image: string[]
   url: string
-  price?: number | null
+  priceCents?: number | null
 }) {
   return {
     "@context": "https://schema.org",
@@ -40,11 +40,11 @@ export function productJsonLd(product: {
     description: product.description,
     image: product.image,
     url: absoluteUrl(product.url),
-    ...(product.price != null && Number.isFinite(product.price)
+    ...(product.priceCents != null && Number.isFinite(product.priceCents)
       ? {
           offers: {
             "@type": "Offer",
-            price: product.price,
+            price: (product.priceCents / 100).toFixed(2),
             priceCurrency: "KES",
           },
         }

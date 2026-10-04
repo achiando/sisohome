@@ -9,7 +9,7 @@ export type ProductWithCategory = {
   description: string | null
   unit: string | null
   specifications: any
-  price: number | null
+  priceCents: number
   images: any
   category: {
     id: string

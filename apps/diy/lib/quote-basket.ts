@@ -10,6 +10,13 @@ export interface QuoteItem {
 }
 
 const QUOTE_BASKET_KEY = "tijwa_diy_quote_basket"
+export const QUOTE_BASKET_EVENT = "tijwa:diy-quote-updated"
+
+function persist(basket: QuoteItem[]): QuoteItem[] {
+  localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(basket))
+  window.dispatchEvent(new Event(QUOTE_BASKET_EVENT))
+  return basket
+}
 
 export function getQuoteBasket(): QuoteItem[] {
   if (typeof window === "undefined") return []
@@ -36,8 +43,7 @@ export function addToQuoteBasket(item: QuoteItem): QuoteItem[] {
     basket.push(item)
   }
 
-  localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(basket))
-  return basket
+  return persist(basket)
 }
 
 export function addProjectToQuoteBasket(items: QuoteItem[]): QuoteItem[] {
@@ -45,14 +51,12 @@ export function addProjectToQuoteBasket(items: QuoteItem[]): QuoteItem[] {
   for (const item of items) {
     basket = addToQuoteBasket(item)
   }
-  localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(basket))
-  return basket
+  return persist(basket)
 }
 
 export function removeFromQuoteBasket(id: string): QuoteItem[] {
   const basket = getQuoteBasket().filter((item) => item.id !== id)
-  localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(basket))
-  return basket
+  return persist(basket)
 }
 
 export function updateQuoteQuantity(id: string, quantity: number): QuoteItem[] {
@@ -64,7 +68,7 @@ export function updateQuoteQuantity(id: string, quantity: number): QuoteItem[] {
       return removeFromQuoteBasket(id)
     }
     item.quantity = quantity
-    localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(basket))
+    return persist(basket)
   }
 
   return basket
@@ -72,6 +76,7 @@ export function updateQuoteQuantity(id: string, quantity: number): QuoteItem[] {
 
 export function clearQuoteBasket(): void {
   localStorage.removeItem(QUOTE_BASKET_KEY)
+  window.dispatchEvent(new Event(QUOTE_BASKET_EVENT))
 }
 
 export function getQuoteBasketCount(): number {

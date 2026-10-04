@@ -40,7 +40,7 @@ export default async function EditProductPage({
     shortDesc: product.shortDesc,
     description: product.description,
     unit: product.unit,
-    price: product.price,
+    price: product.priceCents / 100,
     sortOrder: product.sortOrder,
     isFeatured: product.isFeatured,
     isActive: product.isActive,

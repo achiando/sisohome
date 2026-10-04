@@ -4,20 +4,21 @@ import { Badge } from "@workspace/ui/components/badge"
 import { Card, CardContent } from "@workspace/ui/components/card"
 import { formatKsh } from "@/lib/money"
 import type { ProductWithCategory } from "@/lib/products"
+import { AddToQuoteButton } from "./add-to-quote-button"
 
 export function ProductCard({ product }: { product: ProductWithCategory }) {
   const images = Array.isArray(product.images) ? product.images : []
   const first = images[0] as { url?: string; alt?: string } | undefined
   const imageUrl = first && typeof first.url === "string" ? first.url : null
   const imageAlt = first && typeof first.alt === "string" && first.alt ? first.alt : product.name
-  const price = formatKsh(product.price)
+  const price = formatKsh(product.priceCents)
   const showUnit = Boolean(product.unit && product.unit !== "Each")
 
   return (
-    <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
+    <Card className="flex h-full flex-col overflow-hidden transition-shadow hover:shadow-lg">
       <Link
         href={`/products/${product.category.slug}/${product.slug}`}
-        className="group block h-full"
+        className="group flex flex-1 flex-col"
       >
         <div className="relative aspect-video overflow-hidden bg-muted">
           {imageUrl ? (
@@ -35,7 +36,7 @@ export function ProductCard({ product }: { product: ProductWithCategory }) {
           )}
         </div>
 
-        <CardContent className="flex h-full flex-col gap-2 p-6">
+        <CardContent className="flex flex-1 flex-col gap-2 p-6">
           <Badge variant="neutral" shape="pill" className="self-start">
             {product.category.name}
           </Badge>
@@ -60,6 +61,10 @@ export function ProductCard({ product }: { product: ProductWithCategory }) {
           </div>
         </CardContent>
       </Link>
+
+      <div className="px-6 pb-6">
+        <AddToQuoteButton product={product} />
+      </div>
     </Card>
   )
 }

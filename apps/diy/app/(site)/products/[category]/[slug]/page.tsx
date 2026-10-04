@@ -50,7 +50,7 @@ export default async function ProductDetailPage({ params }: ProductPageProps) {
     description: product.seoDesc || product.shortDesc,
     image: images,
     url: `/products/${product.category.slug}/${product.slug}`,
-    price: product.price,
+    priceCents: product.priceCents,
   })
 
   return (

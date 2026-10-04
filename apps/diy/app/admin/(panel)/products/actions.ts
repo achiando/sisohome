@@ -58,7 +58,7 @@ interface ValidatedProduct {
   shortDesc: string
   description: string | null
   unit: string | null
-  price: number | null
+  priceCents: number
   sortOrder: number
   isFeatured: boolean
   isActive: boolean
@@ -114,7 +114,7 @@ async function validateProduct(
   }
 
   const rawPrice = cleanText(input.price)
-  let price: number | null = null
+  let priceCents = 0
   if (!rawPrice) {
     fieldErrors.price = "Enter a price."
   } else {
@@ -122,7 +122,7 @@ async function validateProduct(
     if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
       fieldErrors.price = "Enter a valid price in KSh."
     } else {
-      price = parsedPrice
+      priceCents = Math.round(parsedPrice * 100)
     }
   }
 
@@ -144,7 +144,7 @@ async function validateProduct(
       shortDesc,
       description: cleanText(input.description) || null,
       unit: unit || null,
-      price,
+      priceCents,
       sortOrder,
       isFeatured: input.isFeatured === true,
       isActive: input.isActive !== false,

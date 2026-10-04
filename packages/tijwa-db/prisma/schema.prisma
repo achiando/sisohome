@@ -167,7 +167,7 @@ model DiyProduct {
   description   String?  @db.Text
   unit          String?
   specifications Json?
-  price         Float?
+  priceCents    Int      @map("price_cents")
   images        Json?
   isActive      Boolean  @default(true) @map("is_active")
   isFeatured    Boolean  @default(false) @map("is_featured")

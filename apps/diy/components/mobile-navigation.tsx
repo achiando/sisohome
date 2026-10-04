@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@workspace/ui/components/sheet"
 import { Badge } from "@workspace/ui/components/badge"
-import { getQuoteBasketCount, getWhatsAppBaseLink } from "@/lib/quote-basket"
+import { getQuoteBasketCount, getWhatsAppBaseLink, QUOTE_BASKET_EVENT } from "@/lib/quote-basket"
 
 const navigation = [
   { name: "Products", href: "/products" },
@@ -20,7 +20,10 @@ export function MobileNavigation() {
   const [quoteCount, setQuoteCount] = useState(0)
 
   useEffect(() => {
-    setQuoteCount(getQuoteBasketCount())
+    const syncCount = () => setQuoteCount(getQuoteBasketCount())
+    syncCount()
+    window.addEventListener(QUOTE_BASKET_EVENT, syncCount)
+    return () => window.removeEventListener(QUOTE_BASKET_EVENT, syncCount)
   }, [])
 
   return (

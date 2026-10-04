@@ -208,7 +208,7 @@ export default async function ProjectDetailPage({ params }: ProjectPageProps) {
                       slug: link.product.slug,
                       quantity: link.quantity,
                       unit: link.product.unit,
-                      price: formatKsh(link.product.price),
+                      price: formatKsh(link.product.priceCents),
                     })),
                   }}
                 />

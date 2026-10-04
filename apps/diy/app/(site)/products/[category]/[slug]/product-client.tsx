@@ -30,7 +30,7 @@ export function ProductClient({ product, relatedProducts, relatedProjects }: Pro
   const [quoteCount, setQuoteCount] = useState(0)
   const [selectedImage, setSelectedImage] = useState(0)
   const [quantity, setQuantity] = useState(1)
-  const price = formatKsh(product.price)
+  const price = formatKsh(product.priceCents)
 
   const handleAddToQuote = () => {
     const quoteItem: QuoteItem = {
@@ -40,7 +40,7 @@ export function ProductClient({ product, relatedProducts, relatedProjects }: Pro
       slug: product.slug,
       quantity,
       unit: product.unit,
-      price: formatKsh(product.price),
+      price: formatKsh(product.priceCents),
       sourceProject: null,
     }
 

@@ -23,7 +23,7 @@ export type ProjectProductLink = {
     slug: string
     shortDesc: string
     unit: string | null
-    price: number | null
+    priceCents: number
     images: unknown
     category: { name: string; slug: string }
   }
@@ -128,7 +128,7 @@ export async function getProjectBySlug(slug: string): Promise<ProjectWithProduct
               slug: true,
               shortDesc: true,
               unit: true,
-              price: true,
+              priceCents: true,
               images: true,
               category: { select: { name: true, slug: true } },
             },

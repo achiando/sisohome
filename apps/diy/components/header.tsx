@@ -6,7 +6,7 @@ import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
 import { Input } from "@workspace/ui/components/input"
 import { MobileNavigation } from "./mobile-navigation"
-import { getQuoteBasketCount } from "@/lib/quote-basket"
+import { getQuoteBasketCount, QUOTE_BASKET_EVENT } from "@/lib/quote-basket"
 import { useEffect, useState } from "react"
 
 const navLinks = [
@@ -20,7 +20,10 @@ export function Header() {
   const [quoteCount, setQuoteCount] = useState(0)
 
   useEffect(() => {
-    setQuoteCount(getQuoteBasketCount())
+    const syncCount = () => setQuoteCount(getQuoteBasketCount())
+    syncCount()
+    window.addEventListener(QUOTE_BASKET_EVENT, syncCount)
+    return () => window.removeEventListener(QUOTE_BASKET_EVENT, syncCount)
   }, [])
 
   return (
