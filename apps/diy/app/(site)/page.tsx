@@ -1,7 +1,5 @@
 import Link from "next/link"
-import Image from "next/image"
 import type { Metadata } from "next"
-import { Tag } from "lucide-react"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 import {
@@ -19,6 +17,11 @@ import {
 import { ProductCard } from "@/components/product-card"
 import { ProjectCard } from "@/components/project-card"
 import { CategoryChips } from "@/components/category-chips"
+import {
+  HomeHeroCarousel,
+  type HeroDeal,
+  type HeroSlide,
+} from "@/components/home-hero-carousel"
 import { getWhatsAppBaseLink } from "@/lib/quote-basket"
 import { formatKsh } from "@/lib/money"
 
@@ -59,47 +62,6 @@ function productImages(product: ProductWithCategory): { url: string; alt?: strin
   )
 }
 
-function DealTile({ product }: { product: ProductWithCategory }) {
-  const image = productImages(product)[0]
-  const price = formatKsh(product.priceCents)
-
-  return (
-    <Link
-      href={`/products/${product.category.slug}/${product.slug}`}
-      className="group flex items-center gap-3 rounded-2xl bg-background p-3 shadow-sm transition-shadow hover:shadow-md"
-    >
-      <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-muted sm:h-20 sm:w-20">
-        {image && (
-          <Image
-            src={image.url}
-            alt={image.alt || product.name}
-            fill
-            sizes="80px"
-            className="object-cover transition-transform duration-300 group-hover:scale-105"
-          />
-        )}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="truncate text-xs text-muted-foreground">
-          {product.category.name}
-        </p>
-        <p className="truncate text-sm font-semibold text-foreground">
-          {product.name}
-        </p>
-        {price && (
-          <p className="text-base font-bold text-primary">{price}</p>
-        )}
-      </div>
-      <span
-        className="pr-1 text-sm font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100"
-        aria-hidden="true"
-      >
-        →
-      </span>
-    </Link>
-  )
-}
-
 export default async function HomePage() {
   const categories = await getAllCategories()
   const counts = await getCategoryCounts()
@@ -111,7 +73,50 @@ export default async function HomePage() {
     browseSections.map((section) => getProductsByCategory(section.slug, 6)),
   )
 
-  const deals = featuredProducts.slice(0, 3)
+  const totalProducts = Object.values(counts).reduce((sum, n) => sum + n, 0)
+
+  const deals: HeroDeal[] = featuredProducts.slice(0, 3).map((product) => {
+    const image = productImages(product)[0]
+    return {
+      href: `/products/${product.category.slug}/${product.slug}`,
+      name: product.name,
+      category: product.category.name,
+      price: formatKsh(product.priceCents),
+      imageUrl: image?.url ?? null,
+      imageAlt: image?.alt || product.name,
+    }
+  })
+
+  const slides: HeroSlide[] = [
+    {
+      eyebrow: "Featured Deals",
+      gradient: "bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900",
+      title: "Deals for makers and repairers",
+      body: "Featured products with prices, plus everything you need for your next build. Add to your quote and get the full quotation in one WhatsApp message.",
+      primary: { label: "Browse Products", href: "/products" },
+      secondary: {
+        label: "Request a Quote on WhatsApp",
+        href: getWhatsAppBaseLink(),
+        external: true,
+      },
+      deals,
+    },
+    {
+      eyebrow: `${totalProducts} products · ${categories.length} categories`,
+      gradient: "bg-gradient-to-br from-slate-900 via-teal-950 to-slate-900",
+      title: "Find the exact part you need",
+      body: "From resistors and sensors to tools and enclosures — browse the full catalog by category and add what you need to your quote.",
+      primary: { label: "Browse Categories", href: "/products" },
+    },
+    {
+      eyebrow: "Projects",
+      gradient: "bg-gradient-to-br from-slate-900 via-emerald-950 to-slate-900",
+      title: "Build something with it",
+      body: "Step-by-step projects that list every product you need, with quantities — add them all to your quote in one tap.",
+      primary: { label: "Explore Projects", href: "/projects" },
+      secondary: { label: "Get a Quote", href: "/quote" },
+    },
+  ]
 
   return (
     <div className="flex flex-col">
@@ -140,62 +145,9 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Deals hero — shopping-app style featured deals banner */}
+      {/* Deals hero — rotating carousel banner */}
       <section className="container mx-auto px-4 pt-6 md:pt-10">
-        <div className="overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900">
-          <div className="grid gap-8 p-6 sm:p-10 md:grid-cols-2 md:items-center">
-            <div>
-              <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/15 px-3 py-1.5 text-xs font-semibold text-primary">
-                <Tag className="h-3.5 w-3.5" aria-hidden="true" />
-                Featured Deals
-              </span>
-              <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl md:text-5xl">
-                Deals for makers and repairers
-              </h1>
-              <p className="mt-4 max-w-xl text-base text-slate-300 sm:text-lg">
-                Featured products with prices, plus everything you need for your
-                next build. Add to your quote and get the full quotation in one
-                WhatsApp message.
-              </p>
-              <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-                <Link href="/products" className="w-full sm:w-auto">
-                  <Button
-                    variant="primary"
-                    size="lg"
-                    className="h-12 w-full px-8 sm:w-auto"
-                  >
-                    Browse Products
-                  </Button>
-                </Link>
-                <a
-                  href={getWhatsAppBaseLink()}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full sm:w-auto"
-                >
-                  <Button
-                    variant="outline"
-                    size="lg"
-                    className="h-12 w-full border-white/30 bg-transparent px-8 text-white hover:bg-white/10 sm:w-auto"
-                  >
-                    Request a Quote on WhatsApp
-                  </Button>
-                </a>
-              </div>
-            </div>
-
-            {deals.length > 0 && (
-              <div className="flex flex-col gap-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Featured picks
-                </p>
-                {deals.map((product) => (
-                  <DealTile key={product.id} product={product} />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
+        <HomeHeroCarousel slides={slides} />
       </section>
 
       {/* Featured products / deals */}
