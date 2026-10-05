@@ -104,6 +104,7 @@ export type CategoryList = {
   description: string | null
   sortOrder: number
   isActive: boolean
+  updatedAt: Date
 }
 
 export async function getAllCategories(): Promise<CategoryList[]> {

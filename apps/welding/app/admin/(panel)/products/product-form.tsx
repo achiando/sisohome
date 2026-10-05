@@ -15,6 +15,7 @@ import {
   type ProductInput,
 } from "@/lib/product-input"
 import { parseSpecifications, type SpecificationItem } from "@/lib/specifications"
+import { ImagesEditor } from "@/components/admin/images-editor"
 
 interface FormCategory {
   id: string
@@ -141,80 +142,6 @@ function SpecificationsEditor({
         onClick={() => onChange([...rows, { label: "", material: "", pieces: "" }])}
       >
         Add specification
-      </Button>
-    </div>
-  )
-}
-
-function ImagesEditor({
-  value,
-  onChange,
-}: {
-  value: unknown
-  onChange: (next: unknown) => void
-  error?: string
-}) {
-  const rows: ImageRow[] = Array.isArray(value)
-    ? (value as ImageRow[]).map((row) => ({
-        url: String(row.url ?? ""),
-        alt: String(row.alt ?? ""),
-      }))
-    : []
-
-  const update = (index: number, patch: Partial<ImageRow>) => {
-    onChange(rows.map((row, i) => (i === index ? { ...row, ...patch } : row)))
-  }
-
-  return (
-    <div className="space-y-3">
-      {rows.length === 0 ? (
-        <p className="text-xs text-muted-foreground">
-          No images yet. Add the product photography you want on the site.
-        </p>
-      ) : null}
-
-      {rows.map((row, index) => (
-        <div
-          key={index}
-          className="grid grid-cols-1 gap-3 rounded-xl border border-border/70 bg-background p-3 sm:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)_auto] sm:items-end"
-        >
-          <Input
-            id={`image-url-${index}`}
-            label="Image URL"
-            inputSize="sm"
-            placeholder="https://..."
-            value={row.url}
-            onChange={(e) => update(index, { url: e.target.value })}
-          />
-          <Input
-            id={`image-alt-${index}`}
-            label="Alt text"
-            inputSize="sm"
-            placeholder="Steel sliding gate installed at a property"
-            value={row.alt}
-            onChange={(e) => update(index, { alt: e.target.value })}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label={`Remove image ${index + 1}`}
-            onClick={() => onChange(rows.filter((_, i) => i !== index))}
-            className="mb-1"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        </div>
-      ))}
-
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        leftIcon={Plus}
-        onClick={() => onChange([...rows, { url: "", alt: "" }])}
-      >
-        Add image
       </Button>
     </div>
   )
@@ -442,7 +369,7 @@ export function ProductForm({
                   type: "custom",
                   colSpan: "full",
                   render: ({ value, onChange }) => (
-                    <ImagesEditor value={value} onChange={onChange} />
+                    <ImagesEditor value={value} onChange={onChange} folder="products" />
                   ),
                 },
               ],

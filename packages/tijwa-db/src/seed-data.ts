@@ -43,36 +43,8 @@ export type SeedProject = {
   seoDesc: string
 }
 
-const bg: Record<string, string> = {
-  gates: "0f172a",
-  doors: "1e293b",
-  windows: "334155",
-  railings: "111827",
-  structural: "1f2937",
-  custom: "0f172a",
-}
-
-function placeholder(
-  width: number,
-  height: number,
-  label: string,
-  tone = "0f172a",
-): string {
-  return `https://placehold.co/${width}x${height}/${tone}/f8fafc.png?text=${encodeURIComponent(label)}`
-}
-
-function productImage(
-  label: string,
-  alt: string,
-  tone: string,
-  extra = false,
-): SeedImage[] {
-  return [
-    {
-      url: placeholder(extra ? 800 : 1200, extra ? 450 : 675, label, tone),
-      alt,
-    },
-  ]
+function seedImage(slug: string, alt: string, second = false): SeedImage[] {
+  return [{ url: `/seed/${slug}${second ? "-2" : ""}.jpg`, alt }]
 }
 
 export const categories: SeedCategory[] = [
@@ -135,11 +107,13 @@ export const products: SeedProduct[] = [
       { label: "Sizing", material: "Made to your opening measurement" },
     ],
     images: [
-      ...productImage("Steel Sliding Gate", "Steel sliding gate", bg.gates),
-      ...productImage(
-        "Sliding Gate Detail",
-        "Detail of a steel sliding gate frame",
-        bg.gates,
+      ...seedImage(
+        "steel-sliding-gate",
+        "Blue steel sliding gate set into a brick wall",
+      ),
+      ...seedImage(
+        "steel-sliding-gate",
+        "Close-up of a sliding gate latch on a steel frame",
         true,
       ),
     ],
@@ -163,10 +137,9 @@ export const products: SeedProduct[] = [
       { label: "Operation", material: "Single swing" },
       { label: "Sizing", material: "Made to your opening measurement" },
     ],
-    images: productImage(
-      "Steel Pedestrian Gate",
-      "Steel pedestrian gate",
-      bg.gates,
+    images: seedImage(
+      "steel-pedestrian-gate",
+      "Metal pedestrian gate between stone pillars on a garden path",
     ),
     isFeatured: false,
     sortOrder: 2,
@@ -188,7 +161,10 @@ export const products: SeedProduct[] = [
       { label: "Operation", material: "Swing or sliding" },
       { label: "Sizing", material: "Made to your opening measurement" },
     ],
-    images: productImage("Steel Security Gate", "Steel security gate", bg.gates),
+    images: seedImage(
+      "steel-security-gate",
+      "Vertical bar security gate in a brick archway",
+    ),
     isFeatured: false,
     sortOrder: 3,
     seoTitle: "Steel Security Gates | TijwaWelders",
@@ -209,7 +185,10 @@ export const products: SeedProduct[] = [
       { label: "Operation", material: "Double swing" },
       { label: "Sizing", material: "Made to your opening measurement" },
     ],
-    images: productImage("Steel Swing Gate", "Double leaf steel swing gate", bg.gates),
+    images: seedImage(
+      "steel-swing-gate",
+      "Black steel swing gate closing a driveway between stone walls",
+    ),
     isFeatured: false,
     sortOrder: 4,
     seoTitle: "Steel Swing Gates | TijwaWelders",
@@ -232,11 +211,10 @@ export const products: SeedProduct[] = [
       { label: "Sizing", material: "Made to your door opening" },
     ],
     images: [
-      ...productImage("Steel Security Door", "Steel security door", bg.doors),
-      ...productImage(
-        "Security Door Detail",
-        "Detail of a steel security door frame",
-        bg.doors,
+      ...seedImage("steel-security-door", "Dark red steel door in a courtyard"),
+      ...seedImage(
+        "steel-security-door",
+        "Brushed steel lever handle with keys in a door lock",
         true,
       ),
     ],
@@ -259,7 +237,10 @@ export const products: SeedProduct[] = [
       { label: "Leaf", material: "To suit your existing or new leaf", pieces: 1 },
       { label: "Sizing", material: "Made to your door opening" },
     ],
-    images: productImage("Steel Door Frame", "Fabricated steel door frame", bg.doors),
+    images: seedImage(
+      "steel-door-frame",
+      "Arched double entry doors with grille inserts in a house facade",
+    ),
     isFeatured: false,
     sortOrder: 2,
     seoTitle: "Steel Door Frames | TijwaWelders",
@@ -279,7 +260,10 @@ export const products: SeedProduct[] = [
       { label: "Leaf", material: "Double leaf", pieces: 2 },
       { label: "Sizing", material: "Made to your entrance width" },
     ],
-    images: productImage("Steel Double Door", "Double leaf steel door", bg.doors),
+    images: seedImage(
+      "steel-double-door",
+      "Black metal double doors with decorative grille tops",
+    ),
     isFeatured: false,
     sortOrder: 3,
     seoTitle: "Steel Double Doors | TijwaWelders",
@@ -301,11 +285,13 @@ export const products: SeedProduct[] = [
       { label: "Sizing", material: "Made to each window opening" },
     ],
     images: [
-      ...productImage("Window Grills", "Steel window grills", bg.windows),
-      ...productImage(
-        "Window Grill Detail",
-        "Detail of steel window grill bars",
-        bg.windows,
+      ...seedImage(
+        "window-grills",
+        "Decorative metal window grill with a fleur-de-lis pattern",
+      ),
+      ...seedImage(
+        "window-grills",
+        "Window with black security bars set into a stone wall",
         true,
       ),
     ],
@@ -328,7 +314,10 @@ export const products: SeedProduct[] = [
       { label: "Glazing", material: "To suit your chosen glazing" },
       { label: "Sizing", material: "Made to your window opening" },
     ],
-    images: productImage("Steel Window Frame", "Steel window frame", bg.windows),
+    images: seedImage(
+      "steel-window-frame",
+      "Arched window in a white steel frame set into a rendered wall",
+    ),
     isFeatured: false,
     sortOrder: 2,
     seoTitle: "Steel Window Frames | TijwaWelders",
@@ -347,10 +336,9 @@ export const products: SeedProduct[] = [
       { label: "Frame", material: "3/4 inch square tube", pieces: 1 },
       { label: "Sizing", material: "Made to your window opening" },
     ],
-    images: productImage(
-      "Expanded Metal Screen",
-      "Expanded metal window screen in a steel frame",
-      bg.windows,
+    images: seedImage(
+      "expanded-metal-screen",
+      "Close-up of an expanded metal mesh panel",
     ),
     isFeatured: false,
     sortOrder: 3,
@@ -372,11 +360,13 @@ export const products: SeedProduct[] = [
       { label: "Sizing", material: "Made to your site measurement" },
     ],
     images: [
-      ...productImage("Balcony Railings", "Steel balcony railing", bg.railings),
-      ...productImage(
-        "Balcony Railing Detail",
-        "Detail of a steel balcony railing top rail",
-        bg.railings,
+      ...seedImage(
+        "balcony-railings",
+        "Branch-style balustrade panels on the corner of a timber house",
+      ),
+      ...seedImage(
+        "balcony-railings",
+        "Ornate wrought iron balcony railing with scrollwork on a facade",
         true,
       ),
     ],
@@ -398,7 +388,10 @@ export const products: SeedProduct[] = [
       { label: "Posts", material: "3/4 inch square tube", pieces: 4 },
       { label: "Sizing", material: "Made to your stair pitch" },
     ],
-    images: productImage("Stair Railings", "Steel stair railing", bg.railings),
+    images: seedImage(
+      "stair-railings",
+      "Indoor staircase with a light metal railing beside timber treads",
+    ),
     isFeatured: false,
     sortOrder: 2,
     seoTitle: "Stair Railings | TijwaWelders",
@@ -418,7 +411,10 @@ export const products: SeedProduct[] = [
       { label: "Posts", material: "3/4 inch square tube", pieces: 3 },
       { label: "Sizing", material: "Made to your measurement" },
     ],
-    images: productImage("Steel Handrails", "Steel handrail on square tube posts", bg.railings),
+    images: seedImage(
+      "steel-handrails",
+      "Polished round steel handrail mounted to a concrete wall",
+    ),
     isFeatured: false,
     sortOrder: 3,
     seoTitle: "Steel Handrails | TijwaWelders",
@@ -440,15 +436,13 @@ export const products: SeedProduct[] = [
       { label: "Finish", material: "As specified in your quote" },
     ],
     images: [
-      ...productImage(
-        "Structural Steel Beams",
-        "Fabricated structural steel beams",
-        bg.structural,
+      ...seedImage(
+        "structural-steel-beams",
+        "Structural steel columns and beams inside an industrial building",
       ),
-      ...productImage(
-        "Beam Fabrication Detail",
-        "Detail of a welded steel beam connection",
-        bg.structural,
+      ...seedImage(
+        "structural-steel-beams",
+        "Stacked hollow section steel beams in a fabrication yard",
         true,
       ),
     ],
@@ -471,7 +465,10 @@ export const products: SeedProduct[] = [
       { label: "Working", material: "Cut and welded to your drawing" },
       { label: "Finish", material: "As specified in your quote" },
     ],
-    images: productImage("Steel Columns", "Fabricated steel columns", bg.structural),
+    images: seedImage(
+      "steel-columns",
+      "Steel frame of a multi-storey building under construction",
+    ),
     isFeatured: false,
     sortOrder: 2,
     seoTitle: "Steel Columns | TijwaWelders",
@@ -493,10 +490,9 @@ export const products: SeedProduct[] = [
       { label: "Gauge", material: "Gauge 16 or gauge 18, as specified on your quote" },
       { label: "Sizing", material: "As per your drawing or sample" },
     ],
-    images: productImage(
-      "Custom Fabrication",
-      "Custom fabricated steel item",
-      bg.custom,
+    images: seedImage(
+      "custom-fabrication",
+      "Workshop entrance with a metal fabrication sign and steel gates",
     ),
     isFeatured: true,
     sortOrder: 1,
@@ -515,14 +511,15 @@ export const projects: SeedProject[] = [
     description:
       "Sliding gate fabricated from 3/4 inch square tube with gauge 18 infill, made to the supplied opening measurement.",
     images: [
-      {
-        url: placeholder(1600, 900, "Sliding Gate Fabrication"),
-        alt: "Steel sliding gate fabricated by TijwaWelders",
-      },
-      {
-        url: placeholder(1200, 675, "Sliding Gate Detail"),
-        alt: "Detail of a fabricated steel sliding gate frame",
-      },
+      ...seedImage(
+        "sliding-gate-fabrication",
+        "Ornate metal sliding gate viewed from inside a shopfront",
+      ),
+      ...seedImage(
+        "sliding-gate-fabrication",
+        "Sliding gate motor mounted on paving beside a gate track",
+        true,
+      ),
     ],
     isFeatured: true,
     sortOrder: 1,
@@ -537,14 +534,15 @@ export const projects: SeedProject[] = [
     description:
       "Balcony railing fabricated from 1 inch square tube top rail with gauge 18 infill, made to the supplied site measurement.",
     images: [
-      {
-        url: placeholder(1600, 900, "Balcony Railing Fabrication"),
-        alt: "Steel balcony railing fabricated by TijwaWelders",
-      },
-      {
-        url: placeholder(1200, 675, "Railing Detail"),
-        alt: "Detail of a fabricated steel balcony railing",
-      },
+      ...seedImage(
+        "balcony-railing-fabrication",
+        "Welder in a helmet and gloves holding a welding torch",
+      ),
+      ...seedImage(
+        "balcony-railing-fabrication",
+        "Decorative wrought iron grille with a monogram",
+        true,
+      ),
     ],
     isFeatured: true,
     sortOrder: 2,
@@ -559,14 +557,15 @@ export const projects: SeedProject[] = [
     description:
       "Window grills fabricated from 3/4 inch square tube frames with gauge 16 bar infill, made to each supplied window opening.",
     images: [
-      {
-        url: placeholder(1600, 900, "Window Grill Fabrication"),
-        alt: "Steel window grills fabricated by TijwaWelders",
-      },
-      {
-        url: placeholder(1200, 675, "Window Grill Detail"),
-        alt: "Detail of fabricated steel window grill bars",
-      },
+      ...seedImage(
+        "window-grill-fabrication",
+        "Wrought iron window grill seen from inside a room",
+      ),
+      ...seedImage(
+        "window-grill-fabrication",
+        "Welders working on a steel frame in an open workshop yard",
+        true,
+      ),
     ],
     isFeatured: false,
     sortOrder: 3,
@@ -581,14 +580,15 @@ export const projects: SeedProject[] = [
     description:
       "Structural steel members fabricated from plate and section, cut and welded to the supplied drawing.",
     images: [
-      {
-        url: placeholder(1600, 900, "Structural Steel Fabrication"),
-        alt: "Fabricated structural steel members by TijwaWelders",
-      },
-      {
-        url: placeholder(1200, 675, "Steel Connection Detail"),
-        alt: "Detail of a welded structural steel connection",
-      },
+      ...seedImage(
+        "structural-steel-fabrication",
+        "Tower crane above a steel framed building under construction",
+      ),
+      ...seedImage(
+        "structural-steel-fabrication",
+        "Welder working on steel with sparks flying in a workshop",
+        true,
+      ),
     ],
     isFeatured: false,
     sortOrder: 4,
@@ -602,12 +602,10 @@ export const projects: SeedProject[] = [
     type: "Commercial",
     description:
       "Steel security door fabricated from 1 inch square tube frame with gauge 18 sheet skin, made to the supplied door opening.",
-    images: [
-      {
-        url: placeholder(1600, 900, "Security Door Fabrication"),
-        alt: "Steel security door fabricated by TijwaWelders",
-      },
-    ],
+    images: seedImage(
+      "security-door-fabrication",
+      "Close-up of a welder joining steel with sparks flying",
+    ),
     isFeatured: false,
     sortOrder: 5,
     seoTitle: "Security Door Fabrication | TijwaWelders Projects",
