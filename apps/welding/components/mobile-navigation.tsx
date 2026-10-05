@@ -5,7 +5,7 @@ import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
 import { Sheet, SheetContent, SheetTrigger } from "@workspace/ui/components/sheet"
 import { Badge } from "@workspace/ui/components/badge"
-import { getQuoteBasketCount } from "@/lib/quote-basket"
+import { getQuoteBasketCount, getDirectWhatsAppLink, onQuoteBasketChanged } from "@/lib/quote-basket"
 
 export function MobileNavigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -13,6 +13,7 @@ export function MobileNavigation() {
 
   useEffect(() => {
     setQuoteCount(getQuoteBasketCount())
+    return onQuoteBasketChanged(() => setQuoteCount(getQuoteBasketCount()))
   }, [])
 
   const navigation = [
@@ -75,16 +76,27 @@ export function MobileNavigation() {
                   WhatsApp
                 </Button>
               </a>
-              <Link href="/quote" onClick={() => setIsOpen(false)} className="relative block">
-                <Button variant="outline" size="lg" className="w-full">
-                  Get a Quote
-                </Button>
-                {quoteCount > 0 && (
+              {quoteCount > 0 ? (
+                <Link href="/quote" onClick={() => setIsOpen(false)} className="relative block">
+                  <Button variant="outline" size="lg" className="w-full">
+                    Get a Quote
+                  </Button>
                   <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-primary text-white text-xs">
                     {quoteCount}
                   </Badge>
-                )}
-              </Link>
+                </Link>
+              ) : (
+                <a
+                  href={getDirectWhatsAppLink()}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Button variant="outline" size="lg" className="w-full">
+                    Get a Quote
+                  </Button>
+                </a>
+              )}
             </div>
           </div>
         </SheetContent>

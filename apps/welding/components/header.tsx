@@ -4,7 +4,7 @@ import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
 import { Badge } from "@workspace/ui/components/badge"
 import { MobileNavigation } from "./mobile-navigation"
-import { getQuoteBasketCount } from "@/lib/quote-basket"
+import { getQuoteBasketCount, getDirectWhatsAppLink, onQuoteBasketChanged } from "@/lib/quote-basket"
 import { useEffect, useState } from "react"
 
 export function Header() {
@@ -12,6 +12,7 @@ export function Header() {
 
   useEffect(() => {
     setQuoteCount(getQuoteBasketCount())
+    return onQuoteBasketChanged(() => setQuoteCount(getQuoteBasketCount()))
   }, [])
 
   return (
@@ -46,16 +47,27 @@ export function Header() {
 
         {/* CTA Button with Quote Badge */}
         <div className="flex items-center space-x-4">
-          <Link href="/quote" className="relative">
-            <Button variant="primary" size="md">
-              Get a Quote
-            </Button>
-            {quoteCount > 0 && (
+          {quoteCount > 0 ? (
+            <Link href="/quote" className="relative">
+              <Button variant="primary" size="md">
+                Get a Quote
+              </Button>
               <Badge className="absolute -top-2 -right-2 h-5 w-5 flex items-center justify-center rounded-full bg-primary text-white text-xs">
                 {quoteCount}
               </Badge>
-            )}
-          </Link>
+            </Link>
+          ) : (
+            <a
+              href={getDirectWhatsAppLink()}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Request a quote on WhatsApp"
+            >
+              <Button variant="primary" size="md">
+                Get a Quote
+              </Button>
+            </a>
+          )}
           
           {/* Mobile Menu Button */}
           <MobileNavigation />

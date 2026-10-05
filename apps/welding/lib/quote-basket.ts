@@ -7,6 +7,16 @@ export interface QuoteItem {
 }
 
 const QUOTE_BASKET_KEY = 'tijwawelders_quote_basket'
+const QUOTE_BASKET_CHANGED_EVENT = 'tijwawelders:quote-basket-changed'
+
+function notifyQuoteBasketChanged(): void {
+  window.dispatchEvent(new Event(QUOTE_BASKET_CHANGED_EVENT))
+}
+
+export function onQuoteBasketChanged(handler: () => void): () => void {
+  window.addEventListener(QUOTE_BASKET_CHANGED_EVENT, handler)
+  return () => window.removeEventListener(QUOTE_BASKET_CHANGED_EVENT, handler)
+}
 
 export function getQuoteBasket(): QuoteItem[] {
   if (typeof window === 'undefined') return []
@@ -33,6 +43,7 @@ export function addToQuoteBasket(item: QuoteItem): QuoteItem[] {
   }
   
   localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(basket))
+  notifyQuoteBasketChanged()
   return basket
 }
 
@@ -40,6 +51,7 @@ export function removeFromQuoteBasket(id: string): QuoteItem[] {
   const basket = getQuoteBasket()
   const filtered = basket.filter(item => item.id !== id)
   localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(filtered))
+  notifyQuoteBasketChanged()
   return filtered
 }
 
@@ -53,6 +65,7 @@ export function updateQuoteQuantity(id: string, quantity: number): QuoteItem[] {
     }
     item.quantity = quantity
     localStorage.setItem(QUOTE_BASKET_KEY, JSON.stringify(basket))
+    notifyQuoteBasketChanged()
   }
   
   return basket
@@ -60,6 +73,7 @@ export function updateQuoteQuantity(id: string, quantity: number): QuoteItem[] {
 
 export function clearQuoteBasket(): void {
   localStorage.removeItem(QUOTE_BASKET_KEY)
+  notifyQuoteBasketChanged()
 }
 
 export function getQuoteBasketCount(): number {
@@ -82,8 +96,21 @@ Thank you.`
   return encodeURIComponent(message)
 }
 
-export function getWhatsAppLink(items: QuoteItem[]): string {
-  const message = generateWhatsAppMessage(items)
+function buildWhatsAppLink(message: string): string {
   const phoneNumber = process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || '254XXXXXXXXXX'
   return `https://wa.me/${phoneNumber}?text=${message}`
+}
+
+export function getWhatsAppLink(items: QuoteItem[]): string {
+  return buildWhatsAppLink(generateWhatsAppMessage(items))
+}
+
+export function getDirectWhatsAppLink(): string {
+  const message = `Hello TijwaWelders,
+
+I would like to request a quotation. Please advise on the next steps.
+
+Thank you.`
+
+  return buildWhatsAppLink(encodeURIComponent(message))
 }
