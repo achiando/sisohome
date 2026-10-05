@@ -6,9 +6,10 @@ import type { ProductWithCategory } from "@/lib/products"
 
 interface ProductCardProps {
   product: ProductWithCategory
+  showCategory?: boolean
 }
 
-export function ProductCard({ product }: ProductCardProps) {
+export function ProductCard({ product, showCategory = true }: ProductCardProps) {
   const firstImage =
     Array.isArray(product.images) && product.images.length > 0
       ? product.images[0]
@@ -26,15 +27,15 @@ export function ProductCard({ product }: ProductCardProps) {
     <Card className="h-full overflow-hidden transition-shadow hover:shadow-lg">
       <Link
         href={`/products/${product.category.slug}/${product.slug}`}
-        className="group block h-full"
+        className="group flex h-full flex-col"
       >
-        <div className="relative aspect-video overflow-hidden bg-muted">
+        <div className="relative h-48 w-full shrink-0 overflow-hidden bg-muted md:h-56">
           {imageUrl ? (
             <Image
               src={imageUrl}
               alt={imageAlt}
               fill
-              sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+              sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
               className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           ) : (
@@ -44,13 +45,20 @@ export function ProductCard({ product }: ProductCardProps) {
           )}
         </div>
 
-        <CardContent className="flex flex-col gap-2 p-6">
-          <Badge variant="neutral" shape="pill" className="self-start">
-            {product.category.name}
-          </Badge>
+        <CardContent className="flex flex-1 flex-col gap-2 p-6">
+          {showCategory && (
+            <Badge variant="neutral" shape="pill" className="self-start">
+              {product.category.name}
+            </Badge>
+          )}
           <h3 className="text-lg font-semibold">{product.name}</h3>
-          <p className="text-sm text-muted-foreground">{product.shortDesc}</p>
-          <span className="mt-2 text-sm font-medium text-primary">
+          {product.priceRange && (
+            <p className="text-sm font-semibold text-primary">{product.priceRange}</p>
+          )}
+          <p className="line-clamp-2 text-sm text-muted-foreground">
+            {product.shortDesc}
+          </p>
+          <span className="mt-auto pt-2 text-sm font-medium text-primary">
             View design →
           </span>
         </CardContent>

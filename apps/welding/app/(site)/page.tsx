@@ -2,20 +2,23 @@ import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
-import {
-  getAllCategories,
-  getFeaturedProducts,
-  type CategoryList,
-  type ProductWithCategory,
-} from "@/lib/products"
+import { getAllCategories, getAllProducts } from "@/lib/products"
 import { getFeaturedProjects, type ProjectWithImages } from "@/lib/projects"
 import { getAllGuides } from "@/lib/guides"
+import { ProductCard } from "@/components/product-card"
 
 export default async function HomePage() {
   const categories = await getAllCategories()
-  const featuredProducts = await getFeaturedProducts()
+  const products = await getAllProducts()
   const featuredProjects = await getFeaturedProjects()
   const guides = await getAllGuides()
+
+  const productSections = categories
+    .map((category) => ({
+      category,
+      products: products.filter((p) => p.category.slug === category.slug),
+    }))
+    .filter((section) => section.products.length > 0)
 
   // Use first featured project image for hero if available
   const firstProjectImages = featuredProjects[0]?.images
@@ -83,60 +86,41 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Featured Products */}
-      {featuredProducts.length > 0 && (
-        <section className="bg-muted/50 py-20">
+      {productSections.map(({ category, products: items }, index) => (
+        <section
+          key={category.id}
+          className={index % 2 === 0 ? "bg-background py-16" : "bg-muted/50 py-16"}
+        >
           <div className="container mx-auto px-4">
-            <h2 className="mb-2 text-3xl font-bold">Featured Designs</h2>
-            <p className="mb-8 text-muted-foreground">
-              Our most popular steel fabrications
-            </p>
+            <div className="mb-8 flex flex-wrap items-end justify-between gap-4">
+              <div>
+                <h2 className="text-3xl font-bold">{category.name}</h2>
+                {category.description && (
+                  <p className="mt-2 max-w-2xl text-muted-foreground">
+                    {category.description}
+                  </p>
+                )}
+              </div>
+              <Link
+                href={`/products/${category.slug}`}
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                View all {category.name} →
+              </Link>
+            </div>
 
-            <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-              {featuredProducts
-                .slice(0, 3)
-                .map((product: ProductWithCategory) => (
-                  <Link
-                    key={product.id}
-                    href={`/products/${product.category.slug}/${product.slug}`}
-                  >
-                    <Card className="overflow-hidden transition-shadow hover:shadow-lg">
-                      {product.images &&
-                      Array.isArray(product.images) &&
-                      product.images.length > 0 &&
-                      product.images[0] ? (
-                        <div className="aspect-video bg-muted">
-                          <img
-                            src={product.images[0].url}
-                            alt={product.images[0].alt || product.name}
-                            className="h-full w-full object-cover"
-                          />
-                        </div>
-                      ) : (
-                        <div className="flex aspect-video items-center justify-center bg-muted">
-                          <p className="text-sm text-muted-foreground">
-                            Image coming soon
-                          </p>
-                        </div>
-                      )}
-                      <CardContent className="p-6">
-                        <h3 className="mb-2 text-lg font-semibold">
-                          {product.name}
-                        </h3>
-                        <p className="mb-4 text-sm text-muted-foreground">
-                          {product.shortDesc}
-                        </p>
-                        <Button variant="outline" className="w-full">
-                          Explore →
-                        </Button>
-                      </CardContent>
-                    </Card>
-                  </Link>
-                ))}
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {items.map((product) => (
+                <ProductCard
+                  key={product.id}
+                  product={product}
+                  showCategory={false}
+                />
+              ))}
             </div>
           </div>
         </section>
-      )}
+      ))}
 
       {/* Real Projects */}
       {featuredProjects.length > 0 && (
@@ -157,11 +141,13 @@ export default async function HomePage() {
                       Array.isArray(project.images) &&
                       project.images.length > 0 &&
                       project.images[0] ? (
-                        <div className="aspect-video bg-muted">
-                          <img
+                        <div className="relative aspect-video bg-muted">
+                          <Image
                             src={project.images[0].url}
                             alt={project.images[0].alt || project.title}
-                            className="h-full w-full object-cover"
+                            fill
+                            sizes="(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"
+                            className="object-cover"
                           />
                         </div>
                       ) : (
@@ -192,26 +178,8 @@ export default async function HomePage() {
         </section>
       )}
 
-      {/* Capabilities */}
-      <section className="bg-muted/50 py-20">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-4 text-3xl font-bold">
-            From Small Fabrication to Complete Structures
-          </h2>
-          <p className="mx-auto mb-8 max-w-2xl text-xl text-muted-foreground">
-            Custom welding and fabrication for residential, commercial and
-            structural projects
-          </p>
-          <Link href="/services" className="flex justify-center">
-            <Button variant="primary" size="lg">
-              Explore Services
-            </Button>
-          </Link>
-        </div>
-      </section>
-
       {/* Education */}
-      <section className="flex justify-center bg-background py-20">
+      <section className="flex justify-center bg-muted/50 py-20">
         <div className="container mx-auto px-4 text-center">
           <h2 className="mb-2 text-3xl font-bold">
             Not Sure Which Steel You Need?
