@@ -119,9 +119,9 @@ export const products: SeedProduct[] = [
     ],
     isFeatured: true,
     sortOrder: 1,
-    seoTitle: "Steel Sliding Gates | TijwaWelders",
+    seoTitle: "Steel Sliding Gates in Kenya | TijwaWelders",
     seoDesc:
-      "Steel sliding gates fabricated to your opening in 3/4 inch or 1 inch tube, gauge 16 or gauge 18.",
+      "Custom steel sliding gates made to your opening measurement. From KES 25,000 in Kenya. Request a quote on WhatsApp.",
     priceRange: "KES 25,000 - KES 45,000",
   },
   {
@@ -143,9 +143,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 2,
-    seoTitle: "Steel Pedestrian Gates | TijwaWelders",
+    seoTitle: "Steel Pedestrian Gates in Kenya | TijwaWelders",
     seoDesc:
-      "Pedestrian gates fabricated from 3/4 inch square tube with gauge 16 or gauge 18 infill.",
+      "Single leaf steel pedestrian gates fabricated to your walkway size. From KES 8,000 in Kenya. Quote on WhatsApp.",
     priceRange: "KES 8,000 - KES 15,000",
   },
   {
@@ -167,9 +167,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 3,
-    seoTitle: "Steel Security Gates | TijwaWelders",
+    seoTitle: "Steel Security Gates in Kenya | TijwaWelders",
     seoDesc:
-      "Security gates with close-spaced gauge 16 or gauge 18 infill on a 1 inch square tube frame.",
+      "Steel security gates with close-spaced infill, made to your opening. From KES 20,000 in Kenya. WhatsApp quote.",
     priceRange: "KES 20,000 - KES 40,000",
   },
   {
@@ -191,9 +191,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 4,
-    seoTitle: "Steel Swing Gates | TijwaWelders",
+    seoTitle: "Steel Swing Gates in Kenya | TijwaWelders",
     seoDesc:
-      "Double leaf swing gates fabricated from 1 inch square tube in gauge 16 or gauge 18.",
+      "Double leaf steel swing gates for driveways, made to your measurement. From KES 30,000 in Kenya. Quote on WhatsApp.",
     priceRange: "KES 30,000 - KES 55,000",
   },
 
@@ -220,9 +220,9 @@ export const products: SeedProduct[] = [
     ],
     isFeatured: true,
     sortOrder: 1,
-    seoTitle: "Steel Security Doors | TijwaWelders",
+    seoTitle: "Steel Security Doors in Kenya | TijwaWelders",
     seoDesc:
-      "Steel security doors with gauge 16 or gauge 18 sheet skin on a 1 inch square tube frame.",
+      "Steel security doors with gauge 16 or 18 sheet skin, made to your opening. From KES 18,000 in Kenya. WhatsApp quote.",
     priceRange: "KES 18,000 - KES 35,000",
   },
   {
@@ -243,8 +243,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 2,
-    seoTitle: "Steel Door Frames | TijwaWelders",
-    seoDesc: "Steel door frames fabricated to your measured door opening.",
+    seoTitle: "Steel Door Frames in Kenya | TijwaWelders",
+    seoDesc:
+      "Fabricated steel door frames made to your measured opening. From KES 6,000 in Kenya. Request a quote on WhatsApp.",
     priceRange: "KES 6,000 - KES 12,000",
   },
   {
@@ -266,9 +267,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 3,
-    seoTitle: "Steel Double Doors | TijwaWelders",
+    seoTitle: "Steel Double Doors in Kenya | TijwaWelders",
     seoDesc:
-      "Double leaf steel doors fabricated from 1 inch square tube with gauge 16 or gauge 18 skin.",
+      "Double leaf steel doors for wide entrances, built to your measurement. From KES 35,000 in Kenya. Quote on WhatsApp.",
     priceRange: "KES 35,000 - KES 60,000",
   },
 
@@ -297,9 +298,9 @@ export const products: SeedProduct[] = [
     ],
     isFeatured: true,
     sortOrder: 1,
-    seoTitle: "Window Grills | TijwaWelders",
+    seoTitle: "Window Grills in Kenya | TijwaWelders",
     seoDesc:
-      "Window grills fabricated from 3/4 inch square tube with gauge 16 or gauge 18 bar infill.",
+      "Steel window grills fabricated to each window opening. From KES 3,500 in Kenya. Request a quote on WhatsApp.",
     priceRange: "KES 3,500 - KES 8,000",
   },
   {
@@ -320,8 +321,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 2,
-    seoTitle: "Steel Window Frames | TijwaWelders",
-    seoDesc: "Steel window frames fabricated to your measured window opening.",
+    seoTitle: "Steel Window Frames in Kenya | TijwaWelders",
+    seoDesc:
+      "Steel window frames made to your window measurement. From KES 5,000 in Kenya. Request a quote on WhatsApp.",
     priceRange: "KES 5,000 - KES 10,000",
   },
   {
@@ -342,9 +344,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 3,
-    seoTitle: "Expanded Metal Window Screens | TijwaWelders",
+    seoTitle: "Expanded Metal Window Screens in Kenya | TijwaWelders",
     seoDesc:
-      "Expanded metal window screens welded into 3/4 inch square tube frames.",
+      "Expanded metal window screens welded into square tube frames. From KES 2,500 in Kenya. Quote on WhatsApp.",
     priceRange: "KES 2,500 - KES 5,000",
   },
 
@@ -372,9 +374,9 @@ export const products: SeedProduct[] = [
     ],
     isFeatured: true,
     sortOrder: 1,
-    seoTitle: "Balcony Railings | TijwaWelders",
+    seoTitle: "Balcony Railings in Kenya | TijwaWelders",
     seoDesc:
-      "Balcony railings fabricated from 1 inch square tube with gauge 16 or gauge 18 infill.",
+      "Steel balcony railings fabricated to your site measurement. From KES 4,000 per meter in Kenya. WhatsApp quote.",
     priceRange: "KES 4,000 - KES 8,000 per meter",
   },
   {
@@ -394,9 +396,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 2,
-    seoTitle: "Stair Railings | TijwaWelders",
+    seoTitle: "Stair Railings in Kenya | TijwaWelders",
     seoDesc:
-      "Stair railings fabricated from 1 inch and 3/4 inch square tube to your stair measurement.",
+      "Steel stair railings made to your stair pitch and length. From KES 5,000 per meter in Kenya. Quote on WhatsApp.",
     priceRange: "KES 5,000 - KES 10,000 per meter",
   },
   {
@@ -417,9 +419,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 3,
-    seoTitle: "Steel Handrails | TijwaWelders",
+    seoTitle: "Steel Handrails in Kenya | TijwaWelders",
     seoDesc:
-      "Steel handrails fabricated from 1 inch rail tube on 3/4 inch square tube posts.",
+      "Steel handrails on square tube posts, fabricated to your length. From KES 3,000 per meter in Kenya. Quote on WhatsApp.",
     priceRange: "KES 3,000 - KES 6,000 per meter",
   },
 
@@ -448,9 +450,9 @@ export const products: SeedProduct[] = [
     ],
     isFeatured: true,
     sortOrder: 1,
-    seoTitle: "Structural Steel Beams | TijwaWelders",
+    seoTitle: "Structural Steel Beams in Kenya | TijwaWelders",
     seoDesc:
-      "Structural steel beams fabricated from plate and section, cut and welded to your drawing.",
+      "Structural steel beams fabricated from plate and section to your drawing. From KES 8,000 per meter in Kenya. Quote on WhatsApp.",
     priceRange: "KES 8,000 - KES 15,000 per meter",
   },
   {
@@ -471,9 +473,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: false,
     sortOrder: 2,
-    seoTitle: "Steel Columns | TijwaWelders",
+    seoTitle: "Steel Columns in Kenya | TijwaWelders",
     seoDesc:
-      "Steel columns fabricated from plate and section, cut and welded to your drawing.",
+      "Steel columns fabricated to your drawing from plate and section. From KES 10,000 per meter in Kenya. WhatsApp quote.",
     priceRange: "KES 10,000 - KES 20,000 per meter",
   },
 
@@ -496,9 +498,9 @@ export const products: SeedProduct[] = [
     ),
     isFeatured: true,
     sortOrder: 1,
-    seoTitle: "Custom Steel Fabrication | TijwaWelders",
+    seoTitle: "Custom Steel Fabrication in Nairobi | TijwaWelders",
     seoDesc:
-      "Custom steel fabrication from your drawing, sketch or sample in square tube, sheet or plate.",
+      "Custom steel fabrication from your drawing, sketch or sample in Nairobi. Request a quote on WhatsApp.",
     priceRange: "Request Quote",
   },
 ]
@@ -523,9 +525,9 @@ export const projects: SeedProject[] = [
     ],
     isFeatured: true,
     sortOrder: 1,
-    seoTitle: "Sliding Gate Fabrication | TijwaWelders Projects",
+    seoTitle: "Sliding Gate Fabrication in Kenya | TijwaWelders",
     seoDesc:
-      "Sliding gate fabricated from 3/4 inch square tube with gauge 18 infill.",
+      "Sliding gate fabricated from 3/4 inch square tube with gauge 18 infill, made to the supplied opening measurement in Kenya.",
   },
   {
     title: "Balcony Railing Fabrication",
@@ -546,9 +548,9 @@ export const projects: SeedProject[] = [
     ],
     isFeatured: true,
     sortOrder: 2,
-    seoTitle: "Balcony Railing Fabrication | TijwaWelders Projects",
+    seoTitle: "Balcony Railing Fabrication in Kenya | TijwaWelders",
     seoDesc:
-      "Balcony railing fabricated from 1 inch square tube with gauge 18 infill.",
+      "Balcony railing fabricated from 1 inch square tube with gauge 18 infill, made to the supplied site measurement in Kenya.",
   },
   {
     title: "Window Grill Fabrication",
@@ -569,9 +571,9 @@ export const projects: SeedProject[] = [
     ],
     isFeatured: false,
     sortOrder: 3,
-    seoTitle: "Window Grill Fabrication | TijwaWelders Projects",
+    seoTitle: "Window Grill Fabrication in Kenya | TijwaWelders",
     seoDesc:
-      "Window grills fabricated from 3/4 inch square tube with gauge 16 bar infill.",
+      "Window grills fabricated from 3/4 inch square tube with gauge 16 bar infill, made to each supplied window opening in Kenya.",
   },
   {
     title: "Structural Steel Fabrication",
@@ -592,9 +594,9 @@ export const projects: SeedProject[] = [
     ],
     isFeatured: false,
     sortOrder: 4,
-    seoTitle: "Structural Steel Fabrication | TijwaWelders Projects",
+    seoTitle: "Structural Steel Fabrication in Kenya | TijwaWelders",
     seoDesc:
-      "Structural steel fabricated from plate and section, cut and welded to your drawing.",
+      "Structural steel fabricated from plate and section, cut and welded to the supplied drawing in Kenya.",
   },
   {
     title: "Security Door Fabrication",
@@ -608,8 +610,8 @@ export const projects: SeedProject[] = [
     ),
     isFeatured: false,
     sortOrder: 5,
-    seoTitle: "Security Door Fabrication | TijwaWelders Projects",
+    seoTitle: "Security Door Fabrication in Kenya | TijwaWelders",
     seoDesc:
-      "Steel security door fabricated from 1 inch square tube with gauge 18 sheet skin.",
+      "Steel security door fabricated from 1 inch square tube with gauge 18 sheet skin in Kenya.",
   },
 ]

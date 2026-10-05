@@ -14,6 +14,48 @@ interface CategoryPageProps {
   params: Promise<{ category: string }>
 }
 
+const CATEGORY_SEO: Record<
+  string,
+  { title: string; description: string; h1: string }
+> = {
+  gates: {
+    title: "Steel Gates in Kenya - Prices & Designs | TijwaWelders",
+    description:
+      "Custom steel gates in Kenya — sliding, swing and pedestrian gates made to your opening size. Compare designs and prices, quote on WhatsApp.",
+    h1: "Steel Gates",
+  },
+  doors: {
+    title: "Steel Security Doors in Kenya | TijwaWelders",
+    description:
+      "Steel security doors and double doors fabricated in Kenya to your opening. View designs and prices, request a quote on WhatsApp.",
+    h1: "Steel Security Doors",
+  },
+  windows: {
+    title: "Window Grills & Steel Windows in Kenya | TijwaWelders",
+    description:
+      "Window grills, steel window frames and security screens made to measure in Kenya. See designs and prices, quote on WhatsApp.",
+    h1: "Window Grills & Steel Windows",
+  },
+  railings: {
+    title: "Balcony & Stair Railings in Kenya | TijwaWelders",
+    description:
+      "Steel balcony railings, stair railings and handrails fabricated to your measurement in Kenya. Prices per meter, quote on WhatsApp.",
+    h1: "Steel Railings",
+  },
+  structural: {
+    title: "Structural Steel Fabrication in Kenya | TijwaWelders",
+    description:
+      "Beams, columns and structural steel fabricated to your drawing in Kenya. Request a quotation on WhatsApp.",
+    h1: "Structural Steel",
+  },
+  "custom-fabrication": {
+    title: "Custom Metal Fabrication in Nairobi | TijwaWelders",
+    description:
+      "One-off metal fabrication in Nairobi from your drawing, sketch or sample. Get a custom quote on WhatsApp.",
+    h1: "Custom Metal Fabrication",
+  },
+}
+
 export async function generateMetadata({ params }: CategoryPageProps) {
   const { category: categorySlug } = await params
   const category = await getCategoryBySlug(categorySlug)
@@ -26,10 +68,12 @@ export async function generateMetadata({ params }: CategoryPageProps) {
   }
 
   const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"
+  const seo = CATEGORY_SEO[categorySlug]
 
   return {
-    title: `${category.name} | TijwaWelders`,
+    title: seo?.title || `${category.name} | TijwaWelders`,
     description:
+      seo?.description ||
       category.description ||
       `Browse ${category.name} fabricated by TijwaWelders. Request a quotation for your project.`,
     alternates: {
@@ -49,6 +93,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
   const products = await getProductsByCategory(categorySlug)
   const categories = await getAllCategories()
   const counts = await getCategoryCounts()
+  const seo = CATEGORY_SEO[categorySlug]
 
   return (
     <div className="container mx-auto px-4 py-12">
@@ -63,7 +108,7 @@ export default async function CategoryPage({ params }: CategoryPageProps) {
           </span>
           <span aria-current="page">{category.name}</span>
         </nav>
-        <h1 className="text-4xl font-bold mb-4">{category.name}</h1>
+        <h1 className="text-4xl font-bold mb-4">{seo?.h1 || category.name}</h1>
         {category.description && (
           <p className="text-xl text-muted-foreground max-w-2xl">{category.description}</p>
         )}

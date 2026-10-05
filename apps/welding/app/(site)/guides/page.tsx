@@ -4,8 +4,8 @@ import { Card, CardContent } from "@workspace/ui/components/card"
 import { getAllGuides } from "@/lib/guides"
 
 export const metadata = {
-  title: "Materials & Guides - TijwaWelders Steel Education",
-  description: "Learn about steel materials, gauges, and fabrication. Understand steel tubes, sheets, and specifications before your project.",
+  title: "Steel Guides: Gauges, Tubes & Materials | TijwaWelders",
+  description: "Understand steel gauges, square tubes and materials before your fabrication project in Kenya. Practical guides from TijwaWelders.",
   alternates: {
     canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/guides`,
   },
@@ -18,7 +18,7 @@ export default async function GuidesPage() {
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">Materials & Guides</h1>
+        <h1 className="text-4xl font-bold mb-4">Steel Material Guides</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
           Learn about steel materials, gauges, and fabrication to make informed decisions for your project.
         </p>

@@ -3,9 +3,9 @@ import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 
 export const metadata = {
-  title: "Services - TijwaWelders Fabrication Services",
+  title: "Welding & Fabrication Services in Nairobi | TijwaWelders",
   description:
-    "Custom steel fabrication in our workshop and on site — gates, steel doors, structural steel, installation and metal repairs.",
+    "Custom welding and steel fabrication in Nairobi — workshop-built gates, doors and structural steel, plus on-site installation and repairs. Quote on WhatsApp.",
   alternates: {
     canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/services`,
   },
@@ -79,7 +79,7 @@ export default function ServicesPage() {
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">Services</h1>
+        <h1 className="text-4xl font-bold mb-4">Welding & Steel Fabrication Services</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
           Custom steel fabrication built in our workshop and installed on site,
           for homes, businesses and structural projects

@@ -10,8 +10,8 @@ import { CategoryChips } from "@/components/category-chips"
 import { ProductCard } from "@/components/product-card"
 
 export const metadata = {
-  title: "Products - TijwaWelders Steel Fabrication",
-  description: "Browse our premium steel gates, doors, windows, railings, and custom metal fabrication products. Request quotations for your project.",
+  title: "Steel Gates, Doors & Railings in Kenya | TijwaWelders",
+  description: "Browse steel gates, security doors, window grills, railings and structural steel made to measure in Kenya. Prices shown. Request a WhatsApp quote.",
   alternates: {
     canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/products`,
   },
@@ -26,10 +26,10 @@ export default async function ProductsPage() {
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold mb-4">Products</h1>
+        <h1 className="text-4xl font-bold mb-4">Steel Products</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
-          Browse every design we fabricate — from gates and railings to custom
-          steelwork.
+          Browse every design we fabricate in Kenya — steel gates, doors, window
+          grills, railings and custom steelwork.
         </p>
       </div>
 

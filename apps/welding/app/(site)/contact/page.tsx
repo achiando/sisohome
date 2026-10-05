@@ -2,8 +2,8 @@ import { Button } from "@workspace/ui/components/button"
 import { Card, CardContent } from "@workspace/ui/components/card"
 
 export const metadata = {
-  title: "Contact TijwaWelders - Get a Quote",
-  description: "Contact TijwaWelders for steel fabrication quotes. WhatsApp, phone, and email contact information for your project.",
+  title: "Contact TijwaWelders in Nairobi | Steel Fabrication Quote",
+  description: "Contact TijwaWelders in Nairobi for steel fabrication quotes. WhatsApp, phone and email for gates, doors, railings and structural steel.",
   alternates: {
     canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/contact`,
   },
@@ -14,7 +14,7 @@ export default function ContactPage() {
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">Let's Talk About Your Project</h1>
+        <h1 className="text-4xl font-bold mb-4">Contact TijwaWelders in Nairobi</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
           Get in touch with us for your steel fabrication needs
         </p>

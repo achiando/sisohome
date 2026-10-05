@@ -7,6 +7,15 @@ import { getFeaturedProjects, type ProjectWithImages } from "@/lib/projects"
 import { getAllGuides } from "@/lib/guides"
 import { ProductCard } from "@/components/product-card"
 
+export const metadata = {
+  title: "Steel Fabrication in Nairobi, Kenya | TijwaWelders",
+  description:
+    "Custom steel fabrication in Nairobi — gates, doors, window grills, railings and structural steel built in our workshop, installed on site. WhatsApp quote.",
+  alternates: {
+    canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}`,
+  },
+}
+
 export default async function HomePage() {
   const categories = await getAllCategories()
   const products = await getAllProducts()
@@ -56,9 +65,12 @@ export default async function HomePage() {
         <div className="relative z-10 container mx-auto px-4 text-center">
           <h1 className="mb-6 text-5xl font-bold tracking-tight text-white md:text-7xl lg:text-8xl">
             TijwaWelders
+            <span className="mt-4 block text-xl font-light text-white/90 md:text-2xl lg:text-3xl">
+              Steel Fabrication in Nairobi, Kenya
+            </span>
           </h1>
           <p className="mx-auto mb-8 max-w-3xl text-xl font-light text-white/90 md:text-2xl lg:text-3xl">
-            Steel Fabrication Built for Real Projects
+            Built in our workshop, installed on site — for real projects
           </p>
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
             <a
@@ -80,9 +92,6 @@ export default async function HomePage() {
               </Button>
             </Link>
           </div>
-          <p className="mt-8 text-sm text-white/60">
-            Gates • Doors • Windows • Railings • Structures
-          </p>
         </div>
       </section>
 

@@ -14,7 +14,7 @@ const fontMono = Geist_Mono({
 
 export const metadata = {
   title: "TijwaWelders - Steel Fabrication in Kenya",
-  description: "Premium steel gates, doors, windows, railings, and custom metal fabrication. Request quotations for your project via WhatsApp.",
+  description: "Steel gates, doors, window grills, railings and custom metal fabrication in Nairobi, Kenya. Request a quote on WhatsApp.",
 }
 
 export default function RootLayout({

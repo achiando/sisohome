@@ -2,8 +2,8 @@ import Link from "next/link"
 import { Button } from "@workspace/ui/components/button"
 
 export const metadata = {
-  title: "About TijwaWelders - Steel Fabrication Experts",
-  description: "Learn about TijwaWelders - your trusted partner for steel gates, doors, railings, and custom metal fabrication in Kenya.",
+  title: "About TijwaWelders - Steel Fabricators in Nairobi, Kenya",
+  description: "Learn about TijwaWelders, a Nairobi steel fabrication company building gates, doors, railings and custom metal fabrication across Kenya.",
   alternates: {
     canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/about`,
   },

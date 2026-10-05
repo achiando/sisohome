@@ -4,8 +4,8 @@ import { Card, CardContent } from "@workspace/ui/components/card"
 import { getAllProjects, type ProjectWithImages } from "@/lib/projects"
 
 export const metadata = {
-  title: "Projects - TijwaWelders Portfolio",
-  description: "View our real fabrication work and projects. Steel gates, doors, railings, and structural installations across Kenya.",
+  title: "Steel Fabrication Projects in Kenya | TijwaWelders",
+  description: "See real steel fabrication projects in Kenya — gates, doors, railings and structural steel installed for homes and businesses. View photos.",
   alternates: {
     canonical: `${process.env.NEXT_PUBLIC_SITE_URL || "https://tijwawelders.com"}/projects`,
   },
@@ -18,9 +18,9 @@ export default async function ProjectsPage() {
     <div className="container mx-auto px-4 py-12">
       {/* Header */}
       <div className="mb-12">
-        <h1 className="text-4xl font-bold mb-4">Projects</h1>
+        <h1 className="text-4xl font-bold mb-4">Steel Fabrication Projects</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
-          Real fabrication work by TijwaWelders
+          Real steel fabrication work by TijwaWelders across Kenya
         </p>
       </div>
 
