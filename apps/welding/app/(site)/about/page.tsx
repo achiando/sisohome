@@ -100,7 +100,7 @@ export default function AboutPage() {
       <section className="bg-muted/50 rounded-lg p-8 text-center">
         <h2 className="text-2xl font-bold mb-4">Ready to Work With Us?</h2>
         <p className="text-muted-foreground mb-6">Let's discuss your fabrication project</p>
-        <a href="https://wa.me/YOUR_WHATSAPP_NUMBER" target="_blank" rel="noopener noreferrer">
+        <a href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`} target="_blank" rel="noopener noreferrer">
           <Button variant="primary" size="lg">Contact on WhatsApp</Button>
         </a>
       </section>

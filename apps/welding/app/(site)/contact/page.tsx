@@ -28,7 +28,7 @@ export default function ContactPage() {
             <h2 className="text-xl font-bold mb-2">WhatsApp</h2>
             <p className="text-muted-foreground mb-4">Primary contact channel</p>
             <a 
-              href="https://wa.me/YOUR_WHATSAPP_NUMBER" 
+              href={`https://wa.me/${process.env.NEXT_PUBLIC_WHATSAPP_NUMBER}`} 
               target="_blank"
               rel="noopener noreferrer"
               className="block"
