@@ -14,7 +14,7 @@ const fontMono = Geist_Mono({
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
-  title: "TijwaWelders DIY - Products, Projects & Quotations",
+  title: "ODHERU Electronics - Products, Projects & Quotations",
   description:
     "Discover DIY tools, electronics components and project parts, see what you can build, and request a quotation on WhatsApp.",
 }
