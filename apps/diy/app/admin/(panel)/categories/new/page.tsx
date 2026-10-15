@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import { CategoryForm } from "../category-form"
 
 export const metadata: Metadata = {
-  title: "Add Category - ODHERU Electronics Admin",
+  title: "Add Category - ABILA Homes Admin",
 }
 
 export default function NewCategoryPage() {

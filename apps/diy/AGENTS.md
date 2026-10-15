@@ -683,8 +683,8 @@ Use:
 Example:
 
 ```text
-/products/electronics/resistors/10k-ohm-resistor
-/projects/electronics/automatic-plant-watering-system
+/products/Homes/resistors/10k-ohm-resistor
+/projects/Homes/automatic-plant-watering-system
 /guides/how-to-choose-a-power-supply
 ```
 

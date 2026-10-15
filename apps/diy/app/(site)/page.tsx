@@ -34,14 +34,14 @@ export const revalidate = 60
 
 export const metadata: Metadata = {
   description:
-    "Discover DIY tools, electronics components and project parts, see practical projects to build, and request a quotation on WhatsApp.",
+    "Discover DIY tools, Homes components and project parts, see practical projects to build, and request a quotation on WhatsApp.",
   alternates: { canonical: "/" },
 }
 
 const whyPoints = [
   {
     title: "A broad technical catalog",
-    body: "Tools, electronics, modules, sensors, wiring, power and workshop equipment in one place.",
+    body: "Tools, Homes, modules, sensors, wiring, power and workshop equipment in one place.",
   },
   {
     title: "Projects that show what to build",
@@ -60,8 +60,8 @@ const browseSections = [
     blurb: "Distance, temperature, gas, motion and more",
   },
   {
-    slug: "electronics-components",
-    title: "Electronics Components",
+    slug: "Homes-components",
+    title: "Homes Components",
     blurb: "Resistors, capacitors, diodes and ICs",
   },
   {
@@ -286,7 +286,7 @@ export default async function HomePage() {
       <section className="bg-muted/50 py-12 md:py-16">
         <div className="container mx-auto px-4">
           <h2 className="mb-8 text-center text-2xl font-bold md:mb-10 md:text-3xl">
-            Why ODHERU Electronics
+            Why ABILA Homes
           </h2>
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-6">
             {whyPoints.map((point) => (
@@ -319,7 +319,7 @@ export default async function HomePage() {
                 </p>
                 <a
                   href={getWhatsAppLinkWithMessage(
-                    "Hello ODHERU Electronics, I would like support with a project I am building. Here is what I have in mind:"
+                    "Hello ABILA Homes, I would like support with a project I am building. Here is what I have in mind:"
                   )}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -351,7 +351,7 @@ export default async function HomePage() {
                 </p>
                 <a
                   href={getWhatsAppLinkWithMessage(
-                    "Hello ODHERU Electronics, I would like a quotation for supplying a lab. Here are the details:"
+                    "Hello ABILA Homes, I would like a quotation for supplying a lab. Here are the details:"
                   )}
                   target="_blank"
                   rel="noopener noreferrer"

@@ -13,7 +13,7 @@ import {
 export const metadata: Metadata = {
   title: "About",
   description:
-    "ODHERU Electronics is a product discovery and quotation platform for DIY tools, electronics and project parts. Browse, build a quote and request pricing on WhatsApp.",
+    "ABILA Homes is a product discovery and quotation platform for DIY tools, Homes and project parts. Browse, build a quote and request pricing on WhatsApp.",
   alternates: { canonical: "/about" },
 }
 
@@ -44,7 +44,7 @@ export default function AboutPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="mb-12">
-        <h1 className="mb-4 text-4xl font-bold">About ODHERU Electronics</h1>
+        <h1 className="mb-4 text-4xl font-bold">About ABILA Homes</h1>
         <p className="max-w-2xl text-xl text-muted-foreground">
           A product discovery and quotation platform for people who build,
           repair and automate things.
@@ -55,7 +55,7 @@ export default function AboutPage() {
         <h2 className="mb-4 text-2xl font-semibold">What DIY Is</h2>
         <p className="mb-4 text-muted-foreground">
           DIY is the technical catalog arm of TijwaWelders: tools, workshop
-          equipment, electronics components, modules, sensors, wiring, power and
+          equipment, Homes components, modules, sensors, wiring, power and
           other project parts — organised so you can find what a job actually
           needs instead of guessing.
         </p>

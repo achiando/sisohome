@@ -18,11 +18,11 @@ export async function Footer() {
           <div className="space-y-4">
             <h3 className="text-lg font-bold">
               <span className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight text-slate-950">
-                ODHERU <span className="text-amber-600">ELECTRONICS</span>
+                ABILA <span className="text-amber-600">Homes</span>
               </span>
             </h3>
             <p className="text-sm text-muted-foreground">
-              Tools, electronics components and project parts with practical
+              Tools, Homes components and project parts with practical
               project ideas — request a quotation when you know what you need.
             </p>
           </div>
@@ -149,7 +149,7 @@ export async function Footer() {
 
         <div className="flex flex-col items-center justify-between text-sm text-muted-foreground md:flex-row">
           <p>
-            &copy; {new Date().getFullYear()} ODHERU Electronics. All rights
+            &copy; {new Date().getFullYear()} ABILA Homes. All rights
             reserved.
           </p>
         </div>

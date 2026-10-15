@@ -3,7 +3,7 @@ import { getAllCategories } from "@/lib/products"
 import { ProductForm } from "../product-form"
 
 export const metadata: Metadata = {
-  title: "Add Product - ODHERU Electronics Admin",
+  title: "Add Product - ABILA Homes Admin",
 }
 
 export default async function NewProductPage() {

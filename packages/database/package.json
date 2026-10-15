@@ -14,12 +14,20 @@
     "db:seed": "tsx src/seed/seed-data.ts"
   },
   "devDependencies": {
+    "@types/bcrypt": "^5.0.2",
     "@types/node": "^26.6.2",
     "prisma": "7.10.0",
     "tsx": "^4.19.2",
-    "typescript": "^5"
+    "typescript": "^5",
+    "next": "^15.0.0",
+    "@types/react": "^18.0.0",
+    "@types/react-dom": "^18.0.0"
   },
   "dependencies": {
-    "@prisma/client": "7.10.0"
+    "@prisma/client": "7.10.0",
+    "bcrypt": "^5.1.1"
+  },
+  "peerDependencies": {
+    "next": "^15.0.0"
   }
 }

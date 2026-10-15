@@ -1,0 +1,10 @@
+export type CatalogMode = 'welding' | 'diy';
+export type CatalogPageSize = 'A4' | 'A3';
+export type CatalogBrand = { name: string; legalName?: string; tagline?: string; logoPath?: string; phone?: string; whatsapp?: string; email?: string; website?: string; address?: string; location?: string; currency?: string; primaryColor?: string; darkColor?: string; lightColor?: string; footerText?: string };
+export type CatalogGuide = { title: string; slug?: string; category: string; summary: string; body?: string; tips?: string[]; imagePath?: string };
+export type CatalogService = { title: string; summary: string; bullets?: string[] };
+export type CatalogBillOfMaterial = { item: string; specification?: string; quantity?: string | number; unit?: string };
+export type CatalogProduct = { id: string; name: string; category: string; shortDescription?: string; description?: string; specifications?: Record<string, unknown> | null; billOfMaterials?: CatalogBillOfMaterial[]; priceLabel?: string; minPrice?: number | null; maxPrice?: number | null; unit?: string | null; imagePath?: string };
+export type CatalogData = { brand: CatalogBrand; mode: CatalogMode; edition?: string; guides?: CatalogGuide[]; services?: CatalogService[]; products: CatalogProduct[]; productSectionTitle?: string; productSectionIntro?: string };
+export type CatalogOptions = { pageSize?: CatalogPageSize; outputPath: string };
+export type CatalogPdfProps = { data: CatalogData; pageSize: CatalogPageSize };

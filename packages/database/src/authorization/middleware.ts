@@ -22,6 +22,47 @@ import {
 // ============================================================================
 
 export function createAuthorizationMiddleware(authService: AuthorizationService) {
+  function buildRequestFromContext(req: any, options: AuthorizationMiddlewareOptions): AuthorizationRequest {
+    const userId = req.user?.id || req.userId;
+    const organizationId = 
+      req.params?.[options.organizationParam || 'organizationId'] ||
+      req.body?.organizationId ||
+      req.headers?.['x-organization-id'] ||
+      req.query?.organizationId;
+
+    const resourceId = options.resourceParam ? req.params?.[options.resourceParam] : undefined;
+
+    return {
+      userId,
+      permission: options.permission,
+      resourceType: options.resourceType,
+      resourceId,
+      organizationId,
+      context: {
+        ipAddress: req.ip || req.headers?.['x-forwarded-for'],
+        userAgent: req.headers?.['user-agent'],
+        timestamp: new Date(),
+      },
+    };
+  }
+
+  function handleUnauthorized(res: any, result: AuthorizationResult) {
+    return res.status(403).json({
+      error: 'Forbidden',
+      message: result.reason || 'Access denied',
+      code: result.error,
+    });
+  }
+
+  function handleUnauthorizedResponse(result: AuthorizationResult) {
+    return {
+      error: 'Forbidden',
+      message: result.reason || 'Access denied',
+      code: result.error,
+      status: 403,
+    };
+  }
+
   return {
     /**
      * Express/Next.js middleware for route-level authorization
@@ -29,11 +70,11 @@ export function createAuthorizationMiddleware(authService: AuthorizationService)
     authorize: (options: AuthorizationMiddlewareOptions) => {
       return async (req: any, res: any, next: any) => {
         try {
-          const authRequest = this.buildRequestFromContext(req, options);
+          const authRequest = buildRequestFromContext(req, options);
           const result = await authService.authorize(authRequest);
 
           if (!result.authorized) {
-            return this.handleUnauthorized(res, result);
+            return handleUnauthorized(res, result);
           }
 
           // Attach authorization context to request
@@ -58,11 +99,11 @@ export function createAuthorizationMiddleware(authService: AuthorizationService)
     ) => {
       return async (req: any, ...args: T) => {
         try {
-          const authRequest = this.buildRequestFromContext(req, options);
+          const authRequest = buildRequestFromContext(req, options);
           const result = await authService.authorize(authRequest);
 
           if (!result.authorized) {
-            return this.handleUnauthorizedResponse(result);
+            return handleUnauthorizedResponse(result);
           }
 
           // Call the original handler with authorization context

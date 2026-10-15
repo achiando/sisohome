@@ -25,7 +25,9 @@ enum UserStatus {
 model User {
   id          String     @id @default(uuid()) @db.Uuid
   authUserId  String     @unique @map("auth_user_id") @db.Uuid
+  email       String     @unique
   displayName String?    @map("display_name")
+  passwordHash String?   @map("password_hash")
   phone       String?
   status      UserStatus @default(ACTIVE)
   createdAt   DateTime   @default(now()) @map("created_at")
@@ -35,15 +37,19 @@ model User {
   profile              UserProfile?
   organizationMembers  OrganizationMember[]
   auditLogs            AuditLog[]
+  sessions             Session[]
 
   @@map("users")
   @@index([authUserId])
+  @@index([email])
   @@index([status])
 }
 
 model UserProfile {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @unique @map("user_id") @db.Uuid
+  firstName String?  @map("first_name")
+  lastName  String?  @map("last_name")
   avatarUrl String?  @map("avatar_url")
   bio       String?
   timezone  String?
@@ -56,6 +62,25 @@ model UserProfile {
 
   @@map("user_profiles")
   @@index([userId])
+}
+
+model Session {
+  id             String   @id @default(uuid()) @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  token          String   @unique
+  organizationId String?  @map("organization_id") @db.Uuid
+  expiresAt      DateTime @map("expires_at")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@index([userId])
+  @@index([token])
+  @@index([organizationId])
+  @@index([expiresAt])
 }
 
 // ============================================================================
@@ -251,6 +276,7 @@ model Permission {
   key         String   @unique
   name        String
   description String?
+  scope       String   @default("ORGANIZATION") // GLOBAL, ORGANIZATION, RESOURCE, OWNED, ASSIGNED
   createdAt   DateTime @default(now()) @map("created_at")
 
   // Relations
@@ -258,6 +284,7 @@ model Permission {
 
   @@map("permissions")
   @@index([key])
+  @@index([scope])
 }
 
 model RolePermission {

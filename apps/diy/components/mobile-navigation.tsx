@@ -55,7 +55,7 @@ export function MobileNavigation() {
       </SheetTrigger>
       <SheetContent side="right" className="w-80">
         <SheetTitle className="text-xl font-bold">
-          ODHERU Electronics
+          ABILA Homes
         </SheetTitle>
 
         <nav className="mt-6 flex-1" aria-label="Mobile navigation">

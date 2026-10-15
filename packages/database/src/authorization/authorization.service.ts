@@ -3,7 +3,7 @@
  * Domain-agnostic, reusable authorization layer
  */
 
-import { PrismaClient } from '../generated/prisma';
+import { PrismaClient } from '../prisma';
 import {
   IAuthorizationService,
   AuthorizationRequest,
@@ -24,10 +24,17 @@ import {
   MembershipRequiredException,
   OrganizationAccessException,
 } from './types';
+import { SessionAuthorizationCache } from './session-cache';
+import { PolicyEngine } from './policy-engine';
+import { AuditService } from '../audit';
+import { AuthContext } from '../authentication/types';
 
 export class AuthorizationService implements IAuthorizationService {
   private prisma: PrismaClient;
   private cache: Map<string, CacheEntry> = new Map();
+  private sessionCache: SessionAuthorizationCache;
+  private policyEngine: PolicyEngine;
+  private auditService: AuditService;
   private cacheConfig: CacheConfig = {
     enabled: true,
     ttl: 300, // 5 minutes
@@ -35,10 +42,76 @@ export class AuthorizationService implements IAuthorizationService {
     strategy: 'memory',
   };
 
-  constructor(prisma: PrismaClient, cacheConfig?: Partial<CacheConfig>) {
+  constructor(
+    prisma: PrismaClient,
+    cacheConfig?: Partial<CacheConfig>,
+    sessionCache?: SessionAuthorizationCache,
+    policyEngine?: PolicyEngine,
+    auditService?: AuditService
+  ) {
     this.prisma = prisma;
     if (cacheConfig) {
       this.cacheConfig = { ...this.cacheConfig, ...cacheConfig };
+    }
+    this.sessionCache = sessionCache || new SessionAuthorizationCache(this.cacheConfig.ttl);
+    this.policyEngine = policyEngine || new PolicyEngine();
+    this.auditService = auditService || new AuditService(prisma);
+  }
+
+  getPolicyEngine(): PolicyEngine {
+    return this.policyEngine;
+  }
+
+  getAuditService(): AuditService {
+    return this.auditService;
+  }
+
+  /**
+   * Simple developer API: check if user/tenant has permission and passes resource policy
+   */
+  async can(
+    ctx: AuthContext,
+    permission: PermissionKey,
+    resource?: { id?: string; type?: string; organizationId?: string | null; [key: string]: any }
+  ): Promise<boolean> {
+    if (resource?.organizationId && ctx.organizationId && resource.organizationId !== ctx.organizationId) {
+      return false;
+    }
+
+    const decision = await this.authorize({
+      userId: ctx.userId,
+      permission,
+      organizationId: ctx.organizationId || undefined,
+      resourceId: resource?.id,
+      resourceType: (resource?.type as ResourceType) || undefined,
+    });
+
+    if (!decision.authorized) return false;
+
+    if (resource && resource.type && this.policyEngine.getPolicy(resource.type)) {
+      const action = permission.includes('.') ? permission.split('.')[1] : permission;
+      const allowedByPolicy = await this.policyEngine.can(resource.type, action || permission, ctx, resource);
+      if (!allowedByPolicy) return false;
+    }
+
+    return true;
+  }
+
+  /**
+   * Simple developer API: require permission and resource policy (throws on deny)
+   */
+  async require(
+    ctx: AuthContext,
+    permission: PermissionKey,
+    resource?: { id?: string; type?: string; organizationId?: string | null; [key: string]: any }
+  ): Promise<void> {
+    const allowed = await this.can(ctx, permission, resource);
+    if (!allowed) {
+      throw new PermissionDeniedException(permission, {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        resourceId: resource?.id,
+      });
     }
   }
 
@@ -78,11 +151,17 @@ export class AuthorizationService implements IAuthorizationService {
         }
       }
 
-      // 4. Check cache for existing authorization
+      // 4. Check session cache for permissions
+      const sessionEntry = await this.sessionCache.getOrCreateSession(
+        request.userId,
+        request.organizationId || null
+      );
+
+      // 5. Check cache for existing authorization
       const cacheKey = this.buildCacheKey(request);
       const cached = this.getFromCache(cacheKey);
-      if (cached) {
-        return cached;
+      if (cached && cached.value?.authorized !== undefined) {
+        return cached.value as AuthorizationResult;
       }
 
       // 5. Check permission
@@ -144,7 +223,7 @@ export class AuthorizationService implements IAuthorizationService {
       });
 
       // Check if the requested permission exists
-      return permissions.some(rp => rp.permission.key === permission);
+      return permissions.some((rp: any) => rp.permission.key === permission);
     } catch (error) {
       console.error('Error checking permission:', error);
       return false;
@@ -156,9 +235,15 @@ export class AuthorizationService implements IAuthorizationService {
   // ============================================================================
 
   async getUserPermissions(userId: string, organizationId?: string): Promise<PermissionKey[]> {
+    // Check session cache first
+    const sessionEntry = await this.sessionCache.getOrCreateSession(userId, organizationId || null);
+    if (sessionEntry && sessionEntry.permissions.length > 0) {
+      return sessionEntry.permissions as PermissionKey[];
+    }
+
     const cacheKey = `user_permissions:${userId}:${organizationId || 'global'}`;
     const cached = this.getFromCache(cacheKey);
-    if (cached) return cached.value;
+    if (cached) return cached.value as PermissionKey[];
 
     const roles = await this.getUserRoles(userId, organizationId);
     const roleIds = roles.map(r => r.id);
@@ -168,15 +253,27 @@ export class AuthorizationService implements IAuthorizationService {
       include: { permission: true },
     });
 
-    const permissionKeys = permissions.map(rp => rp.permission.key as PermissionKey);
+    const permissionKeys = permissions.map((rp: any) => rp.permission.key as PermissionKey);
     this.setCache(cacheKey, permissionKeys);
+    
+    // Update session cache
+    if (organizationId) {
+      await this.sessionCache.updateSession(
+        userId,
+        organizationId,
+        { userId, authUserId: '', organizationId },
+        permissionKeys,
+        roles.map(r => r.slug)
+      );
+    }
+    
     return permissionKeys;
   }
 
   async getUserRoles(userId: string, organizationId?: string): Promise<Role[]> {
     const cacheKey = `user_roles:${userId}:${organizationId || 'global'}`;
     const cached = this.getFromCache(cacheKey);
-    if (cached) return cached.value;
+    if (cached) return cached.value as Role[];
 
     // Get user's organization memberships
     const memberships = await this.prisma.organizationMember.findMany({
@@ -200,37 +297,8 @@ export class AuthorizationService implements IAuthorizationService {
       },
     });
 
-    // Also get global roles (organizationId = null)
-    const globalRoles = await this.prisma.role.findMany({
-      where: { organizationId: null, isSystem: true },
-      include: {
-        permissions: {
-          include: { permission: true },
-        },
-      },
-    });
-
-    // Combine roles
+    // Combine roles - only organization-specific roles
     const userRoles: Role[] = [];
-    
-    // Add global roles
-    for (const globalRole of globalRoles) {
-      userRoles.push({
-        id: globalRole.id,
-        organizationId: globalRole.organizationId,
-        name: globalRole.name,
-        slug: globalRole.slug,
-        description: globalRole.description,
-        isSystem: globalRole.isSystem,
-        permissions: globalRole.permissions.map(rp => ({
-          id: rp.permission.id,
-          key: rp.permission.key as PermissionKey,
-          name: rp.permission.name,
-          description: rp.permission.description,
-          scope: this.inferPermissionScope(rp.permission.key),
-        })),
-      });
-    }
 
     // Add organization-specific roles
     for (const membership of memberships) {
@@ -238,17 +306,17 @@ export class AuthorizationService implements IAuthorizationService {
         const role = memberRole.role;
         userRoles.push({
           id: role.id,
-          organizationId: role.organizationId,
+          organizationId: role.organizationId ?? undefined,
           name: role.name,
           slug: role.slug,
-          description: role.description,
+          description: role.description ?? undefined,
           isSystem: role.isSystem,
-          permissions: role.permissions.map(rp => ({
+          permissions: role.permissions.map((rp: any) => ({
             id: rp.permission.id,
             key: rp.permission.key as PermissionKey,
             name: rp.permission.name,
-            description: rp.permission.description,
-            scope: this.inferPermissionScope(rp.permission.key),
+            description: rp.permission.description ?? undefined,
+            scope: (rp.permission.scope as PermissionScope) || PermissionScope.ORGANIZATION,
           })),
         });
       }
@@ -299,7 +367,7 @@ export class AuthorizationService implements IAuthorizationService {
 
       // Check if any relationship is currently valid
       const now = new Date();
-      return relationships.some(rel => {
+      return relationships.some((rel: any) => {
         if (rel.startsAt && rel.startsAt > now) return false;
         if (rel.endsAt && rel.endsAt < now) return false;
         return true;
@@ -328,7 +396,7 @@ export class AuthorizationService implements IAuthorizationService {
       select: { organizationId: true },
     });
 
-    return memberships.map(m => m.organizationId);
+    return memberships.map((m: any) => m.organizationId);
   }
 
   // ============================================================================
@@ -364,28 +432,21 @@ export class AuthorizationService implements IAuthorizationService {
     request: AuthorizationRequest,
     result: AuthorizationResult
   ): Promise<void> {
-    try {
-      await this.prisma.auditLog.create({
-        data: {
-          actorUserId: request.userId,
-          organizationId: request.organizationId,
-          action: result.authorized ? 'authorization.granted' : 'authorization.denied',
-          resourceType: request.resourceType,
-          resourceId: request.resourceId,
-          metadata: {
-            permission: request.permission,
-            reason: result.reason,
-            error: result.error,
-            context: request.context,
-          },
-          ipAddress: request.context?.ipAddress,
-          userAgent: request.context?.userAgent,
-        },
-      });
-    } catch (error) {
-      console.error('Error logging authorization attempt:', error);
-      // Don't throw - audit logging shouldn't break authorization
-    }
+    await this.auditService.log({
+      actorUserId: request.userId,
+      organizationId: request.organizationId,
+      action: result.authorized ? 'authorization.granted' : 'authorization.denied',
+      resourceType: request.resourceType,
+      resourceId: request.resourceId,
+      metadata: {
+        permission: request.permission,
+        reason: result.reason,
+        error: result.error,
+        context: request.context,
+      },
+      ipAddress: request.context?.ipAddress,
+      userAgent: request.context?.userAgent,
+    });
   }
 
   // ============================================================================
@@ -467,7 +528,7 @@ export class AuthorizationService implements IAuthorizationService {
     }
 
     // If permission scope requires relationship and user doesn't have one
-    const permissionScope = this.inferPermissionScope(request.permission);
+    const permissionScope = await this.getPermissionScope(request.permission);
     if (permissionScope === PermissionScope.RELATED || permissionScope === PermissionScope.OWNED) {
       return this.deniedResult(
         AuthorizationReason.RELATIONSHIP_REQUIRED,
@@ -491,16 +552,15 @@ export class AuthorizationService implements IAuthorizationService {
     }
   }
 
-  private inferPermissionScope(permissionKey: PermissionKey): PermissionScope {
-    // This is a simple heuristic - in a real implementation, you might store
-    // scope in the permissions table or derive it from permission naming conventions
-    if (permissionKey.startsWith('organization.')) {
-      return PermissionScope.ORGANIZATION;
-    }
-    if (permissionKey.includes('global') || permissionKey.startsWith('platform.')) {
-      return PermissionScope.GLOBAL;
-    }
-    return PermissionScope.RELATED;
+  private async getPermissionScope(permissionKey: PermissionKey): Promise<PermissionScope> {
+    const permission = await this.prisma.permission.findUnique({
+      where: { key: permissionKey },
+      select: { scope: true },
+    });
+
+    if (!permission) return PermissionScope.ORGANIZATION;
+
+    return permission.scope as PermissionScope;
   }
 
   private deniedResult(
@@ -523,7 +583,7 @@ export class AuthorizationService implements IAuthorizationService {
     return {
       authorized: true,
       reason: AuthorizationReason.AUTHORIZED,
-      scope: this.inferPermissionScope(request.permission),
+      scope: await this.getPermissionScope(request.permission),
       roles: roles.map(r => r.slug),
       permissions,
     };
@@ -537,7 +597,7 @@ export class AuthorizationService implements IAuthorizationService {
     return `auth:${request.userId}:${request.permission}:${request.organizationId || 'global'}:${request.resourceType || 'none'}:${request.resourceId || 'none'}`;
   }
 
-  private getFromCache(key: string): AuthorizationResult | null {
+  private getFromCache(key: string): CacheEntry | null {
     if (!this.cacheConfig.enabled) return null;
 
     const entry = this.cache.get(key);
@@ -548,7 +608,7 @@ export class AuthorizationService implements IAuthorizationService {
       return null;
     }
 
-    return entry.value;
+    return entry;
   }
 
   private setCache(key: string, value: any): void {
@@ -558,7 +618,7 @@ export class AuthorizationService implements IAuthorizationService {
     if (this.cache.size >= this.cacheConfig.maxSize) {
       // Remove oldest entry
       const firstKey = this.cache.keys().next().value;
-      this.cache.delete(firstKey);
+      if (firstKey) this.cache.delete(firstKey);
     }
 
     const entry: CacheEntry = {

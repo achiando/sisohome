@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db"
 import { CategoriesList, type AdminCategory } from "./categories-list"
 
 export const metadata: Metadata = {
-  title: "Categories - ODHERU Electronics Admin",
+  title: "Categories - ABILA Homes Admin",
 }
 
 export default async function AdminCategoriesPage() {

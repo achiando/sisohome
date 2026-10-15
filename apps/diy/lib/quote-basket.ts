@@ -118,7 +118,7 @@ export function generateWhatsAppMessage(items: QuoteItem[]): string {
     ? `I would like a quotation for the products needed for the ${firstProject}:`
     : "I would like a quotation for:"
 
-  const message = `Hello ODHERU Electronics,
+  const message = `Hello ABILA Homes,
 
 ${heading}
 

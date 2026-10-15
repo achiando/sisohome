@@ -4,7 +4,7 @@ import { prisma } from "@/lib/db"
 import { ProjectForm, type ProjectFormProject } from "../../project-form"
 
 export const metadata: Metadata = {
-  title: "Edit Project - ODHERU Electronics Admin",
+  title: "Edit Project - ABILA Homes Admin",
 }
 
 export default async function EditProjectPage({

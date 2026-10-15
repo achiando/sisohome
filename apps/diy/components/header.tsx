@@ -32,7 +32,7 @@ export function Header() {
             Tijwa <span className="text-primary">DIY</span>
           </span> */}
           <span className="flex items-center gap-1.5 text-xl font-extrabold tracking-tight text-slate-950">
-            ODHERU <span className="text-amber-600">ELECTRONICS</span>
+            ABILA <span className="text-amber-600">Homes</span>
           </span>
         </Link>
 

@@ -3,7 +3,7 @@ import { prisma } from "@/lib/db"
 import { ProjectForm } from "../project-form"
 
 export const metadata: Metadata = {
-  title: "Add Project - ODHERU Electronics Admin",
+  title: "Add Project - ABILA Homes Admin",
 }
 
 export default async function NewProjectPage() {

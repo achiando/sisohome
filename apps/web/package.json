@@ -12,6 +12,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@prisma/client": "7.10.0",
+    "@workspace/auth-ui": "workspace:*",
     "@workspace/database": "workspace:*",
     "@workspace/ui": "workspace:*",
     "lucide-react": "^1.37.0",

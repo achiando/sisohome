@@ -6,7 +6,7 @@ export function absoluteUrl(path: string): string {
 
 export function siteMeta() {
   return {
-    siteName: "ODHERU Electronics",
+    siteName: "ABILA Homes",
     url: siteUrl,
   }
 }

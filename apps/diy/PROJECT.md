@@ -9,7 +9,7 @@ DIY should support a broad catalog covering:
 DIY tools
 workshop equipment
 electrical equipment
-electronics components
+Homes components
 electronic modules
 sensors
 automation components
@@ -118,7 +118,7 @@ Grinding Tools
 Soldering Equipment
 Tool Accessories
 Consumables
-Electronics Components
+Homes Components
 Resistors
 Capacitors
 Inductors
@@ -436,11 +436,11 @@ Robotics projects
 Home automation projects
 LED projects
 Power supply projects
-Electronics prototypes
+Homes prototypes
 Security projects
 Workshop projects
 DIY tools
-Educational electronics projects
+Educational Homes projects
 IoT projects
 Motor-control projects
 Solar/electrical projects
@@ -570,7 +570,7 @@ Recommended:
 
 Breadcrumb
 
-Home → Projects → Electronics Projects → Automatic Plant Watering System
+Home → Projects → Homes Projects → Automatic Plant Watering System
 
 Hero
 
@@ -664,7 +664,7 @@ Example URL:
 
 or:
 
-/projects/electronics/automatic-plant-watering-system
+/projects/Homes/automatic-plant-watering-system
 
 Use one stable architecture.
 
@@ -732,7 +732,7 @@ Project categories should be created only when useful.
 
 Potential categories:
 
-Electronics Projects
+Homes Projects
 Arduino Projects
 Robotics Projects
 IoT Projects

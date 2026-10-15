@@ -18,7 +18,7 @@ export default async function AdminPanelLayout({
           <div className="flex items-center justify-between gap-3 md:block">
             <Link href="/admin/products" className="flex items-center gap-2">
               <span className="text-sm font-semibold tracking-tight">
-                ODHERU Electronics
+                ABILA Homes
               </span>
               <Badge className="text-[10px] tracking-wider uppercase">
                 Admin

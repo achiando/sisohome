@@ -94,7 +94,7 @@ const featured = new Set([
   "soldering-iron-60w",
   "robot-chassis-2wd-kit",
   "jumper-wire-set",
-  "student-electronics-starter-kit",
+  "student-Homes-starter-kit",
   "arduino-uno-starter-kit",
   "esp32-iot-starter-kit",
   "sensor-kit-37-in-1",
@@ -135,8 +135,8 @@ export const diyCategories: DiySeedCategory[] = [
       "Ready-made kits for students and beginners — everything for a first project in one box.",
   },
   {
-    name: "Electronics Components",
-    slug: "electronics-components",
+    name: "Homes Components",
+    slug: "Homes-components",
     sortOrder: 2,
     description:
       "Resistors, capacitors, LEDs, potentiometers, buzzers and other passive parts, sold in packs so you always have spares.",
@@ -281,7 +281,7 @@ const ohmHints: Record<number, string> = {
 const ohms = Object.keys(ohmHints).map(Number)
 
 push(
-  "electronics-components",
+  "Homes-components",
   r(
     "resistor-kit-1-4w",
     "Resistor Kit — 1/4 W Assorted (600 pcs)",
@@ -349,7 +349,7 @@ const ceramics: [string, string][] = [
   ["1 µF", "1u"],
 ]
 push(
-  "electronics-components",
+  "Homes-components",
   r(
     "ceramic-capacitor-kit",
     "Ceramic Capacitor Kit (100 pcs)",
@@ -391,7 +391,7 @@ const electros = [
   2200, 4700,
 ]
 push(
-  "electronics-components",
+  "Homes-components",
   r(
     "electrolytic-capacitor-kit",
     "Electrolytic Capacitor Kit (120 pcs)",
@@ -434,7 +434,7 @@ const ledColours: [string, string][] = [
 ]
 for (const size of [5, 3]) {
   push(
-    "electronics-components",
+    "Homes-components",
     ...ledColours.map(([c, label]) =>
       r(
         `led-${size}mm-${c}-pack-50`,
@@ -683,7 +683,7 @@ push(
 /* ---- Metal-film 1% resistors, film capacitors, inductors, LED extras ---- */
 const metalFilm = [100, 330, 1000, 4700, 10000, 100000]
 push(
-  "electronics-components",
+  "Homes-components",
   ...metalFilm.map((o) =>
     r(
       `resistor-mf-${codeOhms(o)}-pack-50`,
@@ -1061,19 +1061,19 @@ push(
 push(
   "starter-kits",
   r(
-    "student-electronics-starter-kit",
-    "Student Electronics Starter Kit",
+    "student-Homes-starter-kit",
+    "Student Homes Starter Kit",
     "Kit",
     2800,
     "Breadboard, resistors, LEDs, capacitors, buttons and jumpers for first circuits.",
-    "Everything for the first term of an electronics class without needing a board. Pairs with the multimeter for measuring.",
+    "Everything for the first term of an Homes class without needing a board. Pairs with the multimeter for measuring.",
     [
       [
         "Includes",
         "830-pt breadboard, 600 resistors, 100 LEDs, capacitor kit, 20 buttons, jumpers, 9 V clip",
       ],
     ],
-    "electronics components kit"
+    "Homes components kit"
   ),
   r(
     "arduino-uno-starter-kit",
@@ -1245,7 +1245,7 @@ push(
 )
 
 push(
-  "electronics-components",
+  "Homes-components",
   r(
     "potentiometer-10k-pack-5",
     "10 kΩ Rotary Potentiometer (Pack of 5)",
@@ -6811,7 +6811,7 @@ push(
     "Solder Wire 60/40 Rosin Core 0.8 mm (100 g)",
     "Each",
     700,
-    "Flux-core solder for electronics.",
+    "Flux-core solder for Homes.",
     "Use in ventilated spaces.",
     [
       ["Alloy", "60/40"],
@@ -6960,7 +6960,7 @@ push(
     "Precision Screwdriver Set (25 pcs)",
     "Kit",
     700,
-    "Small bits for electronics.",
+    "Small bits for Homes.",
     "Covers most board and enclosure screws.",
     [["Contents", "25 bits + handle", 25]],
     "precision screwdriver set"
@@ -7582,7 +7582,7 @@ push(
     "Each",
     750,
     "Metal box that shields and dissipates heat.",
-    "For power electronics that need cooling.",
+    "For power Homes that need cooling.",
     [
       ["Size", "120×60×40 mm"],
       ["Material", "Aluminium"],
@@ -8471,7 +8471,7 @@ function build(
     images: [{ url: `/seed/${row.slug}.jpg`, alt: row.name }],
     isFeatured: featured.has(row.slug),
     sortOrder,
-    seoTitle: `${row.name} | ODHERU Electronics`,
+    seoTitle: `${row.name} | ABILA Homes`,
     seoDesc: `${row.short} Add it to your quote on WhatsApp.`,
   }
 }
@@ -8512,7 +8512,7 @@ function project(
     ],
     isFeatured,
     sortOrder: projectOrder,
-    seoTitle: `${title} Project | ODHERU Electronics`,
+    seoTitle: `${title} Project | ABILA Homes`,
     seoDesc: `${shortDesc} Parts list and steps included.`,
     products: parts.map(([productSlug, quantity, isRequired]) => ({
       productSlug,
@@ -8526,7 +8526,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "automatic-plant-watering-system",
     "Automatic Plant Watering System",
-    "Electronics Projects",
+    "Homes Projects",
     "Water plants only when the soil is dry, using a moisture sensor, relay and small pump.",
     "A soil probe reads how wet the pot is. When the reading crosses a dry threshold, the board switches a relay, which switches the pump. Teaches analog reading, relay driving and separating pump power from board power.",
     [
@@ -8562,7 +8562,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "ultrasonic-distance-meter",
     "Ultrasonic Distance Meter",
-    "Electronics Projects",
+    "Homes Projects",
     "Measure distance with an HC-SR04 and show it on a 16×2 LCD.",
     "The HC-SR04 gives a time-of-flight reading; the board converts it to centimetres and prints it on the LCD.",
     [
@@ -8594,7 +8594,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "motion-activated-night-light",
     "Motion-Activated Night Light",
-    "Electronics Projects",
+    "Homes Projects",
     "Switch a light on automatically when a PIR sensor detects movement.",
     "A PIR module signals the board when something moves; the board lights an LED for a set time.",
     [
@@ -8701,7 +8701,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "oled-weather-station",
     "OLED Weather Station",
-    "Electronics Projects",
+    "Homes Projects",
     "Show temperature, humidity and pressure on a small OLED screen.",
     "A DHT22 reads temperature and humidity, a BMP280 reads pressure, and the OLED displays all three.",
     [
@@ -8733,7 +8733,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "temperature-controlled-fan",
     "Temperature-Controlled Fan",
-    "Electronics Projects",
+    "Homes Projects",
     "A fan that speeds up as the temperature rises.",
     "A DHT22 measures temperature and a MOSFET drives a fan with PWM, with a flyback diode for protection.",
     [
@@ -8764,7 +8764,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "rfid-door-lock",
     "RFID Door Lock",
-    "Electronics Projects",
+    "Homes Projects",
     "Open a latch with a servo when an authorised card is scanned.",
     "An RC522 reads each card's ID; on a match a servo opens the latch, otherwise a buzzer sounds.",
     [
@@ -8909,7 +8909,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "digital-clock-ds3231",
     "Digital Clock with DS3231",
-    "Electronics Projects",
+    "Homes Projects",
     "A battery-backed clock on a 4-digit display with set buttons.",
     "A DS3231 keeps accurate time through power loss and a TM1637 shows hours and minutes.",
     [
@@ -8939,7 +8939,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "fire-and-gas-alarm",
     "Fire & Gas Alarm",
-    "Electronics Projects",
+    "Homes Projects",
     "Sound an alarm when a flame or gas/smoke is detected.",
     "A flame sensor and MQ-2 watch for danger; when either trips, a buzzer sounds and a red LED lights.",
     [
@@ -9035,7 +9035,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "digital-thermometer-ds18b20",
     "Digital Thermometer with DS18B20",
-    "Electronics Projects",
+    "Homes Projects",
     "Read a DS18B20 one-wire probe and show the temperature on an LCD.",
     "The DS18B20 reports temperature as digital values over a single wire, so readings stay accurate even on long leads. A 4.7 kΩ pull-up is the only extra part.",
     [
@@ -9072,7 +9072,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "keypad-door-lock",
     "Keypad Door Lock",
-    "Electronics Projects",
+    "Homes Projects",
     "Type a code on a membrane keypad to open a servo latch.",
     "The keypad is scanned as a matrix of rows and columns. A correct code swings the servo to release the latch; a wrong code blinks the red LED and beeps.",
     [
@@ -9111,7 +9111,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "rain-alarm",
     "Rain Alarm",
-    "Electronics Projects",
+    "Homes Projects",
     "Sound a buzzer the moment rain lands on the sensor pad.",
     "The bare board exposes interdigitated copper traces. Rain drops bridge them, the analog reading collapses and the board triggers the alarm.",
     [
@@ -9129,7 +9129,7 @@ export const diyProjects: DiySeedProject[] = [
       ],
       [
         "Mount it outdoors",
-        "Angle the pad so water runs off, keep the electronics box dry and use a longer ribbon cable if needed.",
+        "Angle the pad so water runs off, keep the Homes box dry and use a longer ribbon cable if needed.",
       ],
     ],
     "rain-sensor-module",
@@ -9297,7 +9297,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "water-tank-level-monitor",
     "Water Tank Level Monitor",
-    "Electronics Projects",
+    "Homes Projects",
     "Show the tank level on an LCD and beep when it is nearly full.",
     "The probe's stacked sensors read the water height as a stepped analog value. The display maps it to bars and a buzzer warns before overflow.",
     [
@@ -9428,7 +9428,7 @@ export const diyProjects: DiySeedProject[] = [
       ],
       [
         "Mount the hardware",
-        "Bolt the solenoid so the tongue clears the strike, and box the electronics away from rain.",
+        "Bolt the solenoid so the tongue clears the strike, and box the Homes away from rain.",
       ],
     ],
     "electromagnetic-door-lock-12v",
@@ -9484,7 +9484,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "portable-power-bank",
     "DIY Power Bank",
-    "Electronics Projects",
+    "Homes Projects",
     "Charge a phone from an 18650 cell with a charger board and boost converter.",
     "The TP4056 charges the cell safely from USB, the MT3608 boosts 3.7 V up to a steady 5 V, and a switch isolates the port when not in use.",
     [
@@ -9521,7 +9521,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "bicycle-brake-light",
     "Bicycle Brake Light",
-    "Electronics Projects",
+    "Homes Projects",
     "A tail light that flares bright when the bike decelerates.",
     "An MPU6050 watches forward acceleration; when braking is detected the strip switches from a soft glow to full red, then returns after stopping.",
     [
@@ -9557,7 +9557,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "ph-monitor-hydroponics",
     "pH Monitor for Hydroponics",
-    "Electronics Projects",
+    "Homes Projects",
     "Measure nutrient-solution pH and warn when it drifts out of range.",
     "The analog pH probe board outputs a voltage the board converts to pH. Alerts tell you when the solution needs adjusting, which hydroponic plants are sensitive to.",
     [
@@ -9593,7 +9593,7 @@ export const diyProjects: DiySeedProject[] = [
   project(
     "motor-tachometer",
     "Motor Tachometer",
-    "Electronics Projects",
+    "Homes Projects",
     "Measure motor speed in RPM with a slotted disc and photo-interrupter.",
     "A disc with slots spins between the interrupter's LED and detector. Each slot breaks the beam, an interrupt counts it, and the board converts pulses per second into RPM.",
     [

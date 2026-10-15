@@ -415,7 +415,7 @@ export function ProjectForm({
                   label: "Project category",
                   type: "text",
                   colSpan: 2,
-                  helperText: "e.g. Electronics Projects. Leave blank if not needed.",
+                  helperText: "e.g. Homes Projects. Leave blank if not needed.",
                 },
                 {
                   name: "sortOrder",

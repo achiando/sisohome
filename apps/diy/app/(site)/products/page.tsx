@@ -15,7 +15,7 @@ export const revalidate = 60
 export const metadata: Metadata = {
   title: "Products",
   description:
-    "Browse DIY tools, electronics components, sensors, modules, wiring and workshop equipment. Add products to your quote and request a quotation on WhatsApp.",
+    "Browse DIY tools, Homes components, sensors, modules, wiring and workshop equipment. Add products to your quote and request a quotation on WhatsApp.",
   alternates: { canonical: "/products" },
 }
 
@@ -29,7 +29,7 @@ export default async function ProductsPage() {
       <div className="mb-8">
         <h1 className="text-4xl font-bold mb-4">Products</h1>
         <p className="text-xl text-muted-foreground max-w-2xl">
-          Browse the full catalog — tools, electronics and project parts. Add
+          Browse the full catalog — tools, Homes and project parts. Add
           what you need to your quote and request a quotation.
         </p>
       </div>

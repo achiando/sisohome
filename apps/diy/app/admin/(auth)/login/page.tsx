@@ -21,7 +21,7 @@ export default async function AdminLoginPage() {
   return (
     <Card className="rounded-2xl shadow-lg">
       <CardHeader className="gap-1">
-        <CardTitle className="text-xl">ODHERU Electronics Admin</CardTitle>
+        <CardTitle className="text-xl">ABILA Homes Admin</CardTitle>
         <CardDescription>Sign in to manage the catalogue.</CardDescription>
       </CardHeader>
       <CardContent>

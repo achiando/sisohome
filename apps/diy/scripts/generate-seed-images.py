@@ -201,7 +201,7 @@ def render(filename, label, kicker, palette_name, motif_name, variant=0):
         y += 78
 
     d.line([(64, H - 74), (148, H - 74)], fill=(*accent, 255), width=4)
-    d.text((64, H - 58), "ODHERU Electronics", font=word_font, fill=(226, 232, 240, 255))
+    d.text((64, H - 58), "ABILA Homes", font=word_font, fill=(226, 232, 240, 255))
 
     os.makedirs(OUT, exist_ok=True)
     path = os.path.join(OUT, filename)
@@ -223,8 +223,8 @@ ITEMS = [
     ("830-point-breadboard.jpg", "830-Point Breadboard", "Prototyping", "prototyping", "grid", 0),
     ("830-point-breadboard-2.jpg", "Breadboard Close-Up", "Prototyping", "prototyping", "chip", 1),
     ("jumper-wire-set.jpg", "Jumper Wire Set - 65 Pieces", "Prototyping", "prototyping", "grid", 1),
-    ("resistor-kit-1-4w.jpg", "Resistor Kit - 1/4 W Assorted", "Electronics Components", "components", "glow", 0),
-    ("led-kit-5mm.jpg", "LED Kit - 5 mm Assorted", "Electronics Components", "components", "glow", 1),
+    ("resistor-kit-1-4w.jpg", "Resistor Kit - 1/4 W Assorted", "Homes Components", "components", "glow", 0),
+    ("led-kit-5mm.jpg", "LED Kit - 5 mm Assorted", "Homes Components", "components", "glow", 1),
     ("dc-power-supply-12v-2a.jpg", "12V 2A DC Power Supply", "Electrical", "electrical", "bolt", 0),
     ("18650-battery-holder-2x.jpg", "18650 Battery Holder - 2 Cell", "Electrical", "electrical", "bolt", 1),
     ("soldering-iron-60w.jpg", "60 W Soldering Iron", "Tools & Workshop", "tools", "gear", 0),

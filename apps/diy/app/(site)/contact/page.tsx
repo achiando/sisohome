@@ -8,7 +8,7 @@ import { MessageCircle, Mail, ClipboardList } from "lucide-react"
 export const metadata: Metadata = {
   title: "Contact",
   description:
-    "Contact ODHERU Electronics for product and project quotations. WhatsApp is the fastest way to reach us; email is the fallback.",
+    "Contact ABILA Homes for product and project quotations. WhatsApp is the fastest way to reach us; email is the fallback.",
   alternates: { canonical: "/contact" },
 }
 
@@ -25,7 +25,7 @@ export default function ContactPage() {
   return (
     <div className="container mx-auto px-4 py-12">
       <div className="mb-12">
-        <h1 className="mb-4 text-4xl font-bold">Contact ODHERU Electronics</h1>
+        <h1 className="mb-4 text-4xl font-bold">Contact ABILA Homes</h1>
         <p className="max-w-2xl text-xl text-muted-foreground">
           Quotations are handled by a real person. WhatsApp is the fastest
           route; email works when you prefer to write things down.

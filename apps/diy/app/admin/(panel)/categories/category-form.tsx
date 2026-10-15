@@ -117,7 +117,7 @@ export function CategoryForm({ category }: { category?: CategoryFormCategory }) 
                   type: "text",
                   colSpan: 2,
                   required: true,
-                  placeholder: "Electronics Components",
+                  placeholder: "Homes Components",
                 },
                 {
                   name: "slug",

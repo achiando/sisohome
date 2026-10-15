@@ -4,6 +4,122 @@
 This version has breaking changes — APIs, conventions, and file structure may all differ from your training data. Read the relevant guide in `node_modules/next/dist/docs/` before writing any code. Heed deprecation notices.
 <!-- END:nextjs-agent-rules -->
 
+<!-- BEGIN:authorization-security-rules -->
+# Multi-Tenant Authorization Security - MANDATORY
+
+**ALL development involving routes, pages, components, or API endpoints MUST follow authorization security rules.**
+
+**CRITICAL**: This applies to EVERY UI component and EVERY database operation that accesses or manipulates protected data. There are NO exceptions.
+
+**ALWAYS invoke the `authorization` agent skill before ANY work involving data access or protected features.**
+
+The skill is located at: `packages/database/.agents/skills/authorization/SECURITY_SKILL.md`
+
+## When to Use the Authorization Skill
+
+**MANDATORY for ALL tasks involving**:
+
+### UI Components
+- Creating or modifying ANY component that displays protected data
+- Creating or modifying ANY form that submits protected data
+- Creating or modifying ANY page that requires authentication
+- Creating or modifying ANY list/table showing protected resources
+- Creating or modifying ANY dashboard or admin interface
+- **ANY UI work that touches the database or displays user/org-specific data**
+
+### Database Operations
+- Creating or modifying ANY API route (Next.js API routes, Express routes)
+- Creating or modifying ANY server action or mutation
+- Creating or modifying ANY database query
+- Creating or modifying ANY Prisma operation
+- Creating or modifying ANY data fetching logic
+- **ANY database operation that is not public data**
+
+### General
+- Adding new features that require access control
+- Modifying existing authorization logic
+- Creating or modifying ANY page (Next.js pages, app router pages)
+
+## Core Security Principles
+
+1. **Default Deny**: All access denied by default. Explicit permission required.
+2. **Explicit Tenancy**: Tenant context must always be explicit. Never infer from arbitrary data.
+3. **Server-Side Authorization**: Authorization MUST happen on the server. Client-side checks are UX only.
+4. **Permission Persistence**: Use session caching to avoid repeated database queries.
+5. **No Exceptions**: Every protected data access must be authorized.
+
+## Quick Reference
+
+### API Route Protection
+```typescript
+import { protectRoute } from '@workspace/database';
+
+export async function GET(request: NextRequest) {
+  const authContext = await protectRoute({
+    authService,
+    tenantService,
+    requiredPermissions: ['customers.read'],
+    requireOrganization: true,
+  })(request);
+  // Proceed with business logic
+}
+```
+
+### Server Component Protection
+```typescript
+import { getServerAuthContext, getServerPermissions } from '@workspace/database';
+
+export default async function DashboardPage() {
+  const auth = getServerAuthContext();
+  const permissions = getServerPermissions();
+  
+  if (!permissions.includes('customers.read')) {
+    return <div>Access denied</div>;
+  }
+  return <DashboardContent />;
+}
+```
+
+### Database Query Protection
+```typescript
+// ALWAYS include organization context in queries
+const customers = await prisma.customer.findMany({
+  where: { organizationId: authContext.organizationId },
+});
+```
+
+### Middleware Integration
+```typescript
+import { createAuthMiddleware } from '@workspace/database';
+
+export default createAuthMiddleware({
+  authService,
+  sessionCache,
+  protectedPaths: ['/dashboard', '/settings'],
+});
+```
+
+## Security Checklist
+
+Before committing any code that involves data access:
+- [ ] Server-side authorization check present
+- [ ] Permission key defined in seed data
+- [ ] Tenant context explicit (if organization-scoped)
+- [ ] Client-side checks paired with server checks
+- [ ] Cross-tenant access prevented
+- [ ] Authorization tests written
+- [ ] Database queries scoped to organization
+- [ ] No public data leakage
+
+## Resources
+
+- **Authorization Skill**: `packages/database/.agents/skills/authorization/SECURITY_SKILL.md`
+- **Security Documentation**: `packages/database/SECURITY.md`
+- **Architecture Documentation**: `packages/database/AUTH_ARCHITECTURE.md`
+- **Integration Guide**: `packages/database/INTEGRATION_GUIDE.md`
+
+<!-- END:authorization-security-rules -->
+
 <!-- BEGIN:workspace-ui-rules -->
 # @workspace/ui Design System - MANDATORY
 
