@@ -1,31 +1,34 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { authService } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { authService, getSessionToken } from '@/lib/auth';
+import { clearSessionCookie, setActiveOrgCookie } from '@/lib/session-cookie';
 
-export async function POST(request: NextRequest) {
+export async function POST() {
   try {
-    // Get session token from request
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    // Session token comes from the httpOnly cookie
+    const token = await getSessionToken();
 
-    if (!token) {
-      return NextResponse.json(
-        { success: false, error: 'No session token' },
-        { status: 400 }
-      );
+    if (token) {
+      // Verify session to get session ID, then revoke it
+      try {
+        const identity = await authService.verifySession(token);
+        if (identity.sessionId) {
+          await authService.revokeSession(identity.sessionId);
+        }
+      } catch {
+        // Token may already be invalid — continue to clear cookies anyway
+      }
     }
 
-    // Verify session to get session ID
-    const identity = await authService.verifySession(token);
-
-    // Revoke session
-    if (identity.sessionId) {
-      await authService.revokeSession(identity.sessionId);
-    }
-
-    return NextResponse.json({ success: true });
+    const response = NextResponse.json({ success: true });
+    clearSessionCookie(response);
+    setActiveOrgCookie(response, null);
+    return response;
   } catch (error) {
     console.error('Logout error:', error);
-    // Even if logout fails, return success to avoid blocking user
-    return NextResponse.json({ success: true });
+    // Even if logout fails, clear cookies and return success to unblock user
+    const response = NextResponse.json({ success: true });
+    clearSessionCookie(response);
+    setActiveOrgCookie(response, null);
+    return response;
   }
 }

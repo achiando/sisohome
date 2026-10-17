@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authProvider, authorizationService, db } from '@/lib/auth';
+import { authProvider, db } from '@/lib/auth';
+import { setSessionCookie, setActiveOrgCookie } from '@/lib/session-cookie';
 
 export async function POST(request: NextRequest) {
   try {
@@ -29,18 +30,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get session token
     const session = await db.session.findUnique({
       where: { id: identity.sessionId },
     });
 
-    // Get permissions and roles
-    const organizationId = identity.metadata?.organizationId as string | null;
-    const permissions = await authorizationService.getUserPermissions(identity.userId, organizationId || undefined);
-    const roles = await authorizationService.getUserRoles(identity.userId, organizationId || undefined);
-
-    return NextResponse.json({
+    // Signup creates the account only — no org, no roles, no permissions.
+    // The client should redirect to /onboarding to create or join an org.
+    const response = NextResponse.json({
       success: true,
+      onboardingRequired: true,
       user: {
         id: user.id,
         email: user.email,
@@ -48,13 +46,20 @@ export async function POST(request: NextRequest) {
         avatar: user.profile?.avatarUrl,
       },
       session: {
-        token: session?.token,
         expiresAt: session?.expiresAt?.toISOString(),
-        organizationId,
-        permissions,
-        roles: roles.map(r => r.slug),
+        organizationId: null,
+        permissions: [],
+        roles: [],
       },
     });
+
+    // Persist session token in httpOnly cookie; no active org yet (onboarding).
+    if (session?.token) {
+      setSessionCookie(response, session.token);
+      setActiveOrgCookie(response, null);
+    }
+
+    return response;
   } catch (error) {
     console.error('Sign up error:', error);
     return NextResponse.json(

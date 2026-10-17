@@ -1,11 +1,11 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { authService, authorizationService, db } from '@/lib/auth';
+import { NextResponse } from 'next/server';
+import { authService, authorizationService, db, getSessionToken } from '@/lib/auth';
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
-    // Get session token from request
-    const authHeader = request.headers.get('authorization');
-    const token = authHeader?.replace('Bearer ', '');
+    // Session token comes from the httpOnly cookie — never from JS-readable
+    // storage or an Authorization header the client would have to persist.
+    const token = await getSessionToken();
 
     if (!token) {
       return NextResponse.json({ success: false });
@@ -24,18 +24,26 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false });
     }
 
-    // Get session details
-    const session = await db.session.findUnique({
-      where: { id: identity.sessionId },
-    });
+    const session = identity.sessionId
+      ? await db.session.findUnique({ where: { id: identity.sessionId } })
+      : null;
 
-    // Get permissions and roles
-    const organizationId = identity.metadata?.organizationId as string | null;
-    const permissions = await authorizationService.getUserPermissions(identity.userId, organizationId || undefined);
-    const roles = await authorizationService.getUserRoles(identity.userId, organizationId || undefined);
+    const organizationId = (identity.metadata?.organizationId as string | null) ?? null;
+
+    // Permissions/roles are scoped to the active organization (null while the
+    // user still needs onboarding).
+    const permissions = organizationId
+      ? await authorizationService.getUserPermissions(identity.userId, organizationId)
+      : [];
+    const roles = organizationId
+      ? await authorizationService.getUserRoles(identity.userId, organizationId)
+      : [];
 
     return NextResponse.json({
       success: true,
+      // Mirrored at the top level so AuthResponse consumers (AuthContext)
+      // can enforce the forced password change on session restore.
+      mustChangePassword: user.mustChangePassword,
       user: {
         id: user.id,
         email: user.email,
@@ -43,11 +51,10 @@ export async function GET(request: NextRequest) {
         avatar: user.profile?.avatarUrl,
       },
       session: {
-        token: session?.token,
         expiresAt: session?.expiresAt?.toISOString(),
         organizationId,
         permissions,
-        roles: roles.map(r => r.slug),
+        roles: roles.map((r) => r.slug),
       },
     });
   } catch (error) {
