@@ -47,7 +47,8 @@ function ThemeHotkey() {
         return
       }
 
-      if (event.key.toLowerCase() !== "d") {
+      // Some webviews/extensions dispatch keydowns without a `key` value.
+      if (typeof event.key !== "string" || event.key.toLowerCase() !== "d") {
         return
       }
 

@@ -1,0 +1,111 @@
+/**
+ * SisoHome theme layer — derived from siso-design/design.json.
+ *
+ * Import order matters: this file MUST be imported AFTER "@workspace/ui/globals.css"
+ * (see app/layout.tsx) so these variable overrides win over the shared defaults.
+ *
+ * Rule: design tokens are authored in siso-design/design.json first, then mirrored here.
+ * Never hardcode brand colors inside components — use semantic utilities
+ * (bg-background, bg-card, text-foreground, text-success, ...).
+ */
+
+:root {
+  /* Surfaces — light-first, near-white canvas with white cards (design.json color.*) */
+  --background: oklch(0.985 0.002 260);
+  --foreground: oklch(0.18 0.01 265);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.18 0.01 265);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.18 0.01 265);
+
+  /* Primary actions = near-black ink buttons */
+  --primary: oklch(0.19 0.01 265);
+  --primary-foreground: oklch(0.985 0 0);
+
+  /* Secondary/muted fills */
+  --secondary: oklch(0.97 0.002 260);
+  --secondary-foreground: oklch(0.19 0.01 265);
+  --muted: oklch(0.97 0.002 260);
+  --muted-foreground: oklch(0.55 0.01 260);
+
+  /* Accent = emerald green (active tabs, soft tinted actions like "Message") */
+  --accent: oklch(0.97 0.04 150);
+  --accent-foreground: oklch(0.4 0.11 153);
+
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.925 0.003 260);
+  --input: oklch(0.925 0.003 260);
+  --ring: oklch(0.72 0.17 150);
+
+  /* Semantic status colors (badges: success Occupied, warning Vacant, ...) */
+  --success: oklch(0.72 0.17 150);
+  --success-foreground: oklch(0.42 0.11 150);
+  --warning: oklch(0.85 0.13 85);
+  --warning-foreground: oklch(0.5 0.13 60);
+  --info: oklch(0.85 0.1 250);
+  --info-foreground: oklch(0.45 0.17 255);
+
+  /* Chart series per design.json color.chart */
+  --chart-1: oklch(0.62 0.15 255);
+  --chart-2: oklch(0.72 0.15 55);
+  --chart-3: oklch(0.85 0.15 90);
+  --chart-4: oklch(0.63 0.2 27);
+  --chart-5: oklch(0.6 0.17 300);
+
+  /* Sidebar (white surface, ink labels) */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.18 0.01 265);
+  --sidebar-primary: oklch(0.19 0.01 265);
+  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.97 0.002 260);
+  --sidebar-accent-foreground: oklch(0.19 0.01 265);
+  --sidebar-border: oklch(0.925 0.003 260);
+  --sidebar-ring: oklch(0.72 0.17 150);
+}
+
+.dark {
+  --background: oklch(0.145 0.005 265);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.195 0.005 265);
+  --card-foreground: oklch(0.985 0 0);
+  --popover: oklch(0.195 0.005 265);
+  --popover-foreground: oklch(0.985 0 0);
+
+  --primary: oklch(0.985 0 0);
+  --primary-foreground: oklch(0.19 0.01 265);
+
+  --secondary: oklch(0.25 0.005 265);
+  --secondary-foreground: oklch(0.985 0 0);
+  --muted: oklch(0.25 0.005 265);
+  --muted-foreground: oklch(0.7 0.01 260);
+
+  --accent: oklch(0.3 0.07 153);
+  --accent-foreground: oklch(0.93 0.05 150);
+
+  --border: oklch(0.28 0.005 265);
+  --input: oklch(0.28 0.005 265);
+  --ring: oklch(0.72 0.17 150);
+
+  --success: oklch(0.72 0.17 150);
+  --success-foreground: oklch(0.72 0.17 150);
+  --warning: oklch(0.85 0.13 85);
+  --warning-foreground: oklch(0.85 0.13 85);
+  --info: oklch(0.75 0.12 250);
+  --info-foreground: oklch(0.75 0.12 250);
+
+  --sidebar: oklch(0.195 0.005 265);
+  --sidebar-foreground: oklch(0.985 0 0);
+  --sidebar-accent: oklch(0.25 0.005 265);
+  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --sidebar-border: oklch(0.28 0.005 265);
+}
+
+/* Expose semantic status colors as Tailwind utilities: bg-success, text-warning-foreground, ... */
+@theme inline {
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
+}
