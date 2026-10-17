@@ -9,6 +9,11 @@ export interface AuthResponse {
   onboardingRequired?: boolean;
   /** True when the user must change a temporary password before proceeding. */
   mustChangePassword?: boolean;
+  /**
+   * Password accepted for an account with 2FA on — no session yet; the
+   * client must collect a second-factor code and call verifyTwoFactor().
+   */
+  twoFactorRequired?: boolean;
   user?: {
     id: string;
     email: string;
@@ -124,6 +129,14 @@ export class AuthAPI {
 
   async getProfile(): Promise<AuthResponse> {
     return this.request<AuthResponse>('/profile');
+  }
+
+  /** Step 2 of sign-in for 2FA accounts: live authenticator code or a recovery code. */
+  async verifyTwoFactor(input: { token?: string; recoveryCode?: string }): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/2fa/verify', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
   }
 
   async updateProfile(data: UpdateProfileData): Promise<AuthResponse> {

@@ -43,6 +43,15 @@ export interface AuthContextValue extends AuthState {
    */
   needsPasswordChange: boolean;
   login: (credentials: LoginCredentials) => Promise<AuthResponse>;
+  /**
+   * True while sign-in is paused because the account has two-factor
+   * authentication on: the password passed, the second factor has not.
+   */
+  twoFactorPending: boolean;
+  /** Complete the pending sign-in with an authenticator or recovery code. */
+  verifyTwoFactor: (input: { token?: string; recoveryCode?: string }) => Promise<AuthResponse>;
+  /** Abandon the pending 2FA step and return to the password screen. */
+  cancelTwoFactor: () => void;
   signUp: (credentials: SignUpCredentials) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -66,6 +75,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   });
 
   const authAPI = getAuthAPI();
+
+  // Sign-in paused at the second factor (password already proven).
+  const [twoFactorPending, setTwoFactorPending] = useState(false);
 
   // Derive onboarding state: authenticated but not yet attached to an org.
   const needsOnboarding = state.isAuthenticated && !state.user?.organizationId;
@@ -114,12 +126,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     refreshSession();
   }, [refreshSession]);
 
+  // Any full session supersedes a paused 2FA step (and vice versa): a failed
+  // session restore must not leave the sign-in flow stuck on the code screen.
+  useEffect(() => {
+    if (state.isAuthenticated) setTwoFactorPending(false);
+  }, [state.isAuthenticated]);
+
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
       const response = await authAPI.login(credentials);
-      
+
+      // 2FA accounts: password proved, no session issued yet. Surface the
+      // pending step instead of treating this as a completed sign-in.
+      if (response.success && response.twoFactorRequired) {
+        setTwoFactorPending(true);
+        setState((prev: AuthState) => ({ ...prev, isLoading: false, error: null }));
+        return response;
+      }
+
       if (response.success && response.user) {
+        setTwoFactorPending(false);
         setState({
           user: {
             ...response.user,
@@ -185,6 +212,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      setTwoFactorPending(false);
       setState({
         user: null,
         isLoading: false,
@@ -264,11 +292,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authAPI]);
 
+  const cancelTwoFactor = useCallback(() => {
+    setTwoFactorPending(false);
+    setState((prev: AuthState) => ({ ...prev, isLoading: false, error: null }));
+  }, []);
+
+  const verifyTwoFactor = useCallback(async (input: { token?: string; recoveryCode?: string }) => {
+    try {
+      setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
+      const response = await authAPI.verifyTwoFactor(input);
+
+      if (response.success && response.user) {
+        setTwoFactorPending(false);
+        setState({
+          user: {
+            ...response.user,
+            mustChangePassword: response.mustChangePassword,
+            organizationId: response.session?.organizationId,
+            permissions: response.session?.permissions,
+            roles: response.session?.roles,
+          },
+          isLoading: false,
+          isAuthenticated: true,
+          error: null,
+        });
+        return response;
+      }
+      throw new Error(response.error || 'Verification failed');
+    } catch (error) {
+      setState((prev: AuthState) => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Verification failed',
+      }));
+      throw error;
+    }
+  }, [authAPI]);
+
   const value: AuthContextValue = {
     ...state,
     needsOnboarding,
     needsPasswordChange,
     login,
+    twoFactorPending,
+    verifyTwoFactor,
+    cancelTwoFactor,
     signUp,
     logout,
     resetPassword,
