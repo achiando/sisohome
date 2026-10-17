@@ -48,6 +48,8 @@ export interface AuthContextValue extends AuthState {
    * authentication on: the password passed, the second factor has not.
    */
   twoFactorPending: boolean;
+  /** Which second factor the paused sign-in expects: app code or emailed code. */
+  twoFactorChannel: 'totp' | 'email' | null;
   /** Complete the pending sign-in with an authenticator or recovery code. */
   verifyTwoFactor: (input: { token?: string; recoveryCode?: string }) => Promise<AuthResponse>;
   /** Abandon the pending 2FA step and return to the password screen. */
@@ -55,6 +57,8 @@ export interface AuthContextValue extends AuthState {
   signUp: (credentials: SignUpCredentials) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  /** Set a new password with the single-use token from the reset email. */
+  newPassword: (token: string, password: string) => Promise<void>;
   /**
    * Update the signed-in user's profile. Typed as the endpoint's allow-list
    * (name / avatar / phone) so callers physically cannot send `email`.
@@ -78,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Sign-in paused at the second factor (password already proven).
   const [twoFactorPending, setTwoFactorPending] = useState(false);
+  // Which factor the paused sign-in wants (email channel = code by email).
+  const [twoFactorChannel, setTwoFactorChannel] = useState<'totp' | 'email' | null>(null);
 
   // Derive onboarding state: authenticated but not yet attached to an org.
   const needsOnboarding = state.isAuthenticated && !state.user?.organizationId;
@@ -141,12 +147,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // pending step instead of treating this as a completed sign-in.
       if (response.success && response.twoFactorRequired) {
         setTwoFactorPending(true);
+        setTwoFactorChannel(response.twoFactorChannel ?? 'totp');
         setState((prev: AuthState) => ({ ...prev, isLoading: false, error: null }));
         return response;
       }
 
       if (response.success && response.user) {
         setTwoFactorPending(false);
+        setTwoFactorChannel(null);
         setState({
           user: {
             ...response.user,
@@ -213,6 +221,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.error('Logout error:', error);
     } finally {
       setTwoFactorPending(false);
+      setTwoFactorChannel(null);
       setState({
         user: null,
         isLoading: false,
@@ -232,6 +241,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...prev,
         isLoading: false,
         error: error instanceof Error ? error.message : 'Reset password failed',
+      }));
+      throw error;
+    }
+  }, [authAPI]);
+
+  const newPassword = useCallback(async (token: string, password: string) => {
+    try {
+      setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
+      await authAPI.newPassword(token, password);
+      setState((prev: AuthState) => ({ ...prev, isLoading: false }));
+    } catch (error) {
+      setState((prev: AuthState) => ({
+        ...prev,
+        isLoading: false,
+        error: error instanceof Error ? error.message : 'Password could not be changed',
       }));
       throw error;
     }
@@ -294,6 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const cancelTwoFactor = useCallback(() => {
     setTwoFactorPending(false);
+    setTwoFactorChannel(null);
     setState((prev: AuthState) => ({ ...prev, isLoading: false, error: null }));
   }, []);
 
@@ -304,6 +329,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.success && response.user) {
         setTwoFactorPending(false);
+        setTwoFactorChannel(null);
         setState({
           user: {
             ...response.user,
@@ -335,11 +361,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     needsPasswordChange,
     login,
     twoFactorPending,
+    twoFactorChannel,
     verifyTwoFactor,
     cancelTwoFactor,
     signUp,
     logout,
     resetPassword,
+    newPassword,
     updateProfile,
     refreshSession,
     switchOrganization,

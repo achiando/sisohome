@@ -14,6 +14,8 @@ export interface AuthResponse {
    * client must collect a second-factor code and call verifyTwoFactor().
    */
   twoFactorRequired?: boolean;
+  /** Which second factor the paused sign-in expects for this account. */
+  twoFactorChannel?: 'totp' | 'email';
   user?: {
     id: string;
     email: string;

@@ -214,12 +214,14 @@ function TwoFactorStep({
   onCancel: () => void;
 }) {
   const router = useRouter();
-  const { verifyTwoFactor, isLoading } = useAuth();
+  const { verifyTwoFactor, isLoading, twoFactorChannel } = useAuth();
   const [mode, setMode] = useState<'authenticator' | 'recovery'>('authenticator');
   const [values, setValues] = useState<Record<string, unknown>>({ code: '' });
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const isRecovery = mode === 'recovery';
+  /** Account signs in with codes sent by email instead of an app. */
+  const emailChannel = twoFactorChannel === 'email' && !isRecovery;
 
   const handleChange = (name: string, value: unknown) => {
     setValues((prev) => ({ ...prev, [name]: value }));
@@ -277,19 +279,21 @@ function TwoFactorStep({
   const sections: FormSection[] = [
     {
       id: 'two-factor',
-      title: isRecovery ? 'Recovery code' : 'Authentication code',
+      title: isRecovery ? 'Recovery code' : emailChannel ? 'Email code' : 'Authentication code',
       columns: 4,
       fields: [
         {
           name: 'code',
-          label: isRecovery ? 'Recovery code' : '6-digit code',
+          label: isRecovery ? 'Recovery code' : emailChannel ? '6-digit email code' : '6-digit code',
           type: 'text',
           colSpan: 'full',
           required: true,
           placeholder: isRecovery ? 'XXXXXX-XXXXXX' : '123456',
           helperText: isRecovery
             ? 'Each recovery code works exactly once.'
-            : 'Open Google Authenticator, Authy or 1Password and enter the code shown for SisoHome.',
+            : emailChannel
+              ? 'We emailed you a 6-digit code — it expires in 10 minutes and can be used once.'
+              : 'Open Google Authenticator, Authy or 1Password and enter the code shown for SisoHome.',
           disabled: isLoading,
         },
       ],
@@ -301,7 +305,9 @@ function TwoFactorStep({
       <CardHeader>
         <CardTitle>Two-factor authentication</CardTitle>
         <CardDescription>
-          Your password was accepted. Enter your code to finish signing in.
+          {emailChannel
+            ? 'Your password was accepted. Enter the code we emailed you to finish signing in.'
+            : 'Your password was accepted. Enter your code to finish signing in.'}
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
