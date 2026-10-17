@@ -91,6 +91,11 @@ export default async function HomePage() {
                 Explore Products
               </Button>
             </Link>
+            <a href="/api/catalog?mode=welding" target="_blank" rel="noopener noreferrer">
+              <Button variant="subtle" size="lg">
+                Download Catalog
+              </Button>
+            </a>
           </div>
         </div>
       </section>
@@ -242,6 +247,11 @@ export default async function HomePage() {
                 Email Us
               </Button>
             </Link>
+            <a href="/api/catalog?mode=welding" target="_blank" rel="noopener noreferrer">
+              <Button variant="subtle" size="lg" className="w-full sm:w-auto">
+                Download Catalog
+              </Button>
+            </a>
           </div>
         </div>
       </section>

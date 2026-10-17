@@ -19,11 +19,30 @@ export type DbProductLike = {
 export function imagePathFromJson(images: unknown): string | undefined {
   if (!Array.isArray(images) || !images.length) return undefined;
   const first = images[0];
-  if (typeof first === 'string') return first;
+  if (typeof first === 'string') {
+    // Convert relative URLs to absolute URLs
+    if (first.startsWith('/')) {
+      return `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tijwawelders.com'}${first}`;
+    }
+    if (first.startsWith('http://') || first.startsWith('https://')) {
+      return first;
+    }
+    // If it's a relative path without leading slash, assume it's from site URL
+    return `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tijwawelders.com'}/${first}`;
+  }
   if (first && typeof first === 'object') {
     const record = first as Record<string, unknown>;
     const value = record.url ?? record.src ?? record.imageUrl ?? record.path;
-    return typeof value === 'string' ? value : undefined;
+    if (typeof value === 'string') {
+      // Convert relative URLs to absolute URLs
+      if (value.startsWith('/')) {
+        return `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tijwawelders.com'}${value}`;
+      }
+      if (value.startsWith('http://') || value.startsWith('https://')) {
+        return value;
+      }
+      return `${process.env.NEXT_PUBLIC_SITE_URL || 'https://tijwawelders.com'}/${value}`;
+    }
   }
   return undefined;
 }

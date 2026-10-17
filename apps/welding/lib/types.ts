@@ -7,4 +7,5 @@ export type CatalogBillOfMaterial = { item: string; specification?: string; quan
 export type CatalogProduct = { id: string; name: string; category: string; shortDescription?: string; description?: string; specifications?: Record<string, unknown> | null; billOfMaterials?: CatalogBillOfMaterial[]; priceLabel?: string; minPrice?: number | null; maxPrice?: number | null; unit?: string | null; imagePath?: string };
 export type CatalogData = { brand: CatalogBrand; mode: CatalogMode; edition?: string; guides?: CatalogGuide[]; services?: CatalogService[]; products: CatalogProduct[]; productSectionTitle?: string; productSectionIntro?: string };
 export type CatalogOptions = { pageSize?: CatalogPageSize; outputPath: string };
-export type CatalogPdfProps = { data: CatalogData; pageSize: CatalogPageSize };
+export type CatalogPdfProps = { data: CatalogData; pageSize: CatalogPageSize; startPage?: number };
+export type CatalogPdfPropsWithPage = CatalogPdfProps & { startPage?: number };

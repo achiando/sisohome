@@ -12,6 +12,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@react-pdf/renderer": "^4.9.0",
     "@workspace/tijwa-db": "workspace:*",
     "@workspace/ui": "workspace:*",
     "lucide-react": "^1.37.0",
