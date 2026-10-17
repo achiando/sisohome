@@ -118,7 +118,11 @@ function FormHeader({
 
 function StandardForm(props: StandardFormProps) {
   const isBare = props.bare !== false // Default to true (no card)
-  
+  // Standard (non-wizard) forms: a lone primary button spans the full width,
+  // matching the inputs above it. With a Cancel/secondary button, the pair
+  // stays compact and right-aligned.
+  const primaryFullWidth = props.primaryFullWidth ?? !props.onCancel
+
   const formContent = (
     <>
       {props.children}
@@ -144,7 +148,7 @@ function StandardForm(props: StandardFormProps) {
             onSecondary={props.onCancel}
             isLoading={props.isLoading}
             sticky={props.sticky}
-            primaryFullWidth={props.primaryFullWidth ?? true}
+            primaryFullWidth={primaryFullWidth}
           />
         </div>
       ) : (
@@ -166,7 +170,7 @@ function StandardForm(props: StandardFormProps) {
             onSecondary={props.onCancel}
             isLoading={props.isLoading}
             sticky={props.sticky}
-            primaryFullWidth={props.primaryFullWidth ?? true}
+            primaryFullWidth={primaryFullWidth}
           />
         </CardContent>
       )}

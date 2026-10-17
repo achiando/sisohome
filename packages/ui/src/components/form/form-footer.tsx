@@ -42,6 +42,8 @@ export function FormFooter({
 }: FormFooterProps) {
   const hasLeft = !!showBack
   const hasRight = !!onSecondary || !!showNext || !!onPrimary
+  // Lone primary button (no Cancel, no wizard Back/Next) → span full width
+  const lonePrimary = !!primaryFullWidth && !showBack && !onSecondary && !showNext
 
   return (
     <div
@@ -104,6 +106,7 @@ export function FormFooter({
             onClick={onPrimary}
             disabled={isDisabled}
             loading={isLoading}
+            fullWidth={lonePrimary}
             className={cn(primaryFullWidth && "flex-1")}
           >
             {primaryLabel}

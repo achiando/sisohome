@@ -47,10 +47,10 @@ export function DetailSection({
                   ? "subtle"
                   : (action.variant ?? "subtle")
             }
-            size="sm"
+            size="md"
             onClick={action.onClick}
             disabled={action.disabled}
-            className="h-7 shrink-0 text-xs"
+            className="shrink-0"
           >
             {action.icon && <span className="mr-1">{action.icon}</span>}
             {action.label}

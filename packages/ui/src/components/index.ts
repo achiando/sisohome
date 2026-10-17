@@ -32,5 +32,18 @@ export * from "./nav-item"
 export * from "./tooltip"
 export * from "./toast"
 export * from "./shared"
+export * from "./form"
+export * from "./detail-page"
+
+// Form system types (UniversalForm sections/steps) — re-exported so
+// consumers can `import { UniversalForm, type FormSection } from
+// '@workspace/ui/components'` without subpath imports.
+export type {
+  FormSection,
+  FieldDef,
+  FormMode,
+  FormVariant,
+  WizardStep,
+} from "../types/components"
 
 export { CardAction } from "./card"

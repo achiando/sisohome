@@ -53,8 +53,12 @@
     "./postcss.config": "./postcss.config.mjs",
     "./lib/*": "./src/lib/*.ts",
     "./types/*": "./src/types/*.ts",
+    "./types/components": "./src/types/components/index.ts",
     "./components": "./src/components/index.ts",
     "./components/shared": "./src/components/shared/index.ts",
+    "./components/form": "./src/components/form/index.ts",
+    "./components/detail-page": "./src/components/detail-page/index.ts",
+    "./components/bulk-upload": "./src/components/bulk-upload/index.ts",
     "./components/*": "./src/components/*.tsx",
     "./hooks/*": "./src/hooks/*.ts"
   }
