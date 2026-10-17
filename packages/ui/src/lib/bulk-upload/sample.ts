@@ -66,66 +66,35 @@ export function downloadCSV(sample: SampleData): void {
   URL.revokeObjectURL(url)
 }
 
-export function parseExcelFile(
+export async function parseExcelFile(
   file: File
 ): Promise<{ headers: string[]; rows: Record<string, string>[] }> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = (e) => {
-      try {
-        const data = e.target?.result
-        if (!data || typeof data === "string") {
-          reject(new Error("Failed to read file"))
-          return
-        }
-        // eslint-disable-next-line @typescript-eslint/no-require-imports
-        const XLSX = require("xlsx") as {
-          read: (
-            data: ArrayBuffer,
-            opts: { type: string }
-          ) => { Sheets: { [key: string]: unknown }; SheetNames: string[] }
-          utils: {
-            sheet_to_json: <T>(
-              sheet: unknown,
-              opts?: { defval?: string }
-            ) => T[]
-          }
-        }
-        const workbook = XLSX.read(data, { type: "array" })
-        const firstSheetName = workbook.SheetNames[0]
-        if (!firstSheetName) {
-          reject(new Error("No sheets found in workbook"))
-          return
-        }
-        const firstSheet = workbook.Sheets[firstSheetName]
-        if (!firstSheet) {
-          reject(new Error("Sheet not found"))
-          return
-        }
-        const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(
-          firstSheet,
-          { defval: "" }
-        )
-
-        if (jsonData.length === 0) {
-          reject(new Error("No data found in file"))
-          return
-        }
-
-        const firstRow = jsonData[0]
-        if (!firstRow) {
-          reject(new Error("No data found in file"))
-          return
-        }
-        const headers = Object.keys(firstRow)
-        resolve({ headers, rows: jsonData })
-      } catch (err) {
-        reject(err)
-      }
-    }
-    reader.onerror = () => reject(reader.error)
-    reader.readAsArrayBuffer(file)
+  // Dynamic import: the xlsx parser ships as its own chunk instead of
+  // being pulled into the initial bundle via a static require.
+  const XLSX = await import("xlsx")
+  const data = await file.arrayBuffer()
+  const workbook = XLSX.read(data, { type: "array" })
+  const firstSheetName = workbook.SheetNames[0]
+  if (!firstSheetName) {
+    throw new Error("No sheets found in workbook")
+  }
+  const firstSheet = workbook.Sheets[firstSheetName]
+  if (!firstSheet) {
+    throw new Error("Sheet not found")
+  }
+  const jsonData = XLSX.utils.sheet_to_json<Record<string, string>>(firstSheet, {
+    defval: "",
   })
+
+  if (jsonData.length === 0) {
+    throw new Error("No data found in file")
+  }
+
+  const firstRow = jsonData[0]
+  if (!firstRow) {
+    throw new Error("No data found in file")
+  }
+  return { headers: Object.keys(firstRow), rows: jsonData }
 }
 
 export function parseCSVFile(

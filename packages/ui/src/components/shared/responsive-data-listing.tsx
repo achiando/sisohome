@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { Search, Loader2, Plus, SlidersHorizontal, X } from 'lucide-react';
 import { Input } from '@workspace/ui/components/input';
 import { Button } from '@workspace/ui/components/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@workspace/ui/components/popover';
 import { InfiniteScrollSentinel } from './infinite-scroll-sentinel';
 import {
   ResponsiveMobileCard,
@@ -52,6 +53,8 @@ export interface FilterConfig {
 export interface ResponsiveDataListingProps<T> {
   title: string;
   description?: string;
+  /** Total record count shown next to the title as "Total N" (design.json count). */
+  count?: number;
   items: T[];
   columns: ColumnDef<T>[];
   cardMapper: CardMapper<T>;
@@ -62,6 +65,8 @@ export interface ResponsiveDataListingProps<T> {
   onSearchSubmit?: () => void;
   searchPlaceholder?: string;
   filters?: FilterConfig[];
+  /** Render filters as a scrollable chip row (mobile-friendly, design.json mobile.filters). */
+  filterChips?: boolean;
   primaryAction?: {
     label: string;
     icon?: React.ComponentType<{ className?: string }>;
@@ -83,12 +88,19 @@ export interface ResponsiveDataListingProps<T> {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  /**
+   * Hide the title/description block on mobile — for pages whose shell app
+   * bar already shows the page title (native-app layout). Actions and the
+   * search/filter row stay visible at every breakpoint.
+   */
+  hideHeaderOnMobile?: boolean;
   rowKey: (item: T) => string;
 }
 
 export function ResponsiveDataListing<T>({
   title,
   description,
+  count,
   items,
   columns,
   cardMapper,
@@ -99,12 +111,14 @@ export function ResponsiveDataListing<T>({
   onSearchSubmit,
   searchPlaceholder = 'Search...',
   filters = [],
+  filterChips = false,
   primaryAction,
   secondaryActions = [],
   emptyState,
   hasMore = false,
   isLoadingMore = false,
   onLoadMore,
+  hideHeaderOnMobile = false,
   rowKey,
 }: ResponsiveDataListingProps<T>) {
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -116,8 +130,15 @@ export function ResponsiveDataListing<T>({
     <div className="space-y-6">
       {/* Top Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+        <div className={cn(hideHeaderOnMobile && 'hidden md:block')}>
+          <div className="flex items-baseline gap-2">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-foreground">{title}</h1>
+            {typeof count === 'number' && (
+              <span className="text-xs sm:text-sm text-muted-foreground">
+                <span className="font-semibold text-foreground">Total</span> {count}
+              </span>
+            )}
+          </div>
           {description && <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{description}</p>}
         </div>
 
@@ -183,59 +204,85 @@ export function ResponsiveDataListing<T>({
             </div>
           )}
 
-          {/* Filter Trigger Toggle for Mobile & Desktop Filters */}
+          {/* Filters — popover anchored to the button; no page overlay, the
+              list stays visible and interactive underneath. */}
           {filters.length > 0 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="outline"
-                onClick={(e) => {
-                  createRipple(e);
-                  setFiltersOpen(!filtersOpen);
-                }}
-                className={cn(
-                  'border-border/80 h-11 gap-2 text-xs sm:text-sm flex-1 sm:flex-initial justify-between sm:justify-center rounded-xl shadow-sm',
-                  activeFiltersCount > 0 && 'border-primary/50 text-primary bg-primary/5 font-medium shadow-sm'
-                )}
-              >
-                <div className="flex items-center gap-1.5">
-                  <SlidersHorizontal className="h-4 w-4" />
-                  <span>Filters</span>
+            <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  onClick={(e) => {
+                    createRipple(e);
+                  }}
+                  className={cn(
+                    'border-border/80 h-11 gap-2 text-xs sm:text-sm flex-1 sm:flex-initial justify-between sm:justify-center rounded-xl shadow-sm',
+                    activeFiltersCount > 0 && 'border-primary/50 text-primary bg-primary/5 font-medium shadow-sm'
+                  )}
+                >
+                  <div className="flex items-center gap-1.5">
+                    <SlidersHorizontal className="h-4 w-4" />
+                    <span>Filters</span>
+                  </div>
+                  {activeFiltersCount > 0 && (
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
+                      {activeFiltersCount}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-64 sm:w-72">
+                <div className="grid gap-4">
+                  {filters.map((filter) => (
+                    <div key={filter.key} className="space-y-2">
+                      <label className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider block">
+                        {filter.label}
+                      </label>
+                      <select
+                        value={filter.value}
+                        onChange={(e) => filter.onChange(e.target.value)}
+                        className="w-full border-border/70 bg-background text-foreground rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/50 outline-none transition-all shadow-sm"
+                      >
+                        <option value="">All {filter.label}s</option>
+                        {filter.options.map((opt) => (
+                          <option key={opt.value} value={opt.value}>
+                            {opt.label}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ))}
                 </div>
-                {activeFiltersCount > 0 && (
-                  <span className="flex h-5 w-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground font-bold">
-                    {activeFiltersCount}
-                  </span>
-                )}
-              </Button>
-            </div>
+              </PopoverContent>
+            </Popover>
           )}
         </div>
-
-        {/* Filter Options Drawer / Dropdowns */}
-        {filters.length > 0 && filtersOpen && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-4 rounded-2xl border border-border/80 bg-card/95 shadow-md animate-in fade-in slide-in-from-top-2 duration-200">
-            {filters.map((filter) => (
-              <div key={filter.key} className="space-y-2">
-                <label className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider block">
-                  {filter.label}
-                </label>
-                <select
-                  value={filter.value}
-                  onChange={(e) => filter.onChange(e.target.value)}
-                  className="w-full border-border/70 bg-background text-foreground rounded-xl px-3.5 py-2.5 text-xs sm:text-sm focus:ring-2 focus:ring-primary/20 focus:border-primary/50 outline-none transition-all shadow-sm"
-                >
-                  <option value="">All {filter.label}s</option>
-                  {filter.options.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            ))}
-          </div>
-        )}
       </div>
+
+      {/* Filter Chips Row (mobile-friendly, design.json mobile.filters) */}
+      {filterChips && filters.length > 0 && (
+        <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {filters.flatMap((filter) =>
+            filter.options.map((opt) => {
+              const isActive = filter.value === opt.value;
+              return (
+                <button
+                  key={`${filter.key}-${opt.value}`}
+                  type="button"
+                  onClick={() => filter.onChange(isActive ? '' : opt.value)}
+                  className={cn(
+                    'shrink-0 h-9 px-3.5 rounded-full text-xs font-medium border transition-all active:scale-[0.97]',
+                    isActive
+                      ? 'bg-primary text-primary-foreground border-primary shadow-sm'
+                      : 'bg-card text-muted-foreground border-border/70 hover:border-border'
+                  )}
+                >
+                  {opt.label}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Main Content Area */}
       {loading ? (
@@ -312,9 +359,11 @@ export function ResponsiveDataListing<T>({
         </div>
       ) : (
         <>
-          {/* Desktop Table View (lg:block / md:block) */}
+          {/* Desktop Table View (lg:block / md:block) — no max-height/inner
+              scroll: the page scrolls instead, so row dropdowns (portaled)
+              are never clipped by a scroll container. */}
           <div className="hidden md:block overflow-hidden rounded-2xl border border-border/80 bg-card shadow-md">
-            <div className="overflow-x-auto max-h-[600px] overflow-y-auto">
+            <div className="overflow-x-auto">
               <table className="w-full text-left text-sm border-collapse">
                 <thead className="sticky top-0 z-10 bg-card/95 backdrop-blur-sm">
                   <tr className="border-b border-border/80 bg-muted/50 font-medium text-xs text-muted-foreground uppercase tracking-wider">
