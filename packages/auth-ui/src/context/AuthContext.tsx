@@ -7,13 +7,18 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getAuthAPI, AuthResponse, LoginCredentials, SignUpCredentials } from '../lib/auth-api';
+import { getAuthAPI, AuthResponse, LoginCredentials, SignUpCredentials, UpdateProfileData } from '../lib/auth-api';
 
 export interface AuthUser {
   id: string;
   email: string;
   name: string;
   avatar?: string;
+  /** Contact number; also the SMS channel for a future 2FA fallback. */
+  phone?: string | null;
+  /** Two-factor authentication status (foundation columns, flow ships later). */
+  twoFactorEnabled?: boolean;
+  twoFactorMethod?: 'TOTP' | 'SMS' | 'EMAIL' | null;
   /** Null while the user still needs onboarding (no active organization). */
   organizationId?: string | null;
   /** True while signed in with a temporary password that must be replaced. */
@@ -41,7 +46,11 @@ export interface AuthContextValue extends AuthState {
   signUp: (credentials: SignUpCredentials) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
-  updateProfile: (data: Partial<AuthUser>) => Promise<void>;
+  /**
+   * Update the signed-in user's profile. Typed as the endpoint's allow-list
+   * (name / avatar / phone) so callers physically cannot send `email`.
+   */
+  updateProfile: (data: UpdateProfileData) => Promise<void>;
   refreshSession: () => Promise<void>;
   switchOrganization: (organizationId: string) => Promise<void>;
 }
@@ -200,7 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authAPI]);
 
-  const updateProfile = useCallback(async (data: Partial<AuthUser>) => {
+  const updateProfile = useCallback(async (data: UpdateProfileData) => {
     try {
       setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
       const response = await authAPI.updateProfile(data);

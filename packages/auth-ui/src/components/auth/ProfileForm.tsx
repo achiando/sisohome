@@ -1,45 +1,65 @@
 /**
  * ProfileForm Component
- * User profile management form
- * Uses @workspace/ui components
+ * Edit-only form for the user's own profile (display name + avatar), built on
+ * the design-system UniversalForm — the standard for all forms across the app.
+ *
+ * The email is the account identity: it is never a field here and is never
+ * accepted by the update endpoint. Callers render a read-only view and swap
+ * this in when the user presses Edit.
  */
 
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useAuth } from '../../context';
-import { profileSchema, type ProfileFormData } from '../../lib/validators';
-import { Button, Input, Card, CardContent, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components';
+import { profileSchema } from '../../lib/validators';
+import { UniversalForm, type FormSection } from '@workspace/ui/components';
 
 export interface ProfileFormProps {
+  /** Leave edit mode without saving. */
+  onCancel?: () => void;
   onSuccess?: () => void;
 }
 
-export default function ProfileForm({ onSuccess }: ProfileFormProps) {
+export default function ProfileForm({ onCancel, onSuccess }: ProfileFormProps) {
   const { user, updateProfile, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<ProfileFormData>({
-    resolver: standardSchemaResolver(profileSchema),
-    mode: 'onChange',
-    defaultValues: {
-      name: user?.name || '',
-      email: user?.email || '',
-      avatar: user?.avatar || '',
-    },
-  });
+  const [values, setValues] = useState<Record<string, unknown>>(() => ({
+    name: user?.name || '',
+    avatar: user?.avatar || '',
+  }));
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const onSubmit = async (data: ProfileFormData) => {
+  const handleChange = (name: string, value: unknown) => {
+    setValues((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => {
+      if (!prev[name]) return prev;
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  };
+
+  const onSubmit = async (submitValues: Record<string, unknown>) => {
+    const parsed = profileSchema.safeParse(submitValues);
+    if (!parsed.success) {
+      const fieldErrors: Record<string, string> = {};
+      for (const issue of parsed.error.issues) {
+        const key = String(issue.path[0] ?? '');
+        if (key && !fieldErrors[key]) fieldErrors[key] = issue.message;
+      }
+      setErrors(fieldErrors);
+      return;
+    }
+    setErrors({});
+
+    setSaving(true);
     try {
       setError(null);
-      await updateProfile(data);
+      await updateProfile(parsed.data);
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -47,66 +67,65 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
       }, 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Update profile failed');
+    } finally {
+      setSaving(false);
     }
   };
 
+  const sections: FormSection[] = [
+    {
+      id: 'profile',
+      title: 'Profile',
+      description: 'How you appear across every workspace you belong to.',
+      columns: 4,
+      fields: [
+        {
+          name: 'name',
+          label: 'Name',
+          type: 'text',
+          colSpan: 'full',
+          required: true,
+          placeholder: 'John Doe',
+          disabled: isLoading || saving,
+        },
+        {
+          name: 'avatar',
+          label: 'Avatar URL',
+          type: 'text',
+          colSpan: 'full',
+          placeholder: 'https://example.com/avatar.jpg',
+          disabled: isLoading || saving,
+          helperText: 'Paste a link to your photo. Used as your profile picture.',
+        },
+      ],
+    },
+  ];
+
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Profile Settings</CardTitle>
-        <CardDescription>Update your profile information</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
-          <Input
-            id="name"
-            type="text"
-            label="Name"
-            placeholder="John Doe"
-            autoComplete="name"
-            error={errors.name?.message}
-            {...register('name')}
-            disabled={isLoading}
-          />
-
-          <Input
-            id="email"
-            type="email"
-            label="Email"
-            placeholder="you@example.com"
-            autoComplete="email"
-            error={errors.email?.message}
-            {...register('email')}
-            disabled={isLoading}
-          />
-
-          <Input
-            id="avatar"
-            type="url"
-            label="Avatar URL"
-            placeholder="https://example.com/avatar.jpg"
-            error={errors.avatar?.message}
-            {...register('avatar')}
-            disabled={isLoading}
-          />
-
-          {error && (
-            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-              <p className="text-sm text-red-600">{error}</p>
-            </div>
-          )}
-
-          {success && (
-            <div className="p-3 bg-green-50 border border-green-200 rounded-md">
-              <p className="text-sm text-green-600">Profile updated successfully</p>
-            </div>
-          )}
-
-          <Button type="submit" className="w-full" loading={isLoading}>
-            Save Changes
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
+    <UniversalForm
+      title="Profile"
+      description="Your name and picture as they appear across workspaces."
+      mode="edit"
+      values={values}
+      errors={errors}
+      onChange={handleChange}
+      sections={sections}
+      onSubmit={onSubmit}
+      onCancel={onCancel}
+      primaryLabel="Save changes"
+      isLoading={isLoading || saving}
+      formClassName="max-w-2xl"
+    >
+      {error && (
+        <div className="rounded-xl border border-destructive/40 bg-destructive/10 p-3">
+          <p className="text-sm text-destructive">{error}</p>
+        </div>
+      )}
+      {success && (
+        <div className="rounded-xl border border-success/40 bg-success/10 p-3">
+          <p className="text-sm text-success">Profile updated successfully</p>
+        </div>
+      )}
+    </UniversalForm>
   );
 }

@@ -14,6 +14,9 @@ export interface AuthResponse {
     email: string;
     name: string;
     avatar?: string;
+    phone?: string | null;
+    twoFactorEnabled?: boolean;
+    twoFactorMethod?: 'TOTP' | 'SMS' | 'EMAIL' | null;
   };
   session?: {
     /** The session token lives in an httpOnly cookie and is never returned here. */
@@ -43,8 +46,9 @@ export interface ResetPasswordCredentials {
 
 export interface UpdateProfileData {
   name?: string;
-  email?: string;
   avatar?: string;
+  /** Contact number. Deliberately no `email` — identity is immutable. */
+  phone?: string;
 }
 
 export interface ChangePasswordData {

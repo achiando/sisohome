@@ -84,19 +84,26 @@ export const newPasswordSchema = z
 
 export type NewPasswordFormData = z.infer<typeof newPasswordSchema>;
 
-// Profile update schema
+// Profile update schema.
+//
+// NOTE: `email` is deliberately NOT here. The email is the account identity —
+// it is immutable and never accepted from any update endpoint.
 export const profileSchema = z.object({
   name: z
     .string()
     .min(1, 'Name is required')
     .min(2, 'Name must be at least 2 characters')
     .optional(),
-  email: z
-    .string()
-    .min(1, 'Email is required')
-    .email('Invalid email address')
-    .optional(),
   avatar: z.string().url().optional(),
+  /** Optional contact/2FA phone in loosely-normalised national or E.164 form. */
+  phone: z
+    .string()
+    .trim()
+    .refine(
+      (v) => v === '' || /^\+?[0-9][0-9\s\-().]{6,19}$/.test(v),
+      'Enter a valid phone number'
+    )
+    .optional(),
 });
 
 export type ProfileFormData = z.infer<typeof profileSchema>;
