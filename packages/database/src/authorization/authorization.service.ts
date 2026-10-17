@@ -261,7 +261,7 @@ export class AuthorizationService implements IAuthorizationService {
       await this.sessionCache.updateSession(
         userId,
         organizationId,
-        { userId, authUserId: '', organizationId },
+        { userId, organizationId },
         permissionKeys,
         roles.map(r => r.slug)
       );

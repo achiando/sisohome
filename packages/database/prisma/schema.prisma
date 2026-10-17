@@ -24,12 +24,13 @@ enum UserStatus {
 
 model User {
   id          String     @id @default(uuid()) @db.Uuid
-  authUserId  String     @unique @map("auth_user_id") @db.Uuid
   email       String     @unique
   displayName String?    @map("display_name")
   passwordHash String?   @map("password_hash")
+  mustChangePassword Boolean @default(false) @map("must_change_password")
   phone       String?
   status      UserStatus @default(ACTIVE)
+  onboardingCompletedAt DateTime? @map("onboarding_completed_at")
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
@@ -40,7 +41,6 @@ model User {
   sessions             Session[]
 
   @@map("users")
-  @@index([authUserId])
   @@index([email])
   @@index([status])
 }
@@ -75,6 +75,7 @@ model Session {
 
   // Relations
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organization Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
   @@map("sessions")
   @@index([userId])
@@ -104,11 +105,21 @@ enum OrganizationType {
   OTHER             // Other business types
 }
 
+// Product kind — decides which role templates are seeded on org creation.
+// Distinct from OrganizationType (legal form). Nullable for legacy orgs.
+enum OrganizationKind {
+  LANDLORD              // Self-managed landlord workspace
+  PROPERTY_MANAGEMENT   // Company operating properties for owners
+  MAINTENANCE_COMPANY   // Maintenance/service business
+  MARKETING_AGENT       // House-marketing individual: markets homes, hands tenants off to landlord/PM
+}
+
 model Organization {
   id             String             @id @default(uuid()) @db.Uuid
   name           String
   slug           String             @unique
   type           OrganizationType   @default(CORPORATION)
+  kind           OrganizationKind?  @map("kind")
   status         OrganizationStatus @default(ACTIVE)
   
   // Business details
@@ -146,11 +157,13 @@ model Organization {
   resourceRelationships ResourceRelationship[]
   auditLogs         AuditLog[]
   locations         OrganizationLocation[]
+  sessions          Session[]
 
   @@map("organizations")
   @@index([slug])
   @@index([status])
   @@index([type])
+  @@index([kind])
   @@index([parentId])
   @@index([taxId])
 }
@@ -236,6 +249,7 @@ model Role {
   slug           String
   description    String?
   isSystem       Boolean   @default(false) @map("is_system")
+  isTemplate     Boolean   @default(false) @map("is_template")
   createdAt      DateTime  @default(now()) @map("created_at")
   updatedAt      DateTime  @updatedAt @map("updated_at")
 
@@ -249,6 +263,7 @@ model Role {
   @@index([organizationId])
   @@index([slug])
   @@index([isSystem])
+  @@index([isTemplate])
 }
 
 model OrganizationMemberRole {

@@ -27,7 +27,7 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
   const {
     authService,
     sessionCache = new SessionAuthorizationCache(),
-    protectedPaths = ['/dashboard', '/settings', '/admin'],
+    protectedPaths = ['/', '/people', '/roles', '/settings', '/admin'],
     publicPaths = ['/login', '/register', '/api/auth/login'],
     apiAuthPath = '/api/auth',
   } = config;
@@ -71,7 +71,6 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
 
       // Inject auth context into headers for server components
       response.headers.set('x-user-id', identity.userId);
-      response.headers.set('x-auth-user-id', identity.authUserId);
       response.headers.set('x-authenticated', 'true');
 
       // Inject permissions if cached
@@ -114,7 +113,6 @@ export function createAuthMiddleware(config: AuthMiddlewareConfig) {
 
 export interface ServerAuthContext {
   userId: string;
-  authUserId: string;
   organizationId: string | null;
   isAuthenticated: boolean;
 }
@@ -135,7 +133,6 @@ export function getServerAuthContext(): ServerAuthContext {
 
   return {
     userId: headers.get('x-user-id') || '',
-    authUserId: headers.get('x-auth-user-id') || '',
     organizationId: headers.get('x-organization-id') || null,
     isAuthenticated: headers.get('x-authenticated') === 'true',
   };

@@ -9,7 +9,6 @@
 
 export interface AuthenticatedIdentity {
   userId: string;
-  authUserId: string;
   sessionId?: string;
   email?: string;
   metadata?: Record<string, any>;
@@ -26,13 +25,6 @@ export interface AuthenticationProvider {
    * @returns Authenticated identity if valid
    */
   verifySession(input: unknown): Promise<AuthenticatedIdentity>;
-
-  /**
-   * Get identity by auth user ID (e.g., Supabase user ID)
-   * @param authUserId - External auth provider user ID
-   * @returns Authenticated identity or null if not found
-   */
-  getIdentity(authUserId: string): Promise<AuthenticatedIdentity | null>;
 
   /**
    * Revoke a session (optional - not all providers support this)
@@ -54,7 +46,6 @@ export interface AuthenticationProvider {
 
 export interface AuthContext {
   userId: string;
-  authUserId: string;
   sessionId?: string;
   organizationId: string | null;
   email?: string;

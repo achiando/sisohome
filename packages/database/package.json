@@ -11,7 +11,8 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx src/seed/seed-data.ts"
+    "db:seed": "tsx src/seed/seed-data.ts",
+    "test": "tsx src/seed/org-kind-templates.test.ts"
   },
   "devDependencies": {
     "@types/bcrypt": "^5.0.2",
@@ -24,6 +25,7 @@
     "@types/react-dom": "^18.0.0"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "7.10.0",
     "@prisma/client": "7.10.0",
     "bcrypt": "^5.1.1"
   },

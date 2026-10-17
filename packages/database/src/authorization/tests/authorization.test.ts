@@ -69,7 +69,6 @@ describe('AuthorizationService', () => {
     test('Authenticated active user should be allowed to continue', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -88,7 +87,6 @@ describe('AuthorizationService', () => {
     test('Disabled user should be denied', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'DISABLED',
       });
 
@@ -105,7 +103,6 @@ describe('AuthorizationService', () => {
     test('Suspended user should be denied', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'SUSPENDED',
       });
 
@@ -127,7 +124,6 @@ describe('AuthorizationService', () => {
     test('User in Organization A cannot access Organization B', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -148,7 +144,6 @@ describe('AuthorizationService', () => {
     test('User can access their own organization', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -186,7 +181,6 @@ describe('AuthorizationService', () => {
     test('User belongs to A and B, can operate in A', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -218,7 +212,6 @@ describe('AuthorizationService', () => {
     test('User belongs to A and B, can switch to B', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -250,7 +243,6 @@ describe('AuthorizationService', () => {
     test('User cannot access C when only member of A and B', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -275,7 +267,6 @@ describe('AuthorizationService', () => {
     test('Role with permission should be allowed', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -359,7 +350,6 @@ describe('AuthorizationService', () => {
     test('Active membership should be allowed', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -391,7 +381,6 @@ describe('AuthorizationService', () => {
     test('Suspended membership should be denied', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -420,7 +409,6 @@ describe('AuthorizationService', () => {
     test('Removed membership should be denied', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -591,7 +579,6 @@ describe('AuthorizationService', () => {
     test('Organization A user cannot access Organization B resource by ID', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 
@@ -619,7 +606,6 @@ describe('AuthorizationService', () => {
     test('Should cache authorization results', async () => {
       mockPrisma.user.findUnique.mockResolvedValue({
         id: 'user-1',
-        authUserId: 'auth-1',
         status: 'ACTIVE',
       });
 

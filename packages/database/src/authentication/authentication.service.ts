@@ -32,7 +32,7 @@ export class AuthenticationService {
 
       // Resolve application user from auth identity
       const user = await this.prisma.user.findUnique({
-        where: { authUserId: identity.authUserId },
+        where: { id: identity.userId },
       });
 
       if (!user) {
@@ -56,33 +56,6 @@ export class AuthenticationService {
         this.provider.constructor.name,
         error
       );
-    }
-  }
-
-  /**
-   * Get authenticated identity by auth user ID
-   * @param authUserId - External auth provider user ID
-   * @returns Authenticated identity or null
-   */
-  async getIdentity(authUserId: string): Promise<AuthenticatedIdentity | null> {
-    try {
-      const identity = await this.provider.getIdentity(authUserId);
-
-      if (!identity) return null;
-
-      const user = await this.prisma.user.findUnique({
-        where: { authUserId: identity.authUserId },
-      });
-
-      if (!user) return null;
-
-      return {
-        ...identity,
-        userId: user.id,
-      };
-    } catch (error) {
-      console.error('Error getting identity:', error);
-      return null;
     }
   }
 

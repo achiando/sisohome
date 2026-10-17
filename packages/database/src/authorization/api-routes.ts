@@ -29,16 +29,14 @@ export async function getAuthContextFromRequest(
 
   // Extract from headers (set by auth middleware)
   const userId = request.headers.get('x-user-id');
-  const authUserId = request.headers.get('x-auth-user-id');
   const organizationId = request.headers.get('x-organization-id');
 
-  if (!userId || !authUserId) {
+  if (!userId) {
     throw new Error('Authentication context not found in request');
   }
 
   return {
     userId,
-    authUserId,
     organizationId: organizationId || null,
   };
 }
@@ -85,7 +83,6 @@ export function createAuthApiRoutes(options: CreateAuthApiRouteOptions) {
 
         return NextResponse.json({
           userId: authContext.userId,
-          authUserId: authContext.authUserId,
           organizationId: authContext.organizationId,
           permissions,
           roles: roles.map(r => r.slug),

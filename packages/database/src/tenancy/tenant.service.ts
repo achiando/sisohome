@@ -99,6 +99,33 @@ export class TenantService {
   }
 
   /**
+   * Get full membership list for a user (onboarding picker + shell switcher).
+   * Each entry carries org identity, kind, and the member's role slugs.
+   */
+  async getMemberships(userId: string) {
+    const memberships = await this.prisma.organizationMember.findMany({
+      where: { userId, status: 'ACTIVE' },
+      orderBy: { createdAt: 'asc' },
+      include: {
+        organization: {
+          select: { id: true, name: true, slug: true, kind: true, status: true },
+        },
+        roles: {
+          include: { role: { select: { id: true, name: true, slug: true } } },
+        },
+      },
+    });
+
+    return memberships.map((m) => ({
+      organizationId: m.organizationId,
+      membershipId: m.id,
+      organization: m.organization,
+      roles: m.roles.map((mr) => mr.role),
+      joinedAt: m.createdAt,
+    }));
+  }
+
+  /**
    * Check if user can access organization
    * @param userId - User ID
    * @param organizationId - Organization ID

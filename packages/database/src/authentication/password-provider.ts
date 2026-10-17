@@ -43,31 +43,11 @@ export class PasswordAuthProvider implements AuthenticationProvider {
 
     return {
       userId: session.userId,
-      authUserId: session.user.authUserId || session.user.id,
       sessionId: session.id,
       email: session.user.email,
       metadata: {
         organizationId: session.organizationId,
       },
-    };
-  }
-
-  /**
-   * Get identity by auth user ID
-   */
-  async getIdentity(authUserId: string): Promise<AuthenticatedIdentity | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { authUserId },
-    });
-
-    if (!user || user.status !== 'ACTIVE') {
-      return null;
-    }
-
-    return {
-      userId: user.id,
-      authUserId: user.authUserId || user.id,
-      email: user.email,
     };
   }
 
@@ -128,14 +108,18 @@ export class PasswordAuthProvider implements AuthenticationProvider {
       return null;
     }
 
-    // Get user's default organization
-    const membership = await this.prisma.organizationMember.findFirst({
-      where: {
-        userId: user.id,
-        status: 'ACTIVE',
-      },
+    // Decide the active organization for this login:
+    //  - exactly ONE active membership  → auto-activate it
+    //  - ZERO or MULTIPLE memberships   → leave null so the user picks a
+    //    workspace on the onboarding screen (multi-org invariant: never guess
+    //    which org a user means — they select).
+    const activeMemberships = await this.prisma.organizationMember.findMany({
+      where: { userId: user.id, status: 'ACTIVE' },
       orderBy: { createdAt: 'asc' },
+      select: { organizationId: true },
     });
+    const only = activeMemberships.length === 1 ? activeMemberships[0] : undefined;
+    const autoOrgId = only ? only.organizationId : null;
 
     // Create session
     const session = await this.prisma.session.create({
@@ -143,23 +127,29 @@ export class PasswordAuthProvider implements AuthenticationProvider {
         userId: user.id,
         token: this.generateToken(),
         expiresAt: new Date(Date.now() + 3600000), // 1 hour
-        organizationId: membership?.organizationId || null,
+        organizationId: autoOrgId,
       },
     });
 
     return {
       userId: user.id,
-      authUserId: user.authUserId || user.id,
       sessionId: session.id,
       email: user.email,
       metadata: {
         organizationId: session.organizationId,
+        mustChangePassword: user.mustChangePassword,
       },
     };
   }
 
   /**
-   * Sign up with email, password, and name
+   * Sign up with email, password, and name.
+   *
+   * Creates ONLY the user account and a session with no active organization.
+   * Organization creation happens later via onboarding, where the chosen
+   * organization kind seeds that kind's role templates (see
+   * `seedOrgKindRoles`). This lets one user own/operate across multiple
+   * organizations of different kinds.
    */
   async signUp(email: string, password: string, name: string): Promise<AuthenticatedIdentity | null> {
     // Check if user already exists
@@ -174,90 +164,74 @@ export class PasswordAuthProvider implements AuthenticationProvider {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user
+    // Create user (no organization, no roles yet)
     const user = await this.prisma.user.create({
       data: {
         email,
         passwordHash,
-        authUserId: this.generateAuthUserId(),
+        displayName: name,
         status: 'ACTIVE',
         profile: {
           create: {
             firstName: name.split(' ')[0],
-            lastName: name.split(' ').slice(1).join(' ') || '',
+            lastName: name.split(' ').slice(1).join(' ') || undefined,
           },
         },
       },
     });
 
-    // Create default organization for the user
-    const organization = await this.prisma.organization.create({
-      data: {
-        name: `${name}'s Organization`,
-        slug: `${name.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`,
-        status: 'ACTIVE',
-      },
-    });
-
-    // Add user as owner of the organization
-    // First, find or create the owner role
-    let ownerRole = await this.prisma.role.findUnique({
-      where: {
-        organizationId_slug: {
-          organizationId: organization.id,
-          slug: 'owner',
-        },
-      },
-    });
-
-    if (!ownerRole) {
-      ownerRole = await this.prisma.role.create({
-        data: {
-          organizationId: organization.id,
-          name: 'Owner',
-          slug: 'owner',
-          description: 'Organization owner with full access',
-          isSystem: true,
-        },
-      });
-    }
-
-    await this.prisma.organizationMember.create({
-      data: {
-        userId: user.id,
-        organizationId: organization.id,
-        status: 'ACTIVE',
-        roles: {
-          create: {
-            role: {
-              connect: {
-                id: ownerRole.id,
-              },
-            },
-          },
-        },
-      },
-    });
-
-    // Create session
+    // Create session with no active organization (onboarding will set one)
     const session = await this.prisma.session.create({
       data: {
         userId: user.id,
         token: this.generateToken(),
         expiresAt: new Date(Date.now() + 3600000), // 1 hour
-        organizationId: organization.id,
+        organizationId: null,
       },
     });
 
     return {
       userId: user.id,
-      authUserId: user.authUserId,
       sessionId: session.id,
       email: user.email,
       metadata: {
-        organizationId: session.organizationId,
+        organizationId: null,
+        onboardingRequired: true,
       },
     };
+  }
+
+  /**
+   * Change password for an authenticated user.
+   * When the user was flagged `mustChangePassword` (admin-created temp
+   * password), the caller must present that current password; success clears
+   * the flag.
+   */
+  async changePassword(
+    userId: string,
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || !user.passwordHash) {
+      return false;
+    }
+
+    const isValid = await bcrypt.compare(currentPassword, user.passwordHash);
+    if (!isValid) {
+      return false;
+    }
+
+    if (newPassword.length < 8) {
+      throw new Error('New password must be at least 8 characters');
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false },
+    });
+    return true;
   }
 
   /**
@@ -265,12 +239,5 @@ export class PasswordAuthProvider implements AuthenticationProvider {
    */
   private generateToken(): string {
     return Math.random().toString(36).substring(2) + Date.now().toString(36);
-  }
-
-  /**
-   * Generate a random auth user ID
-   */
-  private generateAuthUserId(): string {
-    return `auth_${Date.now()}_${Math.random().toString(36).substring(2)}`;
   }
 }
