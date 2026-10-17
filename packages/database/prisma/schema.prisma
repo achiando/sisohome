@@ -22,15 +22,37 @@ enum UserStatus {
   DISABLED
 }
 
+/**
+ * How a user proved their second factor at enrollment time.
+ * TOTP = authenticator app (recommended, no phone required).
+ * SMS / EMAIL = fallbacks; both are weaker (SIM-swap / inbox takeover).
+ */
+enum TwoFactorMethod {
+  TOTP
+  SMS
+  EMAIL
+}
+
 model User {
   id          String     @id @default(uuid()) @db.Uuid
   email       String     @unique
   displayName String?    @map("display_name")
+  // Nullable so a 3rd-party-only account can exist without a local password.
   passwordHash String?   @map("password_hash")
   mustChangePassword Boolean @default(false) @map("must_change_password")
   phone       String?
   status      UserStatus @default(ACTIVE)
   onboardingCompletedAt DateTime? @map("onboarding_completed_at")
+
+  // ── Two-factor authentication (foundation: columns only, flow comes next) ──
+  twoFactorEnabled     Boolean          @default(false) @map("two_factor_enabled")
+  twoFactorMethod      TwoFactorMethod? @map("two_factor_method")
+  // Pre-shared TOTP secret. MUST be encrypted at rest before any enrollment
+  // ships (app-level encryption via Prisma field extensions or a KMS-backed
+  // accessor) — never returned to the client after enrollment.
+  twoFactorSecret      String?          @map("two_factor_secret")
+  twoFactorConfirmedAt DateTime?        @map("two_factor_confirmed_at")
+
   createdAt   DateTime   @default(now()) @map("created_at")
   updatedAt   DateTime   @updatedAt @map("updated_at")
 
