@@ -22,7 +22,6 @@ import {
   BookOpen,
   HelpCircle,
   MessageCircleQuestion,
-  Plug,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -55,6 +54,9 @@ export const menuSection: NavSection = {
     { label: 'Calendar', href: '/calendar', icon: CalendarDays, uiPermission: 'resource.read' },
     { label: 'Documents', href: '/documents', icon: FileText, uiPermission: 'resource.read' },
     { label: 'Reports', href: '/reports', icon: BarChart3, uiPermission: 'audit.read' },
+    // Single Settings entry — opens the settings area, which carries its own
+    // nested nav (Profile, General, Roles & Permissions, Integrations).
+    { label: 'Settings', href: '/settings', icon: Settings },
   ],
 }
 
@@ -68,18 +70,10 @@ export const helpSection: NavSection = {
   ],
 }
 
-/** SETTINGS — permission-gated admin surfaces. */
-export const settingsSection: NavSection = {
-  overline: 'Settings',
-  items: [
-    { label: 'General', href: '/settings', icon: Settings, uiPermission: 'organization.read' },
-    { label: 'Roles & Permissions', href: '/roles', icon: Settings, uiPermission: 'role.read' },
-    { label: 'Integrations', href: '/settings/integrations', icon: Plug, uiPermission: 'organization.read' },
-  ],
-}
-
-/** All sections rendered in the sidebar, in order. */
-export const navSections: NavSection[] = [menuSection, helpSection, settingsSection]
+/** All sections rendered in the sidebar, in order. Settings is a single
+ *  entry at the end of MENU — its sub-pages carry a nested nav inside the
+ *  /settings layout (app/(dashboard)/settings/_components/settings-nav). */
+export const navSections: NavSection[] = [menuSection, helpSection]
 
 /** Bottom-tab destinations for the mobile app bar (nav entries with tab: true). */
 export const mobileTabItems: NavEntry[] = menuSection.items.filter((item) => item.tab)
