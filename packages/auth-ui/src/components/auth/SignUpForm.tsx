@@ -1,36 +1,42 @@
 /**
  * SignUpForm Component
- * User registration form with validation
- * Uses @workspace/ui components
+ * User registration with live validation — errors and the password
+ * requirements checklist update on every keystroke, rendered below
+ * each input by the @workspace/ui Input component.
  */
 
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller, useWatch } from 'react-hook-form';
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context';
 import { signUpSchema, type SignUpFormData } from '../../lib/validators';
-import { Button, Input, Card, CardContent, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components';
+import { Button, Input, Checkbox, Card, CardContent, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components';
+import PasswordChecklist from './PasswordChecklist';
 
 export interface SignUpFormProps {
   redirectTo?: string;
   showLoginLink?: boolean;
 }
 
-export default function SignUpForm({ redirectTo = '/dashboard', showLoginLink = true }: SignUpFormProps) {
+export default function SignUpForm({ redirectTo = '/onboarding', showLoginLink = true }: SignUpFormProps) {
   const router = useRouter();
   const { signUp, isLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
 
   const {
     register,
+    control,
     handleSubmit,
     formState: { errors },
   } = useForm<SignUpFormData>({
-    resolver: zodResolver(signUpSchema),
+    resolver: standardSchemaResolver(signUpSchema),
+    mode: 'onChange',
   });
+
+  const password = useWatch({ control, name: 'password' }) ?? '';
 
   const onSubmit = async (data: SignUpFormData) => {
     try {
@@ -49,86 +55,70 @@ export default function SignUpForm({ redirectTo = '/dashboard', showLoginLink = 
         <CardDescription>Enter your information to create an account</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">
-              Name
-            </label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="John Doe"
-              {...register('name')}
-              disabled={isLoading}
-            />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name.message}</p>
-            )}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <Input
+            id="name"
+            type="text"
+            label="Name"
+            placeholder="John Doe"
+            autoComplete="name"
+            error={errors.name?.message}
+            {...register('name')}
+            disabled={isLoading}
+          />
+
+          <Input
+            id="email"
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            error={errors.email?.message}
+            {...register('email')}
+            disabled={isLoading}
+          />
 
           <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              {...register('email')}
-              disabled={isLoading}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <label htmlFor="password" className="text-sm font-medium">
-              Password
-            </label>
             <Input
               id="password"
               type="password"
+              label="Password"
               placeholder="••••••••"
+              autoComplete="new-password"
+              error={errors.password?.message}
+              showPasswordToggle
               {...register('password')}
               disabled={isLoading}
             />
-            {errors.password && (
-              <p className="text-sm text-red-500">{errors.password.message}</p>
-            )}
+            <PasswordChecklist password={password} />
           </div>
 
-          <div className="space-y-2">
-            <label htmlFor="confirmPassword" className="text-sm font-medium">
-              Confirm Password
-            </label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              placeholder="••••••••"
-              {...register('confirmPassword')}
-              disabled={isLoading}
-            />
-            {errors.confirmPassword && (
-              <p className="text-sm text-red-500">{errors.confirmPassword.message}</p>
-            )}
-          </div>
+          <Input
+            id="confirmPassword"
+            type="password"
+            label="Confirm password"
+            placeholder="••••••••"
+            autoComplete="new-password"
+            error={errors.confirmPassword?.message}
+            showPasswordToggle
+            {...register('confirmPassword')}
+            disabled={isLoading}
+          />
 
-          <div className="flex items-center space-x-2">
-            <input
-              type="checkbox"
-              id="acceptTerms"
-              {...register('acceptTerms')}
-              disabled={isLoading}
-              className="h-4 w-4"
-            />
-            <label htmlFor="acceptTerms" className="text-sm">
-              I accept the terms and conditions
-            </label>
-          </div>
-          {errors.acceptTerms && (
-            <p className="text-sm text-red-500">{errors.acceptTerms.message}</p>
-          )}
+          <Controller
+            control={control}
+            name="acceptTerms"
+            render={({ field }) => (
+              <Checkbox
+                id="acceptTerms"
+                checked={!!field.value}
+                onCheckedChange={field.onChange}
+                disabled={isLoading}
+                label="I accept the terms and conditions"
+                error={errors.acceptTerms?.message}
+              />
+            )}
+          />
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">

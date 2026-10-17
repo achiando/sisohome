@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useAuth } from '../../context';
 import { profileSchema, type ProfileFormData } from '../../lib/validators';
 import { Button, Input, Card, CardContent, CardHeader, CardTitle, CardDescription } from '@workspace/ui/components';
@@ -27,7 +27,8 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
     handleSubmit,
     formState: { errors },
   } = useForm<ProfileFormData>({
-    resolver: zodResolver(profileSchema),
+    resolver: standardSchemaResolver(profileSchema),
+    mode: 'onChange',
     defaultValues: {
       name: user?.name || '',
       email: user?.email || '',
@@ -56,54 +57,38 @@ export default function ProfileForm({ onSuccess }: ProfileFormProps) {
         <CardDescription>Update your profile information</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="name" className="text-sm font-medium">
-              Name
-            </label>
-            <Input
-              id="name"
-              type="text"
-              placeholder="John Doe"
-              {...register('name')}
-              disabled={isLoading}
-            />
-            {errors.name && (
-              <p className="text-sm text-red-500">{errors.name.message}</p>
-            )}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <Input
+            id="name"
+            type="text"
+            label="Name"
+            placeholder="John Doe"
+            autoComplete="name"
+            error={errors.name?.message}
+            {...register('name')}
+            disabled={isLoading}
+          />
 
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              {...register('email')}
-              disabled={isLoading}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
-            )}
-          </div>
+          <Input
+            id="email"
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            error={errors.email?.message}
+            {...register('email')}
+            disabled={isLoading}
+          />
 
-          <div className="space-y-2">
-            <label htmlFor="avatar" className="text-sm font-medium">
-              Avatar URL
-            </label>
-            <Input
-              id="avatar"
-              type="url"
-              placeholder="https://example.com/avatar.jpg"
-              {...register('avatar')}
-              disabled={isLoading}
-            />
-            {errors.avatar && (
-              <p className="text-sm text-red-500">{errors.avatar.message}</p>
-            )}
-          </div>
+          <Input
+            id="avatar"
+            type="url"
+            label="Avatar URL"
+            placeholder="https://example.com/avatar.jpg"
+            error={errors.avatar?.message}
+            {...register('avatar')}
+            disabled={isLoading}
+          />
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">

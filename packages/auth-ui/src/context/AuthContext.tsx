@@ -14,7 +14,10 @@ export interface AuthUser {
   email: string;
   name: string;
   avatar?: string;
-  organizationId?: string;
+  /** Null while the user still needs onboarding (no active organization). */
+  organizationId?: string | null;
+  /** True while signed in with a temporary password that must be replaced. */
+  mustChangePassword?: boolean;
   permissions?: string[];
   roles?: string[];
 }
@@ -27,7 +30,14 @@ export interface AuthState {
 }
 
 export interface AuthContextValue extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
+  /** True when authenticated but the user has no active organization yet. */
+  needsOnboarding: boolean;
+  /**
+   * True when authenticated with a temporary password — the user must set a
+   * real password before doing anything else (routes to /change-password).
+   */
+  needsPasswordChange: boolean;
+  login: (credentials: LoginCredentials) => Promise<AuthResponse>;
   signUp: (credentials: SignUpCredentials) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
@@ -48,6 +58,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const authAPI = getAuthAPI();
 
+  // Derive onboarding state: authenticated but not yet attached to an org.
+  const needsOnboarding = state.isAuthenticated && !state.user?.organizationId;
+
+  // Forced password change (admin-issued temporary password) outranks
+  // everything: no workspace actions until a real password is set.
+  const needsPasswordChange = state.isAuthenticated && state.user?.mustChangePassword === true;
+
   const refreshSession = useCallback(async () => {
     try {
       setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
@@ -57,6 +74,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setState({
           user: {
             ...response.user,
+            mustChangePassword: response.mustChangePassword,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -96,6 +114,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setState({
           user: {
             ...response.user,
+            mustChangePassword: response.mustChangePassword,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -104,6 +123,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isAuthenticated: true,
           error: null,
         });
+        // Returned so callers can route on the FRESH result (e.g. onboarding
+        // when no organizationId) instead of stale render-time state.
+        return response;
       } else {
         throw new Error(response.error || 'Login failed');
       }
@@ -126,6 +148,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setState({
           user: {
             ...response.user,
+            mustChangePassword: response.mustChangePassword,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -210,6 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setState({
           user: {
             ...response.user,
+            mustChangePassword: response.mustChangePassword,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -233,6 +257,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const value: AuthContextValue = {
     ...state,
+    needsOnboarding,
+    needsPasswordChange,
     login,
     signUp,
     logout,

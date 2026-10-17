@@ -13,24 +13,35 @@ import { useAuth } from '../../context';
 export interface AuthGuardProps {
   children: React.ReactNode;
   redirectTo?: string;
+  onboardingRedirectTo?: string;
   fallback?: React.ReactNode;
 }
 
-export default function AuthGuard({ children, redirectTo = '/login', fallback }: AuthGuardProps) {
-  const { isAuthenticated, isLoading } = useAuth();
+export default function AuthGuard({
+  children,
+  redirectTo = '/login',
+  onboardingRedirectTo = '/onboarding',
+  fallback,
+}: AuthGuardProps) {
+  const { isAuthenticated, isLoading, needsOnboarding } = useAuth();
   const router = useRouter();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
+    if (isLoading) return;
+    if (!isAuthenticated) {
       router.push(redirectTo);
+      return;
     }
-  }, [isAuthenticated, isLoading, redirectTo, router]);
+    if (needsOnboarding) {
+      router.push(onboardingRedirectTo);
+    }
+  }, [isAuthenticated, isLoading, needsOnboarding, redirectTo, onboardingRedirectTo, router]);
 
   if (isLoading) {
     return fallback || <div>Loading...</div>;
   }
 
-  if (!isAuthenticated) {
+  if (!isAuthenticated || needsOnboarding) {
     return fallback || null;
   }
 

@@ -8,7 +8,7 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context';
 import { resetPasswordSchema, type ResetPasswordFormData } from '../../lib/validators';
@@ -30,7 +30,8 @@ export default function ResetPasswordForm({ redirectTo = '/login', showLoginLink
     handleSubmit,
     formState: { errors },
   } = useForm<ResetPasswordFormData>({
-    resolver: zodResolver(resetPasswordSchema),
+    resolver: standardSchemaResolver(resetPasswordSchema),
+    mode: 'onChange',
   });
 
   const onSubmit = async (data: ResetPasswordFormData) => {
@@ -68,22 +69,17 @@ export default function ResetPasswordForm({ redirectTo = '/login', showLoginLink
         <CardDescription>Enter your email to receive a password reset link</CardDescription>
       </CardHeader>
       <CardContent>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-2">
-            <label htmlFor="email" className="text-sm font-medium">
-              Email
-            </label>
-            <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
-              {...register('email')}
-              disabled={isLoading}
-            />
-            {errors.email && (
-              <p className="text-sm text-red-500">{errors.email.message}</p>
-            )}
-          </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4" noValidate>
+          <Input
+            id="email"
+            type="email"
+            label="Email"
+            placeholder="you@example.com"
+            autoComplete="email"
+            error={errors.email?.message}
+            {...register('email')}
+            disabled={isLoading}
+          />
 
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">

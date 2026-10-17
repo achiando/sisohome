@@ -5,6 +5,10 @@
 
 export interface AuthResponse {
   success: boolean;
+  /** Present on signup — the client should route to /onboarding. */
+  onboardingRequired?: boolean;
+  /** True when the user must change a temporary password before proceeding. */
+  mustChangePassword?: boolean;
   user?: {
     id: string;
     email: string;
@@ -12,9 +16,9 @@ export interface AuthResponse {
     avatar?: string;
   };
   session?: {
-    token: string;
+    /** The session token lives in an httpOnly cookie and is never returned here. */
     expiresAt: string;
-    organizationId?: string;
+    organizationId?: string | null;
     permissions?: string[];
     roles?: string[];
   };

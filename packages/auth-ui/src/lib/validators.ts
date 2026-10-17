@@ -129,3 +129,49 @@ export const changePasswordSchema = z
   });
 
 export type ChangePasswordFormData = z.infer<typeof changePasswordSchema>;
+
+/**
+ * Password rules for live checklists (shown while typing).
+ * Keep the `test` predicates in sync with the `.regex()` checks in the
+ * schemas above — labels are the short checklist copy, `message` mirrors
+ * the schema error text.
+ */
+export type PasswordRule = {
+  id: string;
+  label: string;
+  message: string;
+  test: (value: string) => boolean;
+};
+
+export const PASSWORD_RULES: PasswordRule[] = [
+  {
+    id: 'length',
+    label: 'At least 8 characters',
+    message: 'Password must be at least 8 characters',
+    test: (value) => value.length >= 8,
+  },
+  {
+    id: 'uppercase',
+    label: 'One uppercase letter',
+    message: 'Password must contain at least one uppercase letter',
+    test: (value) => /[A-Z]/.test(value),
+  },
+  {
+    id: 'lowercase',
+    label: 'One lowercase letter',
+    message: 'Password must contain at least one lowercase letter',
+    test: (value) => /[a-z]/.test(value),
+  },
+  {
+    id: 'number',
+    label: 'One number',
+    message: 'Password must contain at least one number',
+    test: (value) => /[0-9]/.test(value),
+  },
+  {
+    id: 'special',
+    label: 'One special character',
+    message: 'Password must contain at least one special character',
+    test: (value) => /[^A-Za-z0-9]/.test(value),
+  },
+];
