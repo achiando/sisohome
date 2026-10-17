@@ -7,7 +7,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '../../context';
@@ -50,8 +50,13 @@ export default function LoginForm({
     needsPasswordChange,
     twoFactorPending,
     cancelTwoFactor,
+    verificationNeeded,
+    resendVerification,
   } = useAuth();
   const [error, setError] = useState<string | null>(null);
+  // A verification link was just re-sent from this screen.
+  const [resent, setResent] = useState(false);
+  const [resending, setResending] = useState(false);
 
   // Already signed in (real session restore — not stale cookie optimism) →
   // route past the login screen: forced password change first, else onboarding
@@ -82,9 +87,26 @@ export default function LoginForm({
     mode: 'onChange',
   });
 
+  const emailValue = useWatch({ control, name: 'email' }) ?? '';
+
+  const onResend = async () => {
+    const email = String(emailValue).trim();
+    if (!email || resending) return;
+    setResending(true);
+    try {
+      await resendVerification(email);
+      setResent(true);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send the email');
+    } finally {
+      setResending(false);
+    }
+  };
+
   const onSubmit = async (data: LoginFormData) => {
     try {
       setError(null);
+      setResent(false);
       const response = await login(data);
       // 2FA accounts: password accepted but no session yet — the context
       // flips twoFactorPending and the code prompt takes over, so stop here.
@@ -167,6 +189,24 @@ export default function LoginForm({
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
               <p className="text-sm text-red-600">{error}</p>
             </div>
+          )}
+
+          {/* Address never verified — offer a fresh link right here. */}
+          {verificationNeeded && !resent && (
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full"
+              loading={resending}
+              onClick={onResend}
+            >
+              Resend verification email
+            </Button>
+          )}
+          {verificationNeeded && resent && (
+            <p className="text-center text-sm text-emerald-600">
+              Sent — check your inbox for a new verification link.
+            </p>
           )}
 
           <Button type="submit" className="w-full" loading={isLoading}>

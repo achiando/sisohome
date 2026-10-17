@@ -7,7 +7,14 @@
 'use client';
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getAuthAPI, AuthResponse, LoginCredentials, SignUpCredentials, UpdateProfileData } from '../lib/auth-api';
+import {
+  getAuthAPI,
+  AuthApiError,
+  AuthResponse,
+  LoginCredentials,
+  SignUpCredentials,
+  UpdateProfileData,
+} from '../lib/auth-api';
 
 export interface AuthUser {
   id: string;
@@ -54,7 +61,20 @@ export interface AuthContextValue extends AuthState {
   verifyTwoFactor: (input: { token?: string; recoveryCode?: string }) => Promise<AuthResponse>;
   /** Abandon the pending 2FA step and return to the password screen. */
   cancelTwoFactor: () => void;
-  signUp: (credentials: SignUpCredentials) => Promise<void>;
+  /**
+   * Signup completes with `verificationRequired` — no session yet, the
+   * emailed link must be clicked before onboarding can start.
+   */
+  signUp: (credentials: SignUpCredentials) => Promise<AuthResponse>;
+  /**
+   * True when the last sign-in attempt was refused because the address has
+   * never verified — the sign-in form can offer a resend inline.
+   */
+  verificationNeeded: boolean;
+  /** Redeem the emailed signup link: verifies the address and signs in. */
+  verifyEmail: (token: string) => Promise<AuthResponse>;
+  /** Ask for a fresh verification link (never reveals whether the account exists). */
+  resendVerification: (email: string) => Promise<void>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   /** Set a new password with the single-use token from the reset email. */
@@ -84,6 +104,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [twoFactorPending, setTwoFactorPending] = useState(false);
   // Which factor the paused sign-in wants (email channel = code by email).
   const [twoFactorChannel, setTwoFactorChannel] = useState<'totp' | 'email' | null>(null);
+  // Last sign-in was refused by the email-verification gate.
+  const [verificationNeeded, setVerificationNeeded] = useState(false);
 
   // Derive onboarding state: authenticated but not yet attached to an org.
   const needsOnboarding = state.isAuthenticated && !state.user?.organizationId;
@@ -141,6 +163,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = useCallback(async (credentials: LoginCredentials) => {
     try {
       setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
+      setVerificationNeeded(false);
       const response = await authAPI.login(credentials);
 
       // 2FA accounts: password proved, no session issued yet. Surface the
@@ -174,6 +197,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error(response.error || 'Login failed');
       }
     } catch (error) {
+      // Unverified address — keep the flag so the form can offer a resend.
+      setVerificationNeeded(
+        error instanceof AuthApiError && error.body.needsVerification === true
+      );
       setState((prev: AuthState) => ({
         ...prev,
         isLoading: false,
@@ -183,11 +210,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [authAPI]);
 
-  const signUp = useCallback(async (credentials: SignUpCredentials) => {
+  const signUp = useCallback(async (credentials: SignUpCredentials): Promise<AuthResponse> => {
     try {
       setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
       const response = await authAPI.signUp(credentials);
-      
+
+      // Verified-by-link flow: account created, no session — the caller shows
+      // "check your email" instead of routing to onboarding.
+      if (response.success && response.verificationRequired) {
+        setState((prev: AuthState) => ({ ...prev, isLoading: false, error: null }));
+        return response;
+      }
+
       if (response.success && response.user) {
         setState({
           user: {
@@ -201,6 +235,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           isAuthenticated: true,
           error: null,
         });
+        return response;
       } else {
         throw new Error(response.error || 'Sign up failed');
       }
@@ -213,6 +248,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       throw error;
     }
   }, [authAPI]);
+
+  /**
+   * Redeem the emailed signup link. On success the server has set the
+   * session cookie, so the local state is updated exactly like a login.
+   */
+  const verifyEmail = useCallback(
+    async (token: string): Promise<AuthResponse> => {
+      try {
+        setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
+        const response = await authAPI.verifyEmail(token);
+        if (response.success && response.user) {
+          setVerificationNeeded(false);
+          setState({
+            user: {
+              ...response.user,
+              mustChangePassword: response.mustChangePassword,
+              organizationId: response.session?.organizationId,
+              permissions: response.session?.permissions,
+              roles: response.session?.roles,
+            },
+            isLoading: false,
+            isAuthenticated: true,
+            error: null,
+          });
+          return response;
+        }
+        throw new AuthApiError(response.error || 'Verification failed', 400, response);
+      } catch (error) {
+        setState((prev: AuthState) => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Verification failed',
+        }));
+        throw error;
+      }
+    },
+    [authAPI]
+  );
+
+  /**
+   * Resend is intentionally stateless: the endpoint always answers success,
+   * so there is no meaningful error state to hoist — callers surface the
+   * rare network failure themselves.
+   */
+  const resendVerification = useCallback(
+    async (email: string): Promise<void> => {
+      await authAPI.resendVerification(email);
+    },
+    [authAPI]
+  );
 
   const logout = useCallback(async () => {
     try {
@@ -365,6 +450,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     verifyTwoFactor,
     cancelTwoFactor,
     signUp,
+    verificationNeeded,
+    verifyEmail,
+    resendVerification,
     logout,
     resetPassword,
     newPassword,

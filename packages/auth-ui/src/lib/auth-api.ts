@@ -7,6 +7,14 @@ export interface AuthResponse {
   success: boolean;
   /** Present on signup — the client should route to /onboarding. */
   onboardingRequired?: boolean;
+  /** Signup accepted, but no session: the emailed link must be clicked first. */
+  verificationRequired?: boolean;
+  /** Sign-in refused because this address has not verified its email yet. */
+  needsVerification?: boolean;
+  /** The verification link was already redeemed (it was clicked twice). */
+  alreadyVerified?: boolean;
+  /** Echoed back after signup/resend so the UI can name the address. */
+  email?: string;
   /** True when the user must change a temporary password before proceeding. */
   mustChangePassword?: boolean;
   /**
@@ -33,6 +41,22 @@ export interface AuthResponse {
     roles?: string[];
   };
   error?: string;
+}
+
+/**
+ * Non-2xx answer carrying the server's structured body — call sites need the
+ * flags (needsVerification, alreadyVerified, …), not just the message.
+ */
+export class AuthApiError extends Error {
+  readonly status: number;
+  readonly body: AuthResponse;
+
+  constructor(message: string, status: number, body: AuthResponse) {
+    super(message);
+    this.name = 'AuthApiError';
+    this.status = status;
+    this.body = body;
+  }
 }
 
 export interface LoginCredentials {
@@ -85,8 +109,14 @@ export class AuthAPI {
     });
 
     if (!response.ok) {
-      const error = await response.json().catch(() => ({ error: 'Request failed' }));
-      throw new Error(error.error || 'Request failed');
+      const body = (await response.json().catch(() => ({
+        error: 'Request failed',
+      }))) as AuthResponse;
+      throw new AuthApiError(
+        body.error || 'Request failed',
+        response.status,
+        body
+      );
     }
 
     return response.json();
@@ -103,6 +133,25 @@ export class AuthAPI {
     return this.request<AuthResponse>('/signup', {
       method: 'POST',
       body: JSON.stringify(credentials),
+    });
+  }
+
+  /** Redeem the emailed signup link — verifies the address and signs in. */
+  async verifyEmail(token: string): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/verify-email', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+  }
+
+  /**
+   * Ask for a fresh verification link. The server always answers success so
+   * this can't be used to discover which addresses exist.
+   */
+  async resendVerification(email: string): Promise<{ success: boolean }> {
+    return this.request<{ success: boolean }>('/verify-email/resend', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
     });
   }
 
