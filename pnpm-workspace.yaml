@@ -5,4 +5,5 @@ packages:
 allowBuilds:
   sharp: true
   unrs-resolver: true
+  bcrypt: true
   msw: false
