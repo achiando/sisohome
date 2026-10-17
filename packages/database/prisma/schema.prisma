@@ -61,10 +61,28 @@ model User {
   organizationMembers  OrganizationMember[]
   auditLogs            AuditLog[]
   sessions             Session[]
+  recoveryCodes        UserRecoveryCode[]
 
   @@map("users")
   @@index([email])
   @@index([status])
+}
+
+/**
+ * One-time 2FA backup codes. Stored hashed (high-entropy codes, SHA-256) and
+ * marked `usedAt` on redemption so each code works exactly once.
+ */
+model UserRecoveryCode {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  codeHash  String    @map("code_hash")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_recovery_codes")
+  @@index([userId])
 }
 
 model UserProfile {

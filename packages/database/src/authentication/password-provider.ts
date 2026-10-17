@@ -87,6 +87,62 @@ export class PasswordAuthProvider implements AuthenticationProvider {
   }
 
   /**
+   * Verify an email/password pair WITHOUT creating a session.
+   *
+   * Used when a second factor still has to be proven: the login route must
+   * check the password first, then stop short of issuing a session.
+   */
+  async verifyPassword(email: string, password: string): Promise<boolean> {
+    const user = await this.prisma.user.findUnique({ where: { email } });
+    if (!user || user.status !== 'ACTIVE' || !user.passwordHash) {
+      return false;
+    }
+    return bcrypt.compare(password, user.passwordHash);
+  }
+
+  /**
+   * Create a session for a user whose credentials — and second factor, when
+   * enabled — have already been proven.
+   *
+   * Active organization rule (multi-org invariant: never guess):
+   *  - exactly ONE active membership  → auto-activate it
+   *  - ZERO or MULTIPLE memberships   → null, the user picks on onboarding
+   */
+  async issueSession(userId: string): Promise<AuthenticatedIdentity | null> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.status !== 'ACTIVE') {
+      return null;
+    }
+
+    const activeMemberships = await this.prisma.organizationMember.findMany({
+      where: { userId: user.id, status: 'ACTIVE' },
+      orderBy: { createdAt: 'asc' },
+      select: { organizationId: true },
+    });
+    const only = activeMemberships.length === 1 ? activeMemberships[0] : undefined;
+    const autoOrgId = only ? only.organizationId : null;
+
+    const session = await this.prisma.session.create({
+      data: {
+        userId: user.id,
+        token: this.generateToken(),
+        expiresAt: new Date(Date.now() + 3600000), // 1 hour
+        organizationId: autoOrgId,
+      },
+    });
+
+    return {
+      userId: user.id,
+      sessionId: session.id,
+      email: user.email,
+      metadata: {
+        organizationId: session.organizationId,
+        mustChangePassword: user.mustChangePassword,
+      },
+    };
+  }
+
+  /**
    * Login with email and password
    */
   async login(email: string, password: string): Promise<AuthenticatedIdentity | null> {
@@ -108,38 +164,7 @@ export class PasswordAuthProvider implements AuthenticationProvider {
       return null;
     }
 
-    // Decide the active organization for this login:
-    //  - exactly ONE active membership  → auto-activate it
-    //  - ZERO or MULTIPLE memberships   → leave null so the user picks a
-    //    workspace on the onboarding screen (multi-org invariant: never guess
-    //    which org a user means — they select).
-    const activeMemberships = await this.prisma.organizationMember.findMany({
-      where: { userId: user.id, status: 'ACTIVE' },
-      orderBy: { createdAt: 'asc' },
-      select: { organizationId: true },
-    });
-    const only = activeMemberships.length === 1 ? activeMemberships[0] : undefined;
-    const autoOrgId = only ? only.organizationId : null;
-
-    // Create session
-    const session = await this.prisma.session.create({
-      data: {
-        userId: user.id,
-        token: this.generateToken(),
-        expiresAt: new Date(Date.now() + 3600000), // 1 hour
-        organizationId: autoOrgId,
-      },
-    });
-
-    return {
-      userId: user.id,
-      sessionId: session.id,
-      email: user.email,
-      metadata: {
-        organizationId: session.organizationId,
-        mustChangePassword: user.mustChangePassword,
-      },
-    };
+    return this.issueSession(user.id);
   }
 
   /**
