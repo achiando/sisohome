@@ -1,7 +1,7 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalEnv": ["SESSION_SECRET", "NODE_ENV", "DATABASE_URL"],
+  "globalEnv": ["SESSION_SECRET", "TWO_FACTOR_ENCRYPTION_KEY", "NODE_ENV", "DATABASE_URL"],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "^db:generate"],

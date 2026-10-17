@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authProvider, db } from '@/lib/auth';
 import { setSessionCookie, setActiveOrgCookie } from '@/lib/session-cookie';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const { name, email, password } = body;
@@ -44,6 +44,9 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.displayName || `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim(),
         avatar: user.profile?.avatarUrl,
+        phone: user.phone,
+        twoFactorEnabled: user.twoFactorEnabled,
+        twoFactorMethod: user.twoFactorMethod,
       },
       session: {
         expiresAt: session?.expiresAt?.toISOString(),

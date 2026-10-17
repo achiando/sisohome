@@ -49,6 +49,9 @@ export async function GET() {
         email: user.email,
         name: user.displayName || `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim(),
         avatar: user.profile?.avatarUrl,
+        phone: user.phone,
+        twoFactorEnabled: user.twoFactorEnabled,
+        twoFactorMethod: user.twoFactorMethod,
       },
       session: {
         expiresAt: session?.expiresAt?.toISOString(),

@@ -1,11 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authProvider, authorizationService, db } from '@/lib/auth';
-import { setSessionCookie, setActiveOrgCookie } from '@/lib/session-cookie';
+import { setSessionCookie, setActiveOrgCookie, setTwoFactorPendingCookie } from '@/lib/session-cookie';
+import { encodePendingTwoFactor } from '@/lib/two-factor';
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const { email, password } = body;
+
+    // ── Second factor first, before a session exists ──────────────────────
+    // Password-only users fall through to the normal path below. When 2FA is
+    // on we prove the password WITHOUT creating a session and return a
+    // short-lived pending token for /api/auth/2fa/verify. Failure messages
+    // are identical to a bad password so we don't leak which accounts are
+    // protected.
+    const candidate = await db.user.findUnique({
+      where: { email },
+      select: { id: true, twoFactorEnabled: true },
+    });
+
+    if (candidate?.twoFactorEnabled) {
+      const passwordOk = await authProvider.verifyPassword(email, password);
+      if (!passwordOk) {
+        return NextResponse.json(
+          { success: false, error: 'Invalid email or password' },
+          { status: 401 }
+        );
+      }
+
+      const pending = NextResponse.json({ success: true, twoFactorRequired: true });
+      setTwoFactorPendingCookie(pending, encodePendingTwoFactor(candidate.id));
+      return pending;
+    }
 
     // Login using password provider
     const identity = await authProvider.login(email, password);
@@ -53,6 +79,9 @@ export async function POST(request: NextRequest) {
         email: user.email,
         name: user.displayName || `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim(),
         avatar: user.profile?.avatarUrl,
+        phone: user.phone,
+        twoFactorEnabled: user.twoFactorEnabled,
+        twoFactorMethod: user.twoFactorMethod,
       },
       session: {
         expiresAt: session?.expiresAt?.toISOString(),
