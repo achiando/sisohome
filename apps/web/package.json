@@ -15,6 +15,7 @@
     "@prisma/client": "7.10.0",
     "@workspace/auth-ui": "workspace:*",
     "@workspace/database": "workspace:*",
+    "@workspace/email": "workspace:*",
     "@workspace/ui": "workspace:*",
     "lucide-react": "^1.37.0",
     "next": "16.2.6",
