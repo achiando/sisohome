@@ -3,11 +3,13 @@
 /**
  * Settings → Security → Two-factor authentication
  *
- * Three states in one section:
- *  1. status — not enabled / enabled, with the single relevant action.
- *  2. enrol  — QR + manual key, then a UniversalForm code step that proves the
- *              scan; recovery codes are handed back exactly once.
- *  3. disable — password re-auth before protection is dropped.
+ * States:
+ *  1. choose  — pick the channel: authenticator app (TOTP) or emailed code.
+ *  2. enrol   — TOTP: QR + manual key, then a code that proves the scan.
+ *  3. email   — EMAIL: we send a 6-digit code, user returns it.
+ *  4. codes   — recovery codes, shown exactly once.
+ *  5. status  — enabled/not-enabled with the single relevant action.
+ *  6. disable — password re-auth before protection is dropped.
  *
  * The account only becomes protected once /enable accepts a live code, so
  * abandoning enrolment at any point leaves 2FA off and locks nobody out.
@@ -15,26 +17,33 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
-import { Copy, ShieldCheck, Smartphone } from 'lucide-react'
+import { Copy, Mail, ShieldCheck, Smartphone } from 'lucide-react'
 
 import { useAuth } from '@workspace/auth-ui'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { DetailSection } from '@workspace/ui/components'
 import { UniversalForm } from '@workspace/ui/components/form'
+import { RadioGroup, RadioGroupItem } from '@workspace/ui/components/radio-group'
 import { toast } from '@workspace/ui/components/toast'
 import type { FormSection } from '@workspace/ui/types/components'
 
-type View = 'status' | 'enrol' | 'codes' | 'disable'
+type View = 'status' | 'choose' | 'enrol' | 'email' | 'codes' | 'disable'
+type Method = 'TOTP' | 'EMAIL'
 
-interface SetupPayload {
+interface SetupTotpResponse {
   email: string
   secret: string
   otpauthUri: string
   qrDataUri: string
 }
 
-const codeSection: FormSection[] = [
+interface SetupEmailResponse {
+  email: string
+  expiresInMinutes: number
+}
+
+const totpCodeSection: FormSection[] = [
   {
     id: 'two-factor-code',
     title: 'Confirm setup',
@@ -49,6 +58,25 @@ const codeSection: FormSection[] = [
         placeholder: '123456',
         helperText:
           'Open your authenticator app, find SisoHome and enter the six digits it shows now.',
+      },
+    ],
+  },
+]
+
+const emailCodeSection: FormSection[] = [
+  {
+    id: 'email-code',
+    title: 'Enter the code',
+    columns: 4,
+    fields: [
+      {
+        name: 'code',
+        label: '6-digit email code',
+        type: 'text',
+        colSpan: 'full',
+        required: true,
+        placeholder: '123456',
+        helperText: 'It expires in 10 minutes and can be used once.',
       },
     ],
   },
@@ -73,11 +101,27 @@ const passwordSection: FormSection[] = [
   },
 ]
 
+async function postJson<T>(path: string, body?: unknown): Promise<T> {
+  const res = await fetch(path, {
+    method: 'POST',
+    credentials: 'same-origin',
+    headers: { 'Content-Type': 'application/json' },
+    body: body === undefined ? undefined : JSON.stringify(body),
+  })
+  const data = (await res.json().catch(() => ({}))) as T & { success?: boolean; error?: string }
+  if (!res.ok || data.success === false) {
+    throw new Error(data.error || 'Request failed')
+  }
+  return data
+}
+
 export function TwoFactorSection() {
   const { user, refreshSession } = useAuth()
 
   const [view, setView] = useState<View>('status')
-  const [setup, setSetup] = useState<SetupPayload | null>(null)
+  const [choice, setChoice] = useState<'totp' | 'email'>('totp')
+  const [setup, setSetup] = useState<SetupTotpResponse | null>(null)
+  const [emailTarget, setEmailTarget] = useState<string | null>(null)
   const [recoveryCodes, setRecoveryCodes] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
 
@@ -87,34 +131,21 @@ export function TwoFactorSection() {
   const [passwordErrors, setPasswordErrors] = useState<Record<string, string>>({})
 
   const enabled = user?.twoFactorEnabled === true
+  const methodLabel =
+    user?.twoFactorMethod === 'EMAIL' ? 'Email code' : 'Authenticator app (TOTP)'
 
-  const clearErrors = (setter: (fn: (prev: Record<string, string>) => Record<string, string>) => void) =>
-    setter((prev) => {
-      if (!Object.keys(prev).length) return prev
-      return {}
-    })
-
-  const change =
-    (setter: (fn: (prev: Record<string, unknown>) => Record<string, unknown>) => void) =>
-    (name: string, value: unknown) => {
-      setter((prev) => ({ ...prev, [name]: value }))
-    }
-
-  const startEnrol = () => {
-    setBusy(true)
-    setCodeErrors({})
+  const resetCodeForm = () => {
     setCodeValues({ code: '' })
+    setCodeErrors({})
+  }
+
+  const startTotpEnrol = () => {
+    setBusy(true)
+    resetCodeForm()
 
     void (async () => {
       try {
-        const res = await fetch('/api/auth/2fa/setup', {
-          method: 'POST',
-          credentials: 'same-origin',
-        })
-        const data = (await res.json()) as SetupPayload & { success: boolean; error?: string }
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Could not start two-factor setup')
-        }
+        const data = await postJson<SetupTotpResponse>('/api/auth/2fa/setup', { method: 'TOTP' })
         setSetup(data)
         setView('enrol')
       } catch (err) {
@@ -125,7 +156,29 @@ export function TwoFactorSection() {
     })()
   }
 
-  const handleCodeSubmit = (submitValues: Record<string, unknown>) => {
+  const startEmailEnrol = () => {
+    setBusy(true)
+    resetCodeForm()
+
+    void (async () => {
+      try {
+        const data = await postJson<SetupEmailResponse>('/api/auth/2fa/setup', { method: 'EMAIL' })
+        setEmailTarget(data.email)
+        setView('email')
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not send the code')
+      } finally {
+        setBusy(false)
+      }
+    })()
+  }
+
+  const continueChoice = () => {
+    if (choice === 'email') startEmailEnrol()
+    else startTotpEnrol()
+  }
+
+  const handleEnable = (method: Method) => (submitValues: Record<string, unknown>) => {
     const token = String(submitValues.code ?? '').trim()
     if (!/^\d{6}$/.test(token)) {
       setCodeErrors({ code: 'Enter the 6-digit code' })
@@ -136,23 +189,14 @@ export function TwoFactorSection() {
 
     void (async () => {
       try {
-        const res = await fetch('/api/auth/2fa/enable', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ token }),
+        const data = await postJson<{ recoveryCodes?: string[] }>('/api/auth/2fa/enable', {
+          token,
+          method,
         })
-        const data = (await res.json()) as {
-          success: boolean
-          error?: string
-          recoveryCodes?: string[]
-        }
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'That code was not accepted')
-        }
         setRecoveryCodes(data.recoveryCodes ?? [])
         setSetup(null)
-        setCodeValues({ code: '' })
+        setEmailTarget(null)
+        resetCodeForm()
         setView('codes')
         await refreshSession()
         toast.success('Two-factor authentication is on')
@@ -177,18 +221,11 @@ export function TwoFactorSection() {
 
     void (async () => {
       try {
-        const res = await fetch('/api/auth/2fa/disable', {
-          method: 'POST',
-          credentials: 'same-origin',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password }),
-        })
-        const data = (await res.json()) as { success: boolean; error?: string }
-        if (!res.ok || !data.success) {
-          throw new Error(data.error || 'Could not turn off two-factor authentication')
-        }
+        await postJson('/api/auth/2fa/disable', { password })
         setPasswordValues({ password: '' })
         setRecoveryCodes([])
+        setEmailTarget(null)
+        setSetup(null)
         setView('status')
         await refreshSession()
         toast.success('Two-factor authentication is off')
@@ -209,7 +246,47 @@ export function TwoFactorSection() {
       .catch(() => toast.error('Could not copy to clipboard'))
   }
 
-  /* ── Enrol: scan the QR, then prove it ─────────────────────────────── */
+  /* ── Channel choice ─────────────────────────────────────────────────── */
+  if (view === 'choose') {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1.5">
+          <h3 className="text-sm font-medium">How do you want to receive codes?</h3>
+          <p className="text-sm text-muted-foreground">
+            Both work everywhere you sign in. You can switch later by turning 2FA off and on again.
+          </p>
+        </div>
+
+        <RadioGroup
+          value={choice}
+          onValueChange={(value) => setChoice(value === 'email' ? 'email' : 'totp')}
+          orientation="vertical"
+        >
+          <RadioGroupItem
+            value="totp"
+            label="Authenticator app (recommended)"
+            description="Google Authenticator, Authy or 1Password. Works offline and is not tied to your inbox."
+          />
+          <RadioGroupItem
+            value="email"
+            label="Email code"
+            description="We send a 6-digit code to your email address each time you sign in."
+          />
+        </RadioGroup>
+
+        <div className="flex flex-wrap gap-2">
+          <Button type="button" variant="outline" onClick={() => setView('status')}>
+            Cancel
+          </Button>
+          <Button type="button" variant="primary" onClick={continueChoice} loading={busy}>
+            Continue
+          </Button>
+        </div>
+      </div>
+    )
+  }
+
+  /* ── Enrol: authenticator app ───────────────────────────────────────── */
   if (view === 'enrol' && setup) {
     return (
       <div className="space-y-6">
@@ -246,13 +323,8 @@ export function TwoFactorSection() {
               >
                 Copy key
               </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => setView('status')}
-              >
-                Cancel
+              <Button type="button" variant="outline" size="sm" onClick={() => setView('choose')}>
+                Back
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
@@ -266,13 +338,54 @@ export function TwoFactorSection() {
           values={codeValues}
           errors={codeErrors}
           onChange={(name, value) => {
-            change(setCodeValues)(name, value)
-            clearErrors(setCodeErrors)
+            setCodeValues((prev) => ({ ...prev, [name]: value }))
+            setCodeErrors({})
           }}
-          sections={codeSection}
-          onSubmit={handleCodeSubmit}
+          sections={totpCodeSection}
+          onSubmit={handleEnable('TOTP')}
           primaryLabel="Turn on two-factor"
           isLoading={busy}
+          formClassName="max-w-lg"
+        />
+      </div>
+    )
+  }
+
+  /* ── Enrol: email code ──────────────────────────────────────────────── */
+  if (view === 'email') {
+    return (
+      <div className="space-y-5">
+        <div className="space-y-1.5">
+          <h3 className="text-sm font-medium">Check your email</h3>
+          <p className="text-sm text-muted-foreground">
+            We sent a 6-digit code to{' '}
+            <span className="font-medium text-foreground">{emailTarget ?? 'your address'}</span>.
+            Enter it below to turn on email codes.
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Mail className="size-4 shrink-0" aria-hidden="true" />
+          Didn&apos;t arrive? The code is valid for 10 minutes — check spam, or go back and pick
+          the authenticator app instead.
+        </div>
+
+        <UniversalForm
+          title="Enter the code"
+          values={codeValues}
+          errors={codeErrors}
+          onChange={(name, value) => {
+            setCodeValues((prev) => ({ ...prev, [name]: value }))
+            setCodeErrors({})
+          }}
+          sections={emailCodeSection}
+          onSubmit={handleEnable('EMAIL')}
+          primaryLabel="Turn on two-factor"
+          isLoading={busy}
+          onCancel={() => {
+            resetCodeForm()
+            setView('choose')
+          }}
           formClassName="max-w-lg"
         />
       </div>
@@ -286,8 +399,8 @@ export function TwoFactorSection() {
         <div className="space-y-1.5">
           <h3 className="text-sm font-medium">Save your recovery codes</h3>
           <p className="text-sm text-muted-foreground">
-            Each code works once if you lose access to your authenticator app. They will not be
-            shown again.
+            Each code works once if you lose access to your authenticator app or inbox. They will
+            not be shown again.
           </p>
         </div>
 
@@ -336,8 +449,8 @@ export function TwoFactorSection() {
           values={passwordValues}
           errors={passwordErrors}
           onChange={(name, value) => {
-            change(setPasswordValues)(name, value)
-            clearErrors(setPasswordErrors)
+            setPasswordValues((prev) => ({ ...prev, [name]: value }))
+            setPasswordErrors({})
           }}
           sections={passwordSection}
           onSubmit={handleDisableSubmit}
@@ -358,7 +471,7 @@ export function TwoFactorSection() {
   return (
     <DetailSection
       title="Two-factor authentication"
-      description="Require a second code at sign-in. Works with Google Authenticator, Authy, 1Password and any other authenticator app."
+      description="Require a second code at sign-in — from an authenticator app or your inbox. Recovery codes work as a backup either way."
       fieldLayout="list"
       fields={[
         {
@@ -375,9 +488,7 @@ export function TwoFactorSection() {
                 </Badge>
               )}
               <span className="text-xs text-muted-foreground">
-                {enabled
-                  ? 'Authenticator app (TOTP)'
-                  : 'Password alone is enough to sign in right now.'}
+                {enabled ? methodLabel : 'Password alone is enough to sign in right now.'}
               </span>
             </span>
           ),
@@ -393,7 +504,7 @@ export function TwoFactorSection() {
           : {
               label: 'Set up',
               icon: <ShieldCheck className="size-4" />,
-              onClick: startEnrol,
+              onClick: () => setView('choose'),
               disabled: busy,
             }
       }
