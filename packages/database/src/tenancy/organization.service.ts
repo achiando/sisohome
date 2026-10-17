@@ -154,6 +154,47 @@ export class OrganizationService {
   }
 
   /**
+   * Update an organization's display name. The organizationId comes from the
+   * caller's session context (never from client input), so this is inherently
+   * tenant-scoped — permission checks happen in the API layer.
+   */
+  async updateOrganization(input: {
+    organizationId: string;
+    name: string;
+  }): Promise<CreatedOrganization> {
+    const trimmed = input.name.trim();
+    if (!trimmed) {
+      throw new Error("Organization name is required");
+    }
+    if (trimmed.length > 80) {
+      throw new Error("Organization name must be 80 characters or fewer");
+    }
+
+    const existing = await this.prisma.organization.findUnique({
+      where: { id: input.organizationId },
+      select: { id: true },
+    });
+    if (!existing) {
+      throw new TenantNotFoundError(
+        `Organization not found: ${input.organizationId}`,
+      );
+    }
+
+    const org = await this.prisma.organization.update({
+      where: { id: input.organizationId },
+      data: { name: trimmed },
+      select: { id: true, name: true, slug: true, kind: true },
+    });
+
+    return {
+      id: org.id,
+      name: org.name,
+      slug: org.slug,
+      kind: org.kind as OrganizationKindValue,
+    };
+  }
+
+  /**
    * Validate a user may activate an organization (used by onboarding "pick
    * one" and the shell org switcher).
    */
