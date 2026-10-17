@@ -1,7 +1,12 @@
 export { sendEmail } from './send'
 export { resolveEmailConfig } from './config'
 export { EmailConfigError, EmailSendError } from './errors'
-export { renderEmail, escapeHtml, type RenderEmailOptions } from './render'
+export {
+  renderEmail,
+  escapeHtml,
+  type RenderEmailOptions,
+  type RenderEmailDetail,
+} from './render'
 export { maskEmail } from './mask'
 export type {
   EmailConfig,
