@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { maskEmail } from '@workspace/email';
 import { db } from '@/lib/auth';
 import { getRouteAuthContext } from '@/lib/route-auth';
+import { EMAIL_OTP_TTL_MINUTES, issueEmailOtp } from '@/lib/email-otp';
 import {
   buildOtpauthUri,
   encryptSecret,
@@ -34,6 +36,21 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { success: false, error: 'Two-factor authentication is already on.' },
         { status: 409 }
       );
+    }
+
+    const body = await request.json().catch(() => ({}));
+    const method = body?.method === 'EMAIL' ? 'EMAIL' : 'TOTP';
+
+    // Email channel: no secret to store — the proof is a code sent to the
+    // account address, so setup issues it and /enable checks it.
+    if (method === 'EMAIL') {
+      await issueEmailOtp(user.id, 'TWO_FACTOR_ENROL');
+      return NextResponse.json({
+        success: true,
+        method: 'EMAIL',
+        email: maskEmail(user.email),
+        expiresInMinutes: EMAIL_OTP_TTL_MINUTES,
+      });
     }
 
     const secret = generateTotpSecret();

@@ -6,6 +6,7 @@ import {
   setSessionCookie,
 } from '@/lib/session-cookie';
 import { decodePendingTwoFactor, hashRecoveryCode, verifyTotpToken } from '@/lib/two-factor';
+import { redeemEmailOtp } from '@/lib/email-otp';
 
 /**
  * POST /api/auth/2fa/verify
@@ -50,6 +51,8 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     let valid = false;
     if (recoveryCode) {
       valid = await redeemRecoveryCode(user.id, recoveryCode);
+    } else if (user.twoFactorMethod === 'EMAIL') {
+      valid = await redeemEmailOtp(user.id, 'TWO_FACTOR_LOGIN', token);
     } else {
       valid = user.twoFactorSecret
         ? await verifyTotpToken(token, user.twoFactorSecret)

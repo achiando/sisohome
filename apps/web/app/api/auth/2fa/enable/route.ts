@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/auth';
 import { getRouteAuthContext } from '@/lib/route-auth';
+import { redeemEmailOtp } from '@/lib/email-otp';
 import { generateRecoveryCodes, hashRecoveryCode, verifyTotpToken } from '@/lib/two-factor';
 
 /**
@@ -19,6 +20,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     const body = await request.json().catch(() => ({}));
     const token = typeof body?.token === 'string' ? body.token.trim() : '';
+    const method = body?.method === 'EMAIL' ? 'EMAIL' : 'TOTP';
 
     const user = await db.user.findUnique({ where: { id: context.userId } });
     if (!user) {
@@ -30,14 +32,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         { status: 409 }
       );
     }
-    if (!user.twoFactorSecret) {
+
+    let valid = false;
+    if (method === 'EMAIL') {
+      valid = await redeemEmailOtp(user.id, 'TWO_FACTOR_ENROL', token);
+    } else if (user.twoFactorSecret) {
+      valid = await verifyTotpToken(token, user.twoFactorSecret);
+    } else {
       return NextResponse.json(
         { success: false, error: 'Run setup first to scan the QR code.' },
         { status: 400 }
       );
     }
 
-    const valid = await verifyTotpToken(token, user.twoFactorSecret);
     if (!valid) {
       return NextResponse.json(
         {
@@ -55,8 +62,11 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         where: { id: user.id },
         data: {
           twoFactorEnabled: true,
-          twoFactorMethod: 'TOTP',
+          twoFactorMethod: method,
           twoFactorConfirmedAt: new Date(),
+          // The email channel keeps no authenticator secret; wipe any secret
+          // left behind by an abandoned app-enrolment attempt.
+          twoFactorSecret: method === 'EMAIL' ? null : user.twoFactorSecret,
         },
       }),
       db.userRecoveryCode.deleteMany({ where: { userId: user.id } }),

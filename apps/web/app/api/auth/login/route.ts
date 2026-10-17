@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { authProvider, authorizationService, db } from '@/lib/auth';
 import { setSessionCookie, setActiveOrgCookie, setTwoFactorPendingCookie } from '@/lib/session-cookie';
+import { issueEmailOtp } from '@/lib/email-otp';
 import { encodePendingTwoFactor } from '@/lib/two-factor';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -16,7 +17,7 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // protected.
     const candidate = await db.user.findUnique({
       where: { email },
-      select: { id: true, twoFactorEnabled: true },
+      select: { id: true, twoFactorEnabled: true, twoFactorMethod: true },
     });
 
     if (candidate?.twoFactorEnabled) {
@@ -28,7 +29,27 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         );
       }
 
-      const pending = NextResponse.json({ success: true, twoFactorRequired: true });
+      // Email channel: the second factor is a code, so send it now — after the
+      // password was proved, so the endpoint can't be used to spam inboxes.
+      let twoFactorChannel: 'totp' | 'email' = 'totp';
+      if (candidate.twoFactorMethod === 'EMAIL') {
+        try {
+          await issueEmailOtp(candidate.id, 'TWO_FACTOR_LOGIN');
+          twoFactorChannel = 'email';
+        } catch (error) {
+          console.error('Sign-in code email failed:', error);
+          return NextResponse.json(
+            { success: false, error: 'Could not send a sign-in code. Try again.' },
+            { status: 500 }
+          );
+        }
+      }
+
+      const pending = NextResponse.json({
+        success: true,
+        twoFactorRequired: true,
+        twoFactorChannel,
+      });
       setTwoFactorPendingCookie(pending, encodePendingTwoFactor(candidate.id));
       return pending;
     }

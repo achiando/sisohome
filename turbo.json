@@ -1,7 +1,18 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "ui": "tui",
-  "globalEnv": ["SESSION_SECRET", "TWO_FACTOR_ENCRYPTION_KEY", "NODE_ENV", "DATABASE_URL"],
+  "globalEnv": [
+    "SESSION_SECRET",
+    "TWO_FACTOR_ENCRYPTION_KEY",
+    "NODE_ENV",
+    "DATABASE_URL",
+    "APP_URL",
+    "EMAIL_TRANSPORT",
+    "EMAIL_FROM",
+    "EMAIL_OUTBOX_DIR",
+    "RESEND_API_KEY",
+    "SMTP_URL"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build", "^db:generate"],
