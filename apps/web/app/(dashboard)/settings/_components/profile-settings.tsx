@@ -30,6 +30,7 @@ import {
   CardTitle,
 } from '@workspace/ui/components/card'
 import { DetailSection, FieldItem } from '@workspace/ui/components'
+import { TwoFactorSection } from './two-factor-section'
 import { UniversalForm } from '@workspace/ui/components/form'
 import { Skeleton } from '@workspace/ui/components/skeleton'
 import { toast } from '@workspace/ui/components/toast'
@@ -279,27 +280,8 @@ export function ProfileSettings() {
             />
           )}
 
-          {/* Two-factor authentication */}
-          <DetailSection
-            title="Two-factor authentication"
-            description="Require a second code at sign-in. Works with Google Authenticator, Authy, 1Password and any other authenticator app."
-            fieldLayout="list"
-            fields={[
-              {
-                label: 'Status',
-                value: (
-                  <span className="inline-flex items-center gap-2">
-                    <Badge variant="neutral" shape="pill">
-                      Not enabled
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      Setup arrives with the full enrolment flow.
-                    </span>
-                  </span>
-                ),
-              },
-            ]}
-          />
+          {/* Two-factor authentication (setup / recovery codes / disable) */}
+          <TwoFactorSection />
 
           {/* Linked third-party accounts */}
           <DetailSection
