@@ -1,0 +1,178 @@
+{
+  "$schema": "https://sisohomes.local/schemas/design-1.0.json",
+  "meta": {
+    "name": "SisoHome Design Philosophy",
+    "version": "1.0.0",
+    "extractedFrom": [
+      "siso-design/overview.webp",
+      "siso-design/portfolio.webp",
+      "siso-design/portfolio-property.webp",
+      "siso-design/people-tenant.webp",
+      "siso-design/maintanance.webp",
+      "siso-design/maintanace-1.webp"
+    ],
+    "referenceBrand": "PrimeStay",
+    "targetBrand": "SisoHome",
+    "note": "Mockups are a design reference only. Rebrand to SisoHome; keep the design language. Light-first, dark mode supported via inverse tokens."
+  },
+  "philosophy": [
+    "Light, calm, professional property-operations workspace — near-white canvas, white surfaces, thin borders, very low shadow.",
+    "One dominant accent (emerald green) marks active/selected state; primary actions are near-black filled buttons.",
+    "Information-dense tables on desktop degrade to friendly cards on mobile — never horizontal scrolling for core workflows.",
+    "Every page follows the same skeleton: header → tabs → toolbar → data region. Learn once, use everywhere.",
+    "Status is always color + dot + word (never color alone) for accessibility.",
+    "Touch-first: 44px minimum targets, bottom-anchored feedback, sidebar becomes a sheet on mobile."
+  ],
+  "color": {
+    "canvas": { "value": "#FAFAFB", "usage": "app background behind cards" },
+    "surface": { "value": "#FFFFFF", "usage": "cards, sidebar, table surface" },
+    "surfaceSubtle": { "value": "#F9FAFB", "usage": "table header row, kanban column bg, input fills" },
+    "ink": { "value": "#111827", "usage": "primary text, primary buttons, active nav label" },
+    "inkSecondary": { "value": "#6B7280", "usage": "subtitles, table headers, secondary labels" },
+    "inkMuted": { "value": "#9CA3AF", "usage": "placeholder, overline section labels" },
+    "border": { "value": "#E5E7EB", "usage": "card/table/input borders, dividers" },
+    "borderStrong": { "value": "#D1D5DB", "usage": "outline buttons, focused dividers" },
+    "accent": { "value": "#16A34A", "usage": "active tab underline+label, success text, Message button text" },
+    "accentSoft": { "value": "#F0FDF4", "usage": "accent tinted backgrounds (Message button bg)" },
+    "highlight": { "value": "#3B82F6", "usage": "active chart bar, data highlight" },
+    "semantic": {
+      "success": { "bg": "#DCFCE7", "fg": "#15803D", "dot": "#22C55E", "label": "Occupied / Processed / Low risk" },
+      "warning": { "bg": "#FEF3C7", "fg": "#B45309", "dot": "#F59E0B", "label": "Vacant / Pending" },
+      "danger": { "bg": "#FEE2E2", "fg": "#B91C1C", "dot": "#EF4444", "label": "High priority / Failed" },
+      "info": { "bg": "#DBEAFE", "fg": "#1D4ED8", "dot": "#3B82F6", "label": "Normal priority / In progress" }
+    },
+    "delta": { "up": "#16A34A", "down": "#DC2626", "usage": "metric trend percentages" },
+    "chart": ["#3B82F6", "#F97316", "#FACC15", "#EF4444", "#8B5CF6", "#334155", "#22C55E"]
+  },
+  "typography": {
+    "fontFamily": "Inter (var(--font-sans))",
+    "pageTitle": { "size": "24px", "weight": 600, "tracking": "-0.02em" },
+    "pageSubtitle": { "size": "14px", "weight": 400, "color": "inkSecondary" },
+    "sectionTitle": { "size": "16-18px", "weight": 600 },
+    "body": { "size": "14px", "weight": 400 },
+    "caption": { "size": "13px", "weight": 400, "color": "inkSecondary" },
+    "overline": { "size": "11px", "weight": 600, "tracking": "0.08em", "transform": "uppercase", "color": "inkMuted", "usage": "sidebar section labels: QUICK ACTIONS / MENU / HELP & SUPPORT" },
+    "metric": { "size": "28-32px", "weight": 700, "tracking": "-0.02em" },
+    "uiComponents": "Prefer @workspace/ui <Text> variants (display|headline|title|body|bodyMuted|caption|label) over raw classes."
+  },
+  "radius": {
+    "button": "10px (rounded-lg)",
+    "input": "10px (rounded-lg / rounded-xl per workspace-ui)",
+    "card": "14-16px (rounded-2xl)",
+    "frame": "24px (rounded-3xl) — outer app frame only",
+    "badge": "pill (rounded-full)",
+    "thumbnail": "8px (rounded-lg)"
+  },
+  "shadow": {
+    "card": "none — cards rely on 1px border + white surface",
+    "frame": "0 24px 64px rgba(15,23,42,0.10) — outer canvas frame only",
+    "navActive": "0 1px 3px rgba(15,23,42,0.08)",
+    "dropdown": "0 8px 24px rgba(15,23,42,0.12)"
+  },
+  "spacing": {
+    "contentPadding": "24px mobile / 32px desktop",
+    "cardGap": "16-24px",
+    "touchTarget": "44px minimum",
+    "sidebarWidth": "280px (collapsible)"
+  },
+  "layout": {
+    "frame": "Rounded app frame floating on canvas (desktop); full-bleed on mobile.",
+    "sidebar": {
+      "order": ["brand + collapse toggle", "QUICK ACTIONS search (⌘K)", "MENU nav", "HELP & SUPPORT", "user profile footer"],
+      "activeItem": "white pill: 1px border + navActive shadow + ink label",
+      "inactiveItem": "inkSecondary label, no fill",
+      "mobile": "off-canvas Sheet via hamburger trigger (44px), swipe-to-dismiss"
+    },
+    "content": {
+      "order": ["page header (title+subtitle left, actions right)", "tab navigation", "toolbar (search + filter chips + count)", "data region"],
+      "headerActions": ["primary: near-black filled button with leading icon", "secondary: outline button (e.g. Import)"],
+      "pageBackground": "canvas"
+    },
+    "breakpoints": ["640", "768", "1024", "1280"]
+  },
+  "navigation": {
+    "primary": ["Overview", "Portfolio", "Leasing", "People", "Finances", "Maintenance", "Calendar", "Documents", "Reports"],
+    "help": ["Users Guide", "FAQ", "Contact Support", "Settings"],
+    "note": "Menu labels per mockups; evolve toward sisohome.md §8 (Utilities & Service Schedules, Staff & Service Providers, Settings & Integrations) as domain phases land. Visibility filtered by permission (hasUiPermission) — never show what the server would deny.",
+    "portals": {
+      "tenant": ["My Properties / Leases", "Payments & Receipts", "Documents", "Maintenance Requests", "Announcements"],
+      "caretaker": ["My Tasks", "Inspections", "Service Visits", "Report an Issue", "My Properties"],
+      "provider": ["Work Orders", "Schedule", "Technicians", "Estimates", "Completion Reports", "Invoices"]
+    }
+  },
+  "components": {
+    "primaryButton": "bg-ink text-white rounded-lg h-11, leading icon, active:scale-[0.98]",
+    "secondaryButton": "bg-surface text-ink border border-borderStrong rounded-lg h-11",
+    "statusBadge": "rounded-full, semantic bg + fg, 6px leading dot + word",
+    "priorityBadge": "same recipe: High=danger, Normal=info, Low=success",
+    "card": "bg-surface border border-border rounded-2xl",
+    "statRow": "single card, 4 equal columns, 1px vertical dividers, overline label + metric + delta(linear up/down color)",
+    "tabs": "line style, active = accent text + 2px accent underline, inactive = inkSecondary, horizontal scroll on mobile",
+    "toolbar": "search input + outline filter chips + optional Filter button; wraps to scrollable chip row on mobile",
+    "dataTable": "sticky surfaceSubtle header row (caption, inkSecondary), rows with 40px thumbnail + title/subtitle stack, right-aligned numeric column, action cell = primary View + outline Edit",
+    "peopleCard": "avatar top-left + overflow menu, name, phone, divider, label:value stat rows, footer with accentSoft Message button + outline View Profile button",
+    "kanbanColumn": "surfaceSubtle column bg, overline header + count pill, white ticket cards: id (caption), title (2 lines), property (muted), priority badge, assignee avatar+name + icon buttons",
+    "search": "input with leading Search icon, ⌘K hint chip on desktop"
+  },
+  "patterns": {
+    "pageHeader": "h1 title + muted subtitle; actions right (date-range pill, primary, secondary)",
+    "tabsPerSection": "each module opens with tabs (Portfolio: Properties|Units|Keys & Locks|Equipment|Inspection; People: Tenants|Owners|Service Pros; Maintenance: Requests Board|Recurring)",
+    "onboarding": "post-signup step: full-height single-column card — either list of organizations to join (org row + Join action) OR kind-selection cards (Landlord / Property Management / Maintenance Company) with icon, title, description; one primary CTA; identical at 375px",
+    "emptyState": "illustration/icon + title + description + primary action (use EmptyState from page-shell)",
+    "loading": "Skeleton rows (never bare spinner) — use PageShell / ResponsiveDataListing skeleton",
+    "count": "bold word + muted total next to list title (e.g. 'Properties Total 19')"
+  },
+  "mobile": {
+    "nav": "hamburger → Sheet (left), full-height, swipe-dismiss; user chip at bottom",
+    "tables": "ResponsiveDataListing → stacked cards with key fields + action buttons",
+    "kanban": "column status tabs (scrollable chips) + vertical card list, or horizontal snap-scroll",
+    "grids": "people cards 1 col mobile → 2 (sm) → 3 (lg) → 4 (xl)",
+    "filters": "scrollable chip row or bottom Sheet; never desktop dropdowns",
+    "forms": "UniversalForm single column, sticky FormFooter with primary action; inputs h-11 rounded-xl",
+    "feedback": "Toaster position bottom-center, swipe-dismiss",
+    "touch": "min 44px targets, active:scale-[0.98], ripple"
+  },
+  "themeTokens": {
+    "note": "Mapped into apps/web/app/theme.css on top of @workspace/ui globals. Update design.json first, then theme.css.",
+    "light": {
+      "--background": "oklch(0.985 0.002 260)",
+      "--foreground": "oklch(0.18 0.01 265)",
+      "--card": "oklch(1 0 0)",
+      "--card-foreground": "oklch(0.18 0.01 265)",
+      "--primary": "oklch(0.19 0.01 265)",
+      "--primary-foreground": "oklch(0.985 0 0)",
+      "--secondary": "oklch(0.97 0.002 260)",
+      "--secondary-foreground": "oklch(0.19 0.01 265)",
+      "--muted": "oklch(0.97 0.002 260)",
+      "--muted-foreground": "oklch(0.55 0.01 260)",
+      "--accent": "oklch(0.97 0.04 150)",
+      "--accent-foreground": "oklch(0.40 0.11 153)",
+      "--border": "oklch(0.925 0.003 260)",
+      "--input": "oklch(0.925 0.003 260)",
+      "--ring": "oklch(0.72 0.17 150)",
+      "--success": "oklch(0.72 0.17 150)",
+      "--success-foreground": "oklch(0.42 0.11 150)",
+      "--warning": "oklch(0.85 0.13 85)",
+      "--warning-foreground": "oklch(0.50 0.13 60)",
+      "--info": "oklch(0.85 0.10 250)",
+      "--info-foreground": "oklch(0.45 0.17 255)",
+      "--sidebar": "oklch(1 0 0)",
+      "--sidebar-foreground": "oklch(0.18 0.01 265)",
+      "--sidebar-accent": "oklch(0.97 0.002 260)",
+      "--sidebar-accent-foreground": "oklch(0.19 0.01 265)",
+      "--sidebar-border": "oklch(0.925 0.003 260)"
+    },
+    "dark": {
+      "--background": "oklch(0.145 0.005 265)",
+      "--foreground": "oklch(0.985 0 0)",
+      "--card": "oklch(0.195 0.005 265)",
+      "--primary": "oklch(0.985 0 0)",
+      "--primary-foreground": "oklch(0.19 0.01 265)",
+      "--accent": "oklch(0.30 0.07 153)",
+      "--accent-foreground": "oklch(0.93 0.05 150)",
+      "--border": "oklch(0.28 0.005 265)",
+      "--ring": "oklch(0.72 0.17 150)",
+      "note": "Dark values are a secondary track — mockups are light-only; validate dark mode against this table before shipping."
+    }
+  }
+}
