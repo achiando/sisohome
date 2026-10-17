@@ -329,6 +329,8 @@ export async function seedExampleUser(organizationId: string) {
         displayName: 'Example User',
         phone: '+1234567890',
         status: 'ACTIVE',
+        // Seeded directly (no signup link), so treat the address as proven.
+        emailVerifiedAt: new Date(),
         profile: {
           create: {
             avatarUrl: null,

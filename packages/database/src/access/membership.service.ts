@@ -92,6 +92,10 @@ export class MembershipService {
             passwordHash,
             mustChangePassword: true,
             status: "ACTIVE",
+            // The temporary password is delivered by email, so the address
+            // is considered proven — this account must not be blocked by
+            // the signup verification gate on first sign-in.
+            emailVerifiedAt: new Date(),
           },
         });
         const membership = await tx.organizationMember.create({

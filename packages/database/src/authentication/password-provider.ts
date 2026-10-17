@@ -170,13 +170,21 @@ export class PasswordAuthProvider implements AuthenticationProvider {
   /**
    * Sign up with email, password, and name.
    *
-   * Creates ONLY the user account and a session with no active organization.
-   * Organization creation happens later via onboarding, where the chosen
-   * organization kind seeds that kind's role templates (see
-   * `seedOrgKindRoles`). This lets one user own/operate across multiple
-   * organizations of different kinds.
+   * Creates ONLY the user account — no organization, no roles (onboarding
+   * seeds the chosen kind's role templates via `seedOrgKindRoles`, so one
+   * user can own/operate across multiple organizations of different kinds).
+   *
+   * By default NO session is created: the account is created unverified and
+   * the emailed verification link is the only way in, so onboarding cannot
+   * be reached with an unproven address. Pass `{ createSession: true }`
+   * only where an explicit, already-verified flow needs the session.
    */
-  async signUp(email: string, password: string, name: string): Promise<AuthenticatedIdentity | null> {
+  async signUp(
+    email: string,
+    password: string,
+    name: string,
+    options?: { createSession?: boolean },
+  ): Promise<AuthenticatedIdentity | null> {
     // Check if user already exists
     const existing = await this.prisma.user.findUnique({
       where: { email },
@@ -189,13 +197,14 @@ export class PasswordAuthProvider implements AuthenticationProvider {
     // Hash password
     const passwordHash = await bcrypt.hash(password, 10);
 
-    // Create user (no organization, no roles yet)
+    // Create user (no organization, no roles yet, email not yet verified)
     const user = await this.prisma.user.create({
       data: {
         email,
         passwordHash,
         displayName: name,
         status: 'ACTIVE',
+        emailVerifiedAt: null,
         profile: {
           create: {
             firstName: name.split(' ')[0],
@@ -205,23 +214,29 @@ export class PasswordAuthProvider implements AuthenticationProvider {
       },
     });
 
-    // Create session with no active organization (onboarding will set one)
-    const session = await this.prisma.session.create({
-      data: {
-        userId: user.id,
-        token: this.generateToken(),
-        expiresAt: new Date(Date.now() + 3600000), // 1 hour
-        organizationId: null,
-      },
-    });
+    // Session only for flows that skip the verification gate. The default is
+    // fail-closed: unverified accounts get no session at all.
+    let sessionId: string | undefined;
+    if (options?.createSession) {
+      const session = await this.prisma.session.create({
+        data: {
+          userId: user.id,
+          token: this.generateToken(),
+          expiresAt: new Date(Date.now() + 3600000), // 1 hour
+          organizationId: null,
+        },
+      });
+      sessionId = session.id;
+    }
 
     return {
       userId: user.id,
-      sessionId: session.id,
+      sessionId,
       email: user.email,
       metadata: {
         organizationId: null,
         onboardingRequired: true,
+        verificationRequired: sessionId === undefined,
       },
     };
   }
