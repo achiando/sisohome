@@ -1,6 +1,7 @@
 import { createHash, randomBytes } from 'node:crypto'
 
 import { db } from '@/lib/auth'
+import { appUrl } from '@/lib/base-url'
 
 /**
  * Password reset links: 30-minute, single-use, stored only as a SHA-256 hash
@@ -9,10 +10,8 @@ import { db } from '@/lib/auth'
 
 export const PASSWORD_RESET_TTL_MINUTES = 30
 
-/** Absolute base URL for links written into emails. */
-export function appUrl(): string {
-  return process.env.APP_URL ?? process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000'
-}
+/** Re-exported so existing call sites keep one import. */
+export { appUrl }
 
 export function generateResetToken(): string {
   return randomBytes(32).toString('base64url')

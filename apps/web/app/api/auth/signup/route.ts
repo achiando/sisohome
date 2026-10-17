@@ -1,13 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { authProvider, db } from '@/lib/auth';
-import { setSessionCookie, setActiveOrgCookie } from '@/lib/session-cookie';
+import { sendEmail } from '@workspace/email';
 
+import { authProvider, db } from '@/lib/auth';
+import { verifyEmailTemplate } from '@/lib/email/verify-email';
+import {
+  EMAIL_VERIFICATION_TTL_HOURS,
+  issueVerificationToken,
+  verificationUrl,
+} from '@/lib/verify-email';
+
+/**
+ * POST /api/auth/signup — account creation gated by email verification.
+ *
+ * Creates the user unverified and deliberately issues NO session: the
+ * emailed single-use link is the only way in, so onboarding cannot be
+ * reached with an unproven address. The response tells the client to show
+ * "check your email" instead of routing anywhere.
+ */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
     const body = await request.json();
     const { name, email, password } = body;
 
-    // Sign up using password provider
     const identity = await authProvider.signUp(email, password, name);
 
     if (!identity) {
@@ -17,7 +31,6 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // Get user details
     const user = await db.user.findUnique({
       where: { id: identity.userId },
       include: { profile: true },
@@ -30,39 +43,37 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    const session = await db.session.findUnique({
-      where: { id: identity.sessionId },
-    });
-
-    // Signup creates the account only — no org, no roles, no permissions.
-    // The client should redirect to /onboarding to create or join an org.
-    const response = NextResponse.json({
-      success: true,
-      onboardingRequired: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.displayName || `${user.profile?.firstName || ''} ${user.profile?.lastName || ''}`.trim(),
-        avatar: user.profile?.avatarUrl,
-        phone: user.phone,
-        twoFactorEnabled: user.twoFactorEnabled,
-        twoFactorMethod: user.twoFactorMethod,
-      },
-      session: {
-        expiresAt: session?.expiresAt?.toISOString(),
-        organizationId: null,
-        permissions: [],
-        roles: [],
-      },
-    });
-
-    // Persist session token in httpOnly cookie; no active org yet (onboarding).
-    if (session?.token) {
-      setSessionCookie(response, session.token);
-      setActiveOrgCookie(response, null);
+    // Delivery is awaited so a failure is reported — and the just-created
+    // account is rolled back, so the same address can simply sign up again.
+    try {
+      const token = await issueVerificationToken(user.id);
+      await sendEmail(
+        verifyEmailTemplate({
+          to: user.email,
+          verifyUrl: verificationUrl(token),
+          expiresInHours: EMAIL_VERIFICATION_TTL_HOURS,
+          recipientName: user.displayName ?? undefined,
+        }),
+      );
+    } catch (error) {
+      console.error('Verification email failed:', error);
+      await db.user.delete({ where: { id: user.id } }).catch(() => undefined);
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'We could not send the verification email. Please try again.',
+        },
+        { status: 500 }
+      );
     }
 
-    return response;
+    // No cookies: nothing to route to until the link is clicked.
+    return NextResponse.json({
+      success: true,
+      verificationRequired: true,
+      onboardingRequired: true,
+      email: user.email,
+    });
   } catch (error) {
     console.error('Sign up error:', error);
     return NextResponse.json(

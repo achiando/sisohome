@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { authProvider, authorizationService, db } from '@/lib/auth';
 import { setSessionCookie, setActiveOrgCookie, setTwoFactorPendingCookie } from '@/lib/session-cookie';
 import { issueEmailOtp } from '@/lib/email-otp';
+import { notifyNewLogin } from '@/lib/login-alert';
 import { encodePendingTwoFactor } from '@/lib/two-factor';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
@@ -17,8 +18,23 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     // protected.
     const candidate = await db.user.findUnique({
       where: { email },
-      select: { id: true, twoFactorEnabled: true, twoFactorMethod: true },
+      select: { id: true, email: true, twoFactorEnabled: true, twoFactorMethod: true, emailVerifiedAt: true },
     });
+
+    // Signup is gated on the emailed verification link — an unproven address
+    // never reaches password checks, OTP sends or a session.
+    if (candidate && !candidate.emailVerifiedAt) {
+      return NextResponse.json(
+        {
+          success: false,
+          needsVerification: true,
+          email: candidate.email,
+          error:
+            'Your email address is not verified yet. Check your inbox for the verification link.',
+        },
+        { status: 401 }
+      );
+    }
 
     if (candidate?.twoFactorEnabled) {
       const passwordOk = await authProvider.verifyPassword(email, password);
@@ -117,6 +133,10 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       setSessionCookie(response, session.token);
       setActiveOrgCookie(response, organizationId);
     }
+
+    // Tell the owner about the sign-in (device + location). Fire and forget —
+    // a slow geo lookup must never delay the response.
+    void notifyNewLogin(request, { email: user.email, displayName: user.displayName });
 
     return response;
   } catch (error) {

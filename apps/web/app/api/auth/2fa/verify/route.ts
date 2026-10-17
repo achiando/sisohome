@@ -7,6 +7,7 @@ import {
 } from '@/lib/session-cookie';
 import { decodePendingTwoFactor, hashRecoveryCode, verifyTotpToken } from '@/lib/two-factor';
 import { redeemEmailOtp } from '@/lib/email-otp';
+import { notifyNewLogin } from '@/lib/login-alert';
 
 /**
  * POST /api/auth/2fa/verify
@@ -108,6 +109,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       setActiveOrgCookie(response, organizationId);
     }
     clearTwoFactorPendingCookie(response);
+
+    // Second factor proved — same sign-in notice as the password path.
+    void notifyNewLogin(request, { email: user.email, displayName: user.displayName });
 
     return response;
   } catch (error) {

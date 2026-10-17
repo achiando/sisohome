@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { membershipService } from '@/lib/auth';
+import { sendEmail } from '@workspace/email';
+import { membershipService, db } from '@/lib/auth';
+import { appUrl } from '@/lib/base-url';
+import { memberAddedEmail } from '@/lib/email/member-added';
 import { withAuth } from '@/lib/route-auth';
 
 /**
@@ -35,6 +38,37 @@ export const POST = withAuth(
       { userId: context.userId, organizationId: context.organizationId! },
       { email, name, roleIds },
     );
+
+    // Email the newcomer their temporary password — the admin still sees it
+    // once in the response, but nobody has to relay secrets manually.
+    // Fire and forget: delivery problems never fail member creation.
+    void (async () => {
+      try {
+        const [organization, inviter] = await Promise.all([
+          db.organization.findUnique({
+            where: { id: context.organizationId! },
+            select: { name: true },
+          }),
+          db.user.findUnique({
+            where: { id: context.userId },
+            select: { displayName: true },
+          }),
+        ]);
+        await sendEmail(
+          memberAddedEmail({
+            to: email,
+            recipientName: name,
+            inviterName: inviter?.displayName ?? undefined,
+            organizationName: organization?.name ?? 'this workspace',
+            tempPassword: result.tempPassword,
+            signInUrl: `${appUrl()}/login`,
+          }),
+        );
+      } catch (error) {
+        console.error('Member invitation email failed:', error);
+      }
+    })();
+
     return NextResponse.json(
       {
         success: true,

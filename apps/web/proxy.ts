@@ -12,7 +12,13 @@ import { NextResponse, type NextRequest } from 'next/server';
 const SESSION_COOKIE = 'siso_session';
 const ACTIVE_ORG_COOKIE = 'siso_active_org';
 
-const PUBLIC_PATHS = ['/login', '/signup', '/forgot-password', '/reset-password'];
+const PUBLIC_PATHS = [
+  '/login',
+  '/signup',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+];
 const PUBLIC_API_PATHS = ['/api/auth'];
 
 function isPublicPage(pathname: string): boolean {
