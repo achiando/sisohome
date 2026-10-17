@@ -62,10 +62,57 @@ model User {
   auditLogs            AuditLog[]
   sessions             Session[]
   recoveryCodes        UserRecoveryCode[]
+  passwordResetTokens  PasswordResetToken[]
+  emailOtpCodes        EmailOtpCode[]
 
   @@map("users")
   @@index([email])
   @@index([status])
+}
+
+/**
+ * Single-use password reset links. Only the SHA-256 of the token is stored,
+ * so a database leak never hands out live reset links; `usedAt` plus a short
+ * expiry make every link one-shot.
+ */
+model PasswordResetToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  tokenHash String    @unique @map("token_hash")
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
+  @@index([userId])
+}
+
+/** What a 6-digit emailed code is for. */
+enum EmailOtpPurpose {
+  TWO_FACTOR_ENROL
+  TWO_FACTOR_LOGIN
+}
+
+/**
+ * One-time codes emailed by the app (2FA enrolment and sign-in). High-entropy
+ * for short codes, so SHA-256 is enough; single-use via `usedAt`, short expiry
+ * via `expiresAt`.
+ */
+model EmailOtpCode {
+  id        String          @id @default(uuid()) @db.Uuid
+  userId    String          @map("user_id") @db.Uuid
+  purpose   EmailOtpPurpose
+  codeHash  String          @map("code_hash")
+  expiresAt DateTime        @map("expires_at")
+  usedAt    DateTime?       @map("used_at")
+  createdAt DateTime        @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_otp_codes")
+  @@index([userId, purpose])
 }
 
 /**

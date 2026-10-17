@@ -260,6 +260,44 @@ export class PasswordAuthProvider implements AuthenticationProvider {
   }
 
   /**
+   * Set a password WITHOUT knowing the old one.
+   *
+   * Only the emailed reset flow may call this: the route has already proven
+   * possession of a single-use reset token, so there is no current password
+   * to check. Enforces the same strength rules as the client's reset form so
+   * the server never accepts a password the form would have rejected.
+   */
+  async setPassword(userId: string, newPassword: string): Promise<boolean> {
+    if (newPassword.length < 8) {
+      throw new Error('Password must be at least 8 characters');
+    }
+    if (!/[A-Z]/.test(newPassword)) {
+      throw new Error('Password must contain at least one uppercase letter');
+    }
+    if (!/[a-z]/.test(newPassword)) {
+      throw new Error('Password must contain at least one lowercase letter');
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      throw new Error('Password must contain at least one number');
+    }
+    if (!/[^A-Za-z0-9]/.test(newPassword)) {
+      throw new Error('Password must contain at least one special character');
+    }
+
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user || user.status !== 'ACTIVE') {
+      return false;
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await this.prisma.user.update({
+      where: { id: user.id },
+      data: { passwordHash, mustChangePassword: false },
+    });
+    return true;
+  }
+
+  /**
    * Generate a random session token
    */
   private generateToken(): string {
