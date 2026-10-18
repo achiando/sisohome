@@ -18,6 +18,10 @@ const PUBLIC_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/verify-email',
+  // Legal documents linked from the signup consent checkbox — must be
+  // readable before a session exists.
+  '/terms',
+  '/privacy',
 ];
 const PUBLIC_API_PATHS = ['/api/auth'];
 

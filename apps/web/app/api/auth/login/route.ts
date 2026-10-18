@@ -5,6 +5,7 @@ import { issueEmailOtp } from '@/lib/email-otp';
 import { notifyNewLogin } from '@/lib/login-alert';
 import { encodePendingTwoFactor } from '@/lib/two-factor';
 import { checkRateLimits, ipKey } from '@/lib/rate-limit';
+import { needsConsents } from '@/lib/consent';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -123,6 +124,9 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     const response = NextResponse.json({
       success: true,
       mustChangePassword: user.mustChangePassword,
+      // Surface the consent gap on sign-in so the forced change-password
+      // screen (invited members) can show the opt-in checkbox immediately.
+      needsConsent: await needsConsents(user.id),
       user: {
         id: user.id,
         email: user.email,

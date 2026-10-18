@@ -22,6 +22,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@workspace/ui/components/card'
+import { Checkbox } from '@workspace/ui/components/checkbox'
 import { Input } from '@workspace/ui/components/input'
 import { toast } from '@workspace/ui/components/toast'
 import { useAuth, PasswordChecklist, PASSWORD_RULES } from '@workspace/auth-ui'
@@ -34,9 +35,14 @@ export default function ChangePasswordScreen() {
   const [currentPassword, setCurrentPassword] = useState('')
   const [newPassword, setNewPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [acceptTerms, setAcceptTerms] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [formError, setFormError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  // Invited members (and anyone facing a policy update) must accept the
+  // Terms/Privacy before this change goes through — the server enforces it.
+  const consentNeeded = user?.needsConsent === true
 
   // Not signed in → login first, come back here after.
   useEffect(() => {
@@ -60,6 +66,7 @@ export default function ChangePasswordScreen() {
     const unmet = PASSWORD_RULES.find((rule) => !rule.test(newPassword))
     if (unmet) next.newPassword = newPassword ? unmet.message : 'Enter a new password'
     if (confirmPassword !== newPassword) next.confirmPassword = 'Passwords do not match'
+    if (consentNeeded && !acceptTerms) next.acceptTerms = 'Accept the Terms of Service and Privacy Policy to continue'
     if (Object.keys(next).length > 0) {
       setErrors(next)
       return
@@ -72,7 +79,7 @@ export default function ChangePasswordScreen() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ currentPassword, newPassword }),
+        body: JSON.stringify({ currentPassword, newPassword, acceptTerms: consentNeeded ? acceptTerms : undefined }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !data.success) {
@@ -170,6 +177,38 @@ export default function ChangePasswordScreen() {
               showPasswordToggle
             />
           </div>
+
+          {consentNeeded && (
+            <Checkbox
+              id="acceptTerms"
+              checked={acceptTerms}
+              onCheckedChange={(v) => setAcceptTerms(v === true)}
+              disabled={saving}
+              label={
+                <>
+                  I accept the{' '}
+                  <a
+                    href="/terms"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Terms of Service
+                  </a>{' '}
+                  and{' '}
+                  <a
+                    href="/privacy"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline"
+                  >
+                    Privacy Policy
+                  </a>
+                </>
+              }
+              error={errors.acceptTerms}
+            />
+          )}
 
           {formError && (
             <div className="flex items-start gap-2 rounded-xl border border-destructive/40 bg-destructive/10 p-3">

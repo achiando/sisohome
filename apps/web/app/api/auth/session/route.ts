@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { authService, authorizationService, db, getSessionToken } from '@/lib/auth';
+import { needsConsents } from '@/lib/consent';
 
 export async function GET() {
   try {
@@ -44,6 +45,9 @@ export async function GET() {
       // Mirrored at the top level so AuthResponse consumers (AuthContext)
       // can enforce the forced password change on session restore.
       mustChangePassword: user.mustChangePassword,
+      // True while any required document (Terms/Privacy) is unaccepted at
+      // its current version — the change-password screen shows the opt-in.
+      needsConsent: await needsConsents(user.id),
       user: {
         id: user.id,
         email: user.email,

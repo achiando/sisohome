@@ -9,6 +9,7 @@ import {
   verificationUrl,
 } from '@/lib/verify-email';
 import { checkRateLimits, ipKey } from '@/lib/rate-limit';
+import { consentMetadata, recordConsents } from '@/lib/consent';
 
 /**
  * POST /api/auth/signup — account creation gated by email verification.
@@ -17,6 +18,9 @@ import { checkRateLimits, ipKey } from '@/lib/rate-limit';
  * emailed single-use link is the only way in, so onboarding cannot be
  * reached with an unproven address. The response tells the client to show
  * "check your email" instead of routing anywhere.
+ *
+ * Consent (Terms + Privacy, versioned) is mandatory and recorded with the
+ * request's IP/user-agent before the verification email goes out.
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
@@ -27,7 +31,18 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
     if (limited) return limited;
 
     const body = await request.json();
-    const { name, email, password } = body;
+    const { name, email, password, acceptTerms } = body;
+
+    // Server-side consent gate — the form checkbox is UX, not proof.
+    if (acceptTerms !== true) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'You must accept the Terms of Service and Privacy Policy',
+        },
+        { status: 400 }
+      );
+    }
 
     const identity = await authProvider.signUp(email, password, name);
 
@@ -35,6 +50,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json(
         { success: false, error: 'Email already exists' },
         { status: 409 }
+      );
+    }
+
+    // The consent record is part of account creation: if it cannot be
+    // written, roll the user back exactly like an email failure.
+    try {
+      await recordConsents(identity.userId, consentMetadata(request));
+    } catch (error) {
+      console.error('Consent record failed:', error);
+      await db.user.delete({ where: { id: identity.userId } }).catch(() => undefined);
+      return NextResponse.json(
+        { success: false, error: 'Sign up failed. Please try again.' },
+        { status: 500 }
       );
     }
 
