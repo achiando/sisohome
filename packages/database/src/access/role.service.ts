@@ -47,10 +47,28 @@ export interface ActorContext {
 export class OrgRoleService {
   private prisma: PrismaClient;
   private audit: AuditService;
+  private onRolesChanged?: ((organizationId: string) => void | Promise<void>) | undefined;
 
-  constructor(prisma: PrismaClient) {
+  /**
+   * @param onRolesChanged called after a role's permission set changes or a
+   *   role is deleted — every holder's cached permissions are now stale and
+   *   must be flushed (wired to the authorization cache in the web app).
+   */
+  constructor(
+    prisma: PrismaClient,
+    onRolesChanged?: (organizationId: string) => void | Promise<void>,
+  ) {
     this.prisma = prisma;
     this.audit = new AuditService(prisma);
+    this.onRolesChanged = onRolesChanged;
+  }
+
+  private async notifyRolesChanged(organizationId: string): Promise<void> {
+    try {
+      await this.onRolesChanged?.(organizationId);
+    } catch (error) {
+      console.error('Permission cache invalidation failed:', error);
+    }
   }
 
   /** All roles of the active organization (templates + custom). */
@@ -184,6 +202,9 @@ export class OrgRoleService {
       metadata: { permissions: input.permissions },
     });
 
+    // Permission replace-set changed — every holder's cache is stale.
+    await this.notifyRolesChanged(actor.organizationId);
+
     return this.toView(role.id);
   }
 
@@ -212,6 +233,8 @@ export class OrgRoleService {
       resourceId: role.id,
       metadata: { slug: role.slug },
     });
+
+    await this.notifyRolesChanged(actor.organizationId);
   }
 
   // ── internals ────────────────────────────────────────────────────────────

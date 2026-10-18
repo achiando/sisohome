@@ -38,6 +38,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ success: false, error: message }, { status: 400 });
     }
 
+    // A password change is a security event: every OTHER session dies
+    // (the current one stays so the user isn't logged out mid-flow).
+    await db.session.deleteMany({
+      where: {
+        userId: context.userId,
+        ...(context.sessionId ? { id: { not: context.sessionId } } : {}),
+      },
+    });
+
     return NextResponse.json({ success: true, mustChangePassword: false });
   } catch (error) {
     console.error('Change password error:', error);

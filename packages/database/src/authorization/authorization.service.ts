@@ -406,17 +406,36 @@ export class AuthorizationService implements IAuthorizationService {
   async clearCache(userId?: string, organizationId?: string): Promise<void> {
     if (!userId && !organizationId) {
       this.cache.clear();
+      await this.sessionCache.clear();
       return;
     }
 
-    const prefix = userId ? `user_permissions:${userId}` : '';
-    const orgSuffix = organizationId ? `:${organizationId}` : '';
+    const suffix = organizationId ? `:${organizationId}` : '';
 
     for (const key of this.cache.keys()) {
-      if (key.startsWith(prefix) && key.endsWith(orgSuffix)) {
-        this.cache.delete(key);
-      }
+      const owned =
+        key.startsWith(`user_permissions:${userId}:`) ||
+        key.startsWith(`user_roles:${userId}:`);
+      if (!owned) continue;
+      if (suffix && !key.endsWith(suffix)) continue;
+      this.cache.delete(key);
     }
+  }
+
+  /**
+   * Drop every cached permission/role entry for a user — BOTH cache layers
+   * (the session cache is consulted first, so clearing only one layer leaves
+   * stale grants alive for up to the TTL). MUST be called whenever a
+   * membership's status or role assignments change, or a revoked member
+   * keeps their old permissions for up to 5 minutes.
+   */
+  async invalidateUser(userId: string, organizationId?: string): Promise<void> {
+    if (organizationId) {
+      await this.sessionCache.invalidateOrganization(userId, organizationId);
+    } else {
+      await this.sessionCache.invalidateUser(userId);
+    }
+    await this.clearCache(userId, organizationId);
   }
 
   async warmCache(userId: string, organizationId?: string): Promise<void> {

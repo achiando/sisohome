@@ -46,6 +46,15 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
         },
       }),
       db.userRecoveryCode.deleteMany({ where: { userId: user.id } }),
+      // Dropping the second factor is a security event: kill every OTHER
+      // session so a hijacked device cannot ride along. The current
+      // session survives — it just proved the password.
+      db.session.deleteMany({
+        where: {
+          userId: user.id,
+          ...(context.sessionId ? { id: { not: context.sessionId } } : {}),
+        },
+      }),
     ]);
 
     return NextResponse.json({ success: true });

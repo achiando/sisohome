@@ -32,10 +32,33 @@ const OWNER_SLUGS = new Set(["owner", "organization_owner"]);
 export class MembershipService {
   private prisma: PrismaClient;
   private audit: AuditService;
+  private onPermissionsChanged?:
+    | ((userId: string, organizationId: string) => void | Promise<void>)
+    | undefined;
 
-  constructor(prisma: PrismaClient) {
+  /**
+   * @param onPermissionsChanged called after any change that alters a
+   *   member's effective permissions (role assign/revoke, status change).
+   *   Wiring: clear the authorization caches for that user+org, or revoked
+   *   access survives the cache TTL.
+   */
+  constructor(
+    prisma: PrismaClient,
+    onPermissionsChanged?: (userId: string, organizationId: string) => void | Promise<void>,
+  ) {
     this.prisma = prisma;
     this.audit = new AuditService(prisma);
+    this.onPermissionsChanged = onPermissionsChanged;
+  }
+
+  private async notifyPermissionsChanged(userId: string, organizationId: string): Promise<void> {
+    try {
+      await this.onPermissionsChanged?.(userId, organizationId);
+    } catch (error) {
+      // Cache invalidation is best-effort: a failed flush leaves stale
+      // grants until TTL, but must never fail the mutation itself.
+      console.error('Permission cache invalidation failed:', error);
+    }
   }
 
   async listMembers(organizationId: string): Promise<MemberView[]> {
@@ -146,6 +169,9 @@ export class MembershipService {
       resourceId: membership.id,
       metadata: { userId: membership.userId },
     });
+
+    // Suspension/removal strips permissions — flush them immediately.
+    await this.notifyPermissionsChanged(membership.userId, actor.organizationId);
   }
 
   /**
@@ -212,6 +238,8 @@ export class MembershipService {
       resourceId: membership.id,
       metadata: { roleIds: roles.map((r) => r.id) },
     });
+
+    await this.notifyPermissionsChanged(membership.userId, actor.organizationId);
   }
 
   async revokeRoles(actor: ActorContext, membershipId: string, roleIds: string[]): Promise<void> {
@@ -241,6 +269,8 @@ export class MembershipService {
       resourceId: membership.id,
       metadata: { roleIds },
     });
+
+    await this.notifyPermissionsChanged(membership.userId, actor.organizationId);
   }
 
   // ── internals ────────────────────────────────────────────────────────────

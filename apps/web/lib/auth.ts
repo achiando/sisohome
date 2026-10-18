@@ -29,9 +29,14 @@ const authorizationService = new AuthorizationService(prisma);
 const tenantService = new TenantService(prisma);
 const organizationService = new OrganizationService(prisma);
 
-// Org-scoped role + membership management (multi-org authorization surfaces)
-const orgRoleService = new OrgRoleService(prisma);
-const membershipService = new MembershipService(prisma);
+// Org-scoped role + membership management (multi-org authorization surfaces).
+// Both services flush the authorization caches on every permission-relevant
+// mutation — without that, a revoked member keeps their cached grants for
+// up to the cache TTL.
+const orgRoleService = new OrgRoleService(prisma, () => authorizationService.clearCache());
+const membershipService = new MembershipService(prisma, (userId, organizationId) =>
+  authorizationService.invalidateUser(userId, organizationId),
+);
 
 /**
  * Read the session token from the httpOnly cookie (server components + route
