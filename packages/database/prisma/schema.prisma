@@ -69,6 +69,7 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   emailOtpCodes        EmailOtpCode[]
   emailVerificationTokens EmailVerificationToken[]
+  consents             UserConsent[]
 
   @@map("users")
   @@index([email])
@@ -154,6 +155,34 @@ model UserRecoveryCode {
 
   @@map("user_recovery_codes")
   @@index([userId])
+}
+
+/** Which legal document a user accepted. */
+enum ConsentType {
+  TERMS_OF_SERVICE
+  PRIVACY_POLICY
+}
+
+/**
+ * Versioned proof of consent (GDPR-style): WHICH document version, WHEN,
+ * from WHERE. The (user, type, version) unique key makes acceptance
+ * idempotent and lets a policy update require a fresh opt-in without
+ * losing the historical record.
+ */
+model UserConsent {
+  id            String       @id @default(uuid()) @db.Uuid
+  userId        String       @map("user_id") @db.Uuid
+  type          ConsentType
+  policyVersion String       @map("policy_version")
+  acceptedAt    DateTime     @default(now()) @map("accepted_at")
+  ipAddress     String?      @map("ip_address")
+  userAgent     String?      @map("user_agent")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, type, policyVersion])
+  @@index([userId])
+  @@map("user_consents")
 }
 
 model UserProfile {

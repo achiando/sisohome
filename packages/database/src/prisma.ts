@@ -31,3 +31,7 @@ if (process.env.NODE_ENV !== 'production') {
 }
 
 export { PrismaClientClass as PrismaClient };
+
+// Schema enums (UserStatus, ConsentType, …) — generated to the client but
+// re-exported here so app code can import them from '@workspace/database'.
+export * from '../generated/prisma/enums';
