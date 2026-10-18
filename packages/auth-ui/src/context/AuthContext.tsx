@@ -30,6 +30,8 @@ export interface AuthUser {
   organizationId?: string | null;
   /** True while signed in with a temporary password that must be replaced. */
   mustChangePassword?: boolean;
+  /** True while any required document (Terms/Privacy) is unaccepted. */
+  needsConsent?: boolean;
   permissions?: string[];
   roles?: string[];
 }
@@ -124,6 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user: {
             ...response.user,
             mustChangePassword: response.mustChangePassword,
+            needsConsent: response.needsConsent,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -182,6 +185,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user: {
             ...response.user,
             mustChangePassword: response.mustChangePassword,
+            needsConsent: response.needsConsent,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -227,6 +231,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user: {
             ...response.user,
             mustChangePassword: response.mustChangePassword,
+            needsConsent: response.needsConsent,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -261,13 +266,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (response.success && response.user) {
           setVerificationNeeded(false);
           setState({
-            user: {
-              ...response.user,
-              mustChangePassword: response.mustChangePassword,
-              organizationId: response.session?.organizationId,
-              permissions: response.session?.permissions,
-              roles: response.session?.roles,
-            },
+          user: {
+            ...response.user,
+            mustChangePassword: response.mustChangePassword,
+            needsConsent: response.needsConsent,
+            organizationId: response.session?.organizationId,
+            permissions: response.session?.permissions,
+            roles: response.session?.roles,
+          },
             isLoading: false,
             isAuthenticated: true,
             error: null,
@@ -380,6 +386,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user: {
             ...response.user,
             mustChangePassword: response.mustChangePassword,
+            needsConsent: response.needsConsent,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,
@@ -419,6 +426,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           user: {
             ...response.user,
             mustChangePassword: response.mustChangePassword,
+            needsConsent: response.needsConsent,
             organizationId: response.session?.organizationId,
             permissions: response.session?.permissions,
             roles: response.session?.roles,

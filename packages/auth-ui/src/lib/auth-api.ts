@@ -17,6 +17,8 @@ export interface AuthResponse {
   email?: string;
   /** True when the user must change a temporary password before proceeding. */
   mustChangePassword?: boolean;
+  /** True while any required document (Terms/Privacy) is unaccepted. */
+  needsConsent?: boolean;
   /**
    * Password accepted for an account with 2FA on — no session yet; the
    * client must collect a second-factor code and call verifyTwoFactor().
@@ -69,6 +71,8 @@ export interface SignUpCredentials {
   email: string;
   password: string;
   name: string;
+  /** Required — the server refuses signup without Terms/Privacy consent. */
+  acceptTerms: boolean;
 }
 
 export interface ResetPasswordCredentials {

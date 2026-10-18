@@ -176,7 +176,18 @@ export default function SignUpForm({ redirectTo = '/onboarding', showLoginLink =
                 checked={!!field.value}
                 onCheckedChange={field.onChange}
                 disabled={isLoading}
-                label="I accept the terms and conditions"
+                label={
+                  <>
+                    I accept the{' '}
+                    <a href="/terms" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      Terms of Service
+                    </a>{' '}
+                    and{' '}
+                    <a href="/privacy" target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
+                      Privacy Policy
+                    </a>
+                  </>
+                }
                 error={errors.acceptTerms?.message}
               />
             )}
