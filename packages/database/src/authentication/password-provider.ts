@@ -4,6 +4,7 @@
  * In production, use a proper auth provider (Supabase, Clerk, etc.)
  */
 
+import { randomBytes } from 'node:crypto';
 import bcrypt from 'bcrypt';
 import { PrismaClient } from '../prisma';
 import {
@@ -11,6 +12,13 @@ import {
   AuthenticatedIdentity,
   UnauthenticatedError,
 } from './types';
+
+/** Session lifetime from the last refresh; refreshed while still active. */
+const SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
+/** Refresh at most once per 10 minutes: extend only when < 1h-10m remains. */
+const SESSION_REFRESH_THRESHOLD_MS = 50 * 60 * 1000;
+/** Absolute session cap regardless of activity (sliding renewal stops here). */
+const SESSION_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 export class PasswordAuthProvider implements AuthenticationProvider {
   private prisma: PrismaClient;
@@ -39,6 +47,23 @@ export class PasswordAuthProvider implements AuthenticationProvider {
 
     if (session.user.status !== 'ACTIVE') {
       throw new UnauthenticatedError('User account is not active');
+    }
+
+    // Sliding renewal: active sessions extend themselves (one write per 10
+    // minutes at most) but never past 30 days from first sign-in. Without
+    // this the 1h DB expiry silently cuts off users while the 7-day cookie
+    // still exists.
+    if (session.expiresAt.getTime() - Date.now() <= SESSION_REFRESH_THRESHOLD_MS) {
+      const absoluteMax = session.createdAt.getTime() + SESSION_MAX_AGE_MS;
+      const extended = Math.min(Date.now() + SESSION_TTL_MS, absoluteMax);
+      if (extended > session.expiresAt.getTime()) {
+        await this.prisma.session
+          .update({
+            where: { id: session.id },
+            data: { expiresAt: new Date(extended) },
+          })
+          .catch(() => undefined); // best effort — a lost race must not block
+      }
     }
 
     return {
@@ -313,9 +338,13 @@ export class PasswordAuthProvider implements AuthenticationProvider {
   }
 
   /**
-   * Generate a random session token
+   * Generate a random session token.
+   *
+   * The token is an opaque value looked up in the database — its strength
+   * comes entirely from this generator, so it must be a CSPRNG
+   * (Math.random is seedable/predictable and must never be used here).
    */
   private generateToken(): string {
-    return Math.random().toString(36).substring(2) + Date.now().toString(36);
+    return randomBytes(32).toString('base64url');
   }
 }
