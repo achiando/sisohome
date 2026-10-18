@@ -1,6 +1,5 @@
-import { NextResponse } from 'next/server';
 import { orgRoleService } from '@/lib/auth';
-import { withAuth } from '@/lib/route-auth';
+import { apiRoute } from '@/lib/api-route';
 
 /**
  * GET /api/permissions — global permission catalog, grouped by resource.
@@ -8,7 +7,9 @@ import { withAuth } from '@/lib/route-auth';
  * member of an organization may read it (matrix is visible to owners via
  * role.read, but the catalog itself leaks nothing org-specific).
  */
-export const GET = withAuth(async () => {
-  const catalog = await orgRoleService.listPermissionCatalog();
-  return NextResponse.json({ success: true, permissions: catalog });
+export const GET = apiRoute({
+  async handler() {
+    const catalog = await orgRoleService.listPermissionCatalog();
+    return { permissions: catalog };
+  },
 });

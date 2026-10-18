@@ -1,65 +1,50 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { orgRoleService } from '@/lib/auth';
-import { withAuth } from '@/lib/route-auth';
-
-type Params = { params: Promise<{ id: string }> };
+import { apiRoute, RouteError } from '@/lib/api-route';
 
 /**
  * GET /api/roles/[id] — one role with its permission keys.
  */
-export const GET = withAuth(
-  async (_request: NextRequest, context, { params }: Params) => {
-    const { id } = await params;
-    const roles = await orgRoleService.listRoles(context.organizationId!);
-    const role = roles.find((r) => r.id === id);
+export const GET = apiRoute<{ id: string }>({
+  permissions: 'role.read',
+  async handler({ actor, params }) {
+    const roles = await orgRoleService.listRoles(actor.organizationId);
+    const role = roles.find((r) => r.id === params.id);
     if (!role) {
-      return NextResponse.json({ success: false, error: 'Role not found' }, { status: 404 });
+      throw new RouteError(404, 'Role not found');
     }
-    return NextResponse.json({ success: true, role });
+    return { role };
   },
-  { requiredPermissions: ['role.read'] },
-);
+});
 
 /**
  * PATCH /api/roles/[id] — update a role. Custom roles: name/description/
  * permissions. Template roles: permissions only. System roles: read-only.
  */
-export const PATCH = withAuth(
-  async (request: NextRequest, context, { params }: Params) => {
-    const { id } = await params;
-    const body = await request.json().catch(() => ({}));
-
-    const input: { name?: string; description?: string; permissions?: string[] } = {};
-    if (typeof body?.name === 'string') input.name = body.name;
-    if (typeof body?.description === 'string') input.description = body.description;
-    if (Array.isArray(body?.permissions)) {
-      input.permissions = body.permissions.filter(
+export const PATCH = apiRoute<{ id: string }>({
+  permissions: 'role.manage',
+  async handler({ actor, params, body }) {
+    const input = await body();
+    const update: { name?: string; description?: string; permissions?: string[] } = {};
+    if (typeof input?.name === 'string') update.name = input.name;
+    if (typeof input?.description === 'string') update.description = input.description;
+    if (Array.isArray(input?.permissions)) {
+      update.permissions = input.permissions.filter(
         (p: unknown): p is string => typeof p === 'string',
       );
     }
 
-    const role = await orgRoleService.updateRole(
-      { userId: context.userId, organizationId: context.organizationId! },
-      id,
-      input,
-    );
-    return NextResponse.json({ success: true, role });
+    const role = await orgRoleService.updateRole(actor, params.id, update);
+    return { role };
   },
-  { requiredPermissions: ['role.manage'] },
-);
+});
 
 /**
  * DELETE /api/roles/[id] — delete a custom role. Template/system roles are
  * never deletable; roles with assigned members must be reassigned first.
  */
-export const DELETE = withAuth(
-  async (_request: NextRequest, context, { params }: Params) => {
-    const { id } = await params;
-    await orgRoleService.deleteRole(
-      { userId: context.userId, organizationId: context.organizationId! },
-      id,
-    );
-    return NextResponse.json({ success: true });
+export const DELETE = apiRoute<{ id: string }>({
+  permissions: 'role.manage',
+  async handler({ actor, params }) {
+    await orgRoleService.deleteRole(actor, params.id);
   },
-  { requiredPermissions: ['role.manage'] },
-);
+});

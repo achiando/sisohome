@@ -1,67 +1,56 @@
-import { NextResponse } from 'next/server';
 import { organizationService, prisma } from '@/lib/auth';
-import { withAuth } from '@/lib/route-auth';
+import { apiRoute, RouteError } from '@/lib/api-route';
 
 /**
  * GET /api/organization — details of the session's ACTIVE organization
  * (name, kind, created). Organization context comes from the session, never
  * from client input.
  */
-export const GET = withAuth(
-  async (_request, context) => {
+export const GET = apiRoute({
+  permissions: 'organization.read',
+  async handler({ actor }) {
     const organization = await prisma.organization.findUnique({
-      where: { id: context.organizationId! },
+      where: { id: actor.organizationId },
       select: { id: true, name: true, kind: true, createdAt: true },
     });
     if (!organization) {
-      return NextResponse.json(
-        { success: false, error: 'Organization not found' },
-        { status: 404 },
-      );
+      throw new RouteError(404, 'Organization not found');
     }
-    return NextResponse.json({
-      success: true,
+    return {
       organization: {
         ...organization,
         createdAt: organization.createdAt.toISOString(),
       },
-    });
+    };
   },
-  { requiredPermissions: ['organization.read'] },
-);
+});
 
 /**
  * PATCH /api/organization — rename the active organization.
- * Server-enforced: organization.update + active membership (withAuth).
+ * Server-enforced: organization.update + active membership (apiRoute).
  */
-export const PATCH = withAuth(
-  async (request, context) => {
-    const body = await request.json().catch(() => ({}));
-    const name = typeof body?.name === 'string' ? body.name.trim() : '';
+export const PATCH = apiRoute({
+  permissions: 'organization.update',
+  async handler({ actor, body }) {
+    const input = await body();
+    const name = typeof input?.name === 'string' ? input.name.trim() : '';
     if (!name) {
-      return NextResponse.json(
-        { success: false, error: 'Organization name is required' },
-        { status: 400 },
-      );
+      throw new RouteError(400, 'Organization name is required');
     }
     if (name.length > 80) {
-      return NextResponse.json(
-        { success: false, error: 'Organization name must be 80 characters or fewer' },
-        { status: 400 },
-      );
+      throw new RouteError(400, 'Organization name must be 80 characters or fewer');
     }
 
     try {
       const organization = await organizationService.updateOrganization({
-        organizationId: context.organizationId!,
+        organizationId: actor.organizationId,
         name,
       });
-      return NextResponse.json({ success: true, organization });
+      return { organization };
     } catch (error) {
       const message =
         error instanceof Error ? error.message : 'Failed to update organization';
-      return NextResponse.json({ success: false, error: message }, { status: 500 });
+      throw new RouteError(500, message);
     }
   },
-  { requiredPermissions: ['organization.update'] },
-);
+});

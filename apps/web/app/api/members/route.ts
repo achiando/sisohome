@@ -1,43 +1,40 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { sendEmail } from '@workspace/email';
 import { membershipService, db } from '@/lib/auth';
 import { appUrl } from '@/lib/base-url';
 import { memberAddedEmail } from '@/lib/email/member-added';
-import { withAuth } from '@/lib/route-auth';
+import { apiRoute, ok, RouteError } from '@/lib/api-route';
 
 /**
  * GET /api/members — list the active organization's members with roles.
  */
-export const GET = withAuth(
-  async (_request, context) => {
-    const members = await membershipService.listMembers(context.organizationId!);
-    return NextResponse.json({ success: true, members });
+export const GET = apiRoute({
+  permissions: 'user.read',
+  async handler({ actor }) {
+    const members = await membershipService.listMembers(actor.organizationId);
+    return { members };
   },
-  { requiredPermissions: ['user.read'] },
-);
+});
 
 /**
  * POST /api/members — admin create-user-with-roles. The generated temporary
  * password is returned ONCE for the admin to pass along; the user must
  * change it on first login.
  */
-export const POST = withAuth(
-  async (request, context) => {
-    const body = await request.json().catch(() => ({}));
-    const email = typeof body?.email === 'string' ? body.email.trim() : '';
-    const name = typeof body?.name === 'string' ? body.name.trim() : '';
-    const roleIds = Array.isArray(body?.roleIds)
-      ? body.roleIds.filter((r: unknown): r is string => typeof r === 'string')
+export const POST = apiRoute({
+  permissions: ['user.create', 'membership.invite'],
+  async handler({ actor, body }) {
+    const input = await body();
+    const email = typeof input?.email === 'string' ? input.email.trim() : '';
+    const name = typeof input?.name === 'string' ? input.name.trim() : '';
+    const roleIds = Array.isArray(input?.roleIds)
+      ? input.roleIds.filter((r: unknown): r is string => typeof r === 'string')
       : [];
 
     if (!email || !name) {
-      return NextResponse.json({ success: false, error: 'Email and name are required' }, { status: 400 });
+      throw new RouteError(400, 'Email and name are required');
     }
 
-    const result = await membershipService.createUserWithRoles(
-      { userId: context.userId, organizationId: context.organizationId! },
-      { email, name, roleIds },
-    );
+    const result = await membershipService.createUserWithRoles(actor, { email, name, roleIds });
 
     // Email the newcomer their temporary password — the admin still sees it
     // once in the response, but nobody has to relay secrets manually.
@@ -46,11 +43,11 @@ export const POST = withAuth(
       try {
         const [organization, inviter] = await Promise.all([
           db.organization.findUnique({
-            where: { id: context.organizationId! },
+            where: { id: actor.organizationId },
             select: { name: true },
           }),
           db.user.findUnique({
-            where: { id: context.userId },
+            where: { id: actor.userId },
             select: { displayName: true },
           }),
         ]);
@@ -69,15 +66,7 @@ export const POST = withAuth(
       }
     })();
 
-    return NextResponse.json(
-      {
-        success: true,
-        userId: result.userId,
-        // Shown once — never retrievable again
-        tempPassword: result.tempPassword,
-      },
-      { status: 201 },
-    );
+    // tempPassword is shown once — never retrievable again
+    return ok({ userId: result.userId, tempPassword: result.tempPassword }, { status: 201 });
   },
-  { requiredPermissions: ['user.create', 'membership.invite'] },
-);
+});

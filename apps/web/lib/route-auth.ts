@@ -113,9 +113,50 @@ export class AuthGuardError extends Error {
   }
 }
 
+/** Throw from a handler for a mapped JSON error response. */
+export class RouteError extends Error {
+  status: number;
+  extra?: Record<string, unknown>;
+  constructor(status: number, message: string, extra?: Record<string, unknown>) {
+    super(message);
+    this.status = status;
+    this.extra = extra;
+  }
+}
+
+/**
+ * Shared error mapping for route handlers: AuthGuardError/RouteError and
+ * any error carrying a numeric `status` (AccessError, …) become JSON
+ * responses; everything else is a logged 500.
+ */
+export function mapRouteError(error: unknown): NextResponse {
+  if (error instanceof RouteError) {
+    return NextResponse.json(
+      { success: false, error: error.message, ...error.extra },
+      { status: error.status },
+    );
+  }
+  if (error instanceof AuthGuardError) {
+    return NextResponse.json({ success: false, error: error.message }, { status: error.status });
+  }
+  // Service-layer errors (AccessError and friends) carry a status
+  const status = (error as { status?: unknown })?.status;
+  if (typeof status === 'number' && status >= 400 && status < 600) {
+    return NextResponse.json(
+      { success: false, error: error instanceof Error ? error.message : 'Request failed' },
+      { status },
+    );
+  }
+  console.error('Route error:', error);
+  return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+}
+
 /**
  * Wrap a route handler with authentication + permission checks. The handler
  * receives the resolved context. Errors map to JSON responses.
+ *
+ * Prefer `apiRoute` from '@/lib/api-route' for new routes — it adds params
+ * handling, an actor with a non-null organizationId, and body parsing.
  */
 export function withAuth<T extends (request: NextRequest, context: RouteAuthContext, ...rest: any[]) => Promise<NextResponse>>(
   handler: T,
@@ -126,19 +167,7 @@ export function withAuth<T extends (request: NextRequest, context: RouteAuthCont
       const context = await requireAuth(request, options);
       return await handler(request, context, ...rest);
     } catch (error) {
-      if (error instanceof AuthGuardError) {
-        return NextResponse.json({ success: false, error: error.message }, { status: error.status });
-      }
-      // Service-layer errors (AccessError and friends) carry a status
-      const status = (error as { status?: unknown })?.status;
-      if (typeof status === 'number' && status >= 400 && status < 600) {
-        return NextResponse.json(
-          { success: false, error: error instanceof Error ? error.message : 'Request failed' },
-          { status },
-        );
-      }
-      console.error('Route error:', error);
-      return NextResponse.json({ success: false, error: 'Internal server error' }, { status: 500 });
+      return mapRouteError(error);
     }
   };
 }

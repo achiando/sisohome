@@ -50,54 +50,63 @@ The skill is located at: `packages/database/.agents/skills/authorization/SECURIT
 
 ## Quick Reference
 
-### API Route Protection
+> **In apps/web the only wired enforcement layer is `apiRoute` (`@/lib/api-route`) /
+> `requireAuth` (`@/lib/route-auth`).** The `protectRoute` / `getServerAuthContext`
+> helpers in `@workspace/database` are unwired placeholders — do NOT use them.
+
+### API Route Protection (mandatory for every org-scoped route)
 ```typescript
-import { protectRoute } from '@workspace/database';
+import { apiRoute, RouteError } from '@/lib/api-route';
 
-export async function GET(request: NextRequest) {
-  const authContext = await protectRoute({
-    authService,
-    tenantService,
-    requiredPermissions: ['customers.read'],
-    requireOrganization: true,
-  })(request);
-  // Proceed with business logic
-}
+export const GET = apiRoute({
+  permissions: 'customers.read',   // permission KEYS, never role slugs
+  async handler({ actor }) {       // actor.organizationId is non-null
+    const customers = await prisma.customer.findMany({
+      where: { organizationId: actor.organizationId }, // tenant scoping
+    });
+    return { customers };          // → { success: true, customers }
+  },
+});
+
+export const PATCH = apiRoute<{ id: string }>({
+  permissions: 'customers.update',
+  async handler({ actor, params, body }) {
+    const input = await body();
+    const result = await prisma.customer.updateMany({
+      where: { id: params.id, organizationId: actor.organizationId },
+      data: input,
+    });
+    if (result.count === 0) throw new RouteError(404, 'Customer not found');
+  },
+});
 ```
+`apiRoute` handles: session-cookie auth, `mustChangePassword` block, active-org
+requirement, permission-key checks, params awaiting, cached JSON body parsing,
+and error mapping (`RouteError` / `AccessError` → JSON with status).
 
-### Server Component Protection
-```typescript
-import { getServerAuthContext, getServerPermissions } from '@workspace/database';
-
-export default async function DashboardPage() {
-  const auth = getServerAuthContext();
-  const permissions = getServerPermissions();
-  
-  if (!permissions.includes('customers.read')) {
-    return <div>Access denied</div>;
-  }
-  return <DashboardContent />;
-}
-```
+### Server Pages
+All dashboard pages are client components; the real data boundary is the API
+layer above. If you add a server page/layout that reads protected data, call
+`requireAuth(request, { requiredPermissions: [...] })` from `@/lib/route-auth`
+in it — never rely on the proxy (cookie presence only) or client redirects.
 
 ### Database Query Protection
 ```typescript
 // ALWAYS include organization context in queries
 const customers = await prisma.customer.findMany({
-  where: { organizationId: authContext.organizationId },
+  where: { organizationId: actor.organizationId },
 });
 ```
 
-### Middleware Integration
-```typescript
-import { createAuthMiddleware } from '@workspace/database';
-
-export default createAuthMiddleware({
-  authService,
-  sessionCache,
-  protectedPaths: ['/dashboard', '/settings'],
-});
+### Client UI Gates (UX only — never security)
+```tsx
+const { hasUiPermission } = useUiPermission(); // apps/web/components/shell
+{hasUiPermission('customers.update') && <EditButton />}
 ```
+
+### Middleware
+`apps/web/proxy.ts` is an optimistic cookie-presence gate only. Real
+authentication + permission checks live in `apiRoute` on every route.
 
 ## Security Checklist
 

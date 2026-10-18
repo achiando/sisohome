@@ -1,10 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server';
 import { membershipService } from '@/lib/auth';
-import { withAuth } from '@/lib/route-auth';
+import { apiRoute, RouteError } from '@/lib/api-route';
 
-type Params = { params: Promise<{ id: string }> };
+type MemberStatus = 'ACTIVE' | 'SUSPENDED' | 'REMOVED';
 
-const STATUSES = new Set(['ACTIVE', 'SUSPENDED', 'REMOVED']);
+const STATUSES = new Set<string>(['ACTIVE', 'SUSPENDED', 'REMOVED']);
+
+function isMemberStatus(value: unknown): value is MemberStatus {
+  return typeof value === 'string' && STATUSES.has(value);
+}
 
 /**
  * PATCH /api/members/[id] — update a membership.
@@ -17,45 +20,29 @@ const STATUSES = new Set(['ACTIVE', 'SUSPENDED', 'REMOVED']);
  *
  * Both fields may be sent together; each is applied only when present.
  */
-export const PATCH = withAuth(
-  async (request: NextRequest, context, { params }: Params) => {
-    const { id } = await params;
-    const body = await request.json().catch(() => ({}));
+export const PATCH = apiRoute<{ id: string }>({
+  permissions: 'membership.manage',
+  async handler({ actor, params, body }) {
+    const input = await body();
 
-    const hasStatus = body?.status !== undefined;
-    const hasName = body?.name !== undefined;
+    const hasStatus = input?.status !== undefined;
+    const hasName = input?.name !== undefined;
 
     if (!hasStatus && !hasName) {
-      return NextResponse.json(
-        { success: false, error: 'Provide status and/or name to update' },
-        { status: 400 },
-      );
+      throw new RouteError(400, 'Provide status and/or name to update');
     }
-
-    if (hasStatus && !STATUSES.has(body.status)) {
-      return NextResponse.json(
-        { success: false, error: 'status must be ACTIVE, SUSPENDED, or REMOVED' },
-        { status: 400 },
-      );
+    if (hasStatus && !isMemberStatus(input.status)) {
+      throw new RouteError(400, 'status must be ACTIVE, SUSPENDED, or REMOVED');
     }
-
-    const actor = { userId: context.userId, organizationId: context.organizationId! };
+    if (hasName && (typeof input.name !== 'string' || !input.name.trim())) {
+      throw new RouteError(400, 'name must be a non-empty string');
+    }
 
     if (hasName) {
-      if (typeof body.name !== 'string' || !body.name.trim()) {
-        return NextResponse.json(
-          { success: false, error: 'name must be a non-empty string' },
-          { status: 400 },
-        );
-      }
-      await membershipService.updateMember(actor, id, { name: body.name });
+      await membershipService.updateMember(actor, params.id, { name: input.name as string });
     }
-
     if (hasStatus) {
-      await membershipService.setStatus(actor, id, body.status);
+      await membershipService.setStatus(actor, params.id, input.status as MemberStatus);
     }
-
-    return NextResponse.json({ success: true });
   },
-  { requiredPermissions: ['membership.manage'] },
-);
+});
