@@ -8,6 +8,7 @@ import {
   issueVerificationToken,
   verificationUrl,
 } from '@/lib/verify-email';
+import { checkRateLimits, ipKey } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/verify-email/resend — send a fresh link for an address
@@ -18,6 +19,12 @@ import {
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Inbox-flood cap — the enumeration-safe response stays identical.
+    const limited = checkRateLimits([
+      { key: ipKey(request, 'resend'), limit: 10, windowMs: 10 * 60_000 },
+    ]);
+    if (limited) return limited;
+
     const body = await request.json().catch(() => ({}));
     const email = typeof body?.email === 'string' ? body.email.trim() : '';
     if (!email) {

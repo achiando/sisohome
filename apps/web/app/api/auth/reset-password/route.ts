@@ -5,6 +5,7 @@ import { sendEmail } from '@workspace/email';
 import { db } from '@/lib/auth';
 import { passwordResetEmail } from '@/lib/email/password-reset';
 import { PASSWORD_RESET_TTL_MINUTES, appUrl, issueResetToken } from '@/lib/password-reset';
+import { checkRateLimits, ipKey } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/reset-password — request a reset link by email.
@@ -15,6 +16,12 @@ import { PASSWORD_RESET_TTL_MINUTES, appUrl, issueResetToken } from '@/lib/passw
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Inbox-flood cap: each hit mails a fresh single-use token.
+    const limited = checkRateLimits([
+      { key: ipKey(request, 'reset'), limit: 10, windowMs: 10 * 60_000 },
+    ]);
+    if (limited) return limited;
+
     const body = await request.json().catch(() => ({}));
     const email = typeof body?.email === 'string' ? body.email.trim() : '';
     if (!email) {

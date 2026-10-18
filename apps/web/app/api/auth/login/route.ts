@@ -4,11 +4,23 @@ import { setSessionCookie, setActiveOrgCookie, setTwoFactorPendingCookie } from 
 import { issueEmailOtp } from '@/lib/email-otp';
 import { notifyNewLogin } from '@/lib/login-alert';
 import { encodePendingTwoFactor } from '@/lib/two-factor';
+import { checkRateLimits, ipKey } from '@/lib/rate-limit';
 
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Brute-force cap: per IP flood control, then per-account lockout below.
+    const ipLimited = checkRateLimits([{ key: ipKey(request, 'login'), limit: 30, windowMs: 60_000 }]);
+    if (ipLimited) return ipLimited;
+
     const body = await request.json();
     const { email, password } = body;
+
+    if (typeof email === 'string' && email.trim()) {
+      const accountLimited = checkRateLimits([
+        { key: `login:acct:${email.trim().toLowerCase()}`, limit: 10, windowMs: 5 * 60_000 },
+      ]);
+      if (accountLimited) return accountLimited;
+    }
 
     // ── Second factor first, before a session exists ──────────────────────
     // Password-only users fall through to the normal path below. When 2FA is

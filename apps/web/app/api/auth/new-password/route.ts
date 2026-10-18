@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 import { authProvider, db } from '@/lib/auth';
 import { findValidResetToken } from '@/lib/password-reset';
+import { checkRateLimits, ipKey } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/new-password — complete a reset with the emailed token.
@@ -13,6 +14,12 @@ import { findValidResetToken } from '@/lib/password-reset';
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Reset tokens are high-entropy but unauthenticated — cap guessing.
+    const limited = checkRateLimits([
+      { key: ipKey(request, 'newpw'), limit: 10, windowMs: 10 * 60_000 },
+    ]);
+    if (limited) return limited;
+
     const body = await request.json().catch(() => ({}));
     const token = typeof body?.token === 'string' ? body.token.trim() : '';
     const password = typeof body?.password === 'string' ? body.password : '';

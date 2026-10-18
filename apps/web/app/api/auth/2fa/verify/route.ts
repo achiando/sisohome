@@ -8,6 +8,7 @@ import {
 import { decodePendingTwoFactor, hashRecoveryCode, verifyTotpToken } from '@/lib/two-factor';
 import { redeemEmailOtp } from '@/lib/email-otp';
 import { notifyNewLogin } from '@/lib/login-alert';
+import { checkRateLimits, ipKey } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/2fa/verify
@@ -19,6 +20,9 @@ import { notifyNewLogin } from '@/lib/login-alert';
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    const ipLimited = checkRateLimits([{ key: ipKey(request, '2fa'), limit: 30, windowMs: 60_000 }]);
+    if (ipLimited) return ipLimited;
+
     const pending = decodePendingTwoFactor(request.cookies.get('siso_2fa_pending')?.value);
     if (!pending) {
       const expired = NextResponse.json(
@@ -28,6 +32,13 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       clearTwoFactorPendingCookie(expired);
       return expired;
     }
+
+    // 6-digit codes live for 10 minutes — cap guesses per pending sign-in
+    // so the space cannot be walked within the validity window.
+    const accountLimited = checkRateLimits([
+      { key: `2fa:acct:${pending.userId}`, limit: 6, windowMs: 10 * 60_000 },
+    ]);
+    if (accountLimited) return accountLimited;
 
     const body = await request.json().catch(() => ({}));
     const token = typeof body?.token === 'string' ? body.token.trim() : '';

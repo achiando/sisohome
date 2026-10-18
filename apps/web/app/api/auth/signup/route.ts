@@ -8,6 +8,7 @@ import {
   issueVerificationToken,
   verificationUrl,
 } from '@/lib/verify-email';
+import { checkRateLimits, ipKey } from '@/lib/rate-limit';
 
 /**
  * POST /api/auth/signup — account creation gated by email verification.
@@ -19,6 +20,12 @@ import {
  */
 export async function POST(request: NextRequest): Promise<NextResponse> {
   try {
+    // Each signup mails a verification link — cap per IP.
+    const limited = checkRateLimits([
+      { key: ipKey(request, 'signup'), limit: 10, windowMs: 10 * 60_000 },
+    ]);
+    if (limited) return limited;
+
     const body = await request.json();
     const { name, email, password } = body;
 
