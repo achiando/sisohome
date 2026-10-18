@@ -166,13 +166,13 @@ export class MembershipService {
   ): Promise<void> {
     const membership = await this.getMembership(actor.organizationId, membershipId);
 
-    const data: { name?: string } = {};
+    const data: { displayName?: string } = {};
     if (input.name !== undefined) {
       const name = input.name.trim();
       if (!name) {
         throw new AccessError(400, "Name cannot be empty.");
       }
-      data.name = name;
+      data.displayName = name;
     }
 
     if (Object.keys(data).length === 0) {
