@@ -8,7 +8,7 @@ Rules for this doc (extend, don't rewrite):
 - No secrets, no environment values — only key names. Repo-relative paths only.
 - Add rows to the tables; don't delete history unless it's factually superseded (mark it so).
 
-Snapshot: **2026-10-19 18:30** · branch `main` @ `777c74b` · working tree clean
+Snapshot: **2026-10-19 19:03** · branch `main` @ `40ccd27` · working tree clean
 
 ---
 
@@ -50,11 +50,11 @@ Auth (signup → email verification → login → sessions, password reset/chang
 | Immediate permission-cache invalidation + sibling-session revocation | `9602c1e` | security E2E (perms 5→0 instantly; sibling dead) |
 | Versioned Terms/Privacy consent (DB model + enforcement) | `30ed037` `24015d1` `00138b4` `5950bf9` | consent E2E 8/8 sections |
 
-### Verification status (last run ~13:30, 2026-10-19)
+### Verification status (last run 19:00, 2026-10-19)
 - `pnpm --filter web typecheck` + `lint` → 0 errors / **3 warnings** (baseline) ✓
 - `pnpm --filter sisohome-admin typecheck` + `lint` → 0 errors / 3 warnings ✓
 - `pnpm --filter @workspace/auth-ui` typecheck+lint → 0/5 baseline ✓ · `@workspace/email` clean ✓ · `npx tsc -p packages/database` ✓ · `packages/ui` 0/48 baseline ✓
-- All 6 E2E smokes passed: **apiroute 14/14, verify 10/10, 2FA 11/11, email 12/12, security 5/5, consent 8/8** — **⚠ scripts lost (blocker #1)**
+- All 6 E2E smokes passed **against the recovered scripts** (19:00, run with `BASE=http://localhost:3001` since web fell back — see blocker #1/#2): **consent 8/8, verify 10/10, 2FA 11/11, email 12/12, apiroute 14/14, security 5/5**. DB residue after runs: 0 smoke users · 0 smoke orgs · 0 consent rows
 
 ## 4. Operating playbook
 
@@ -79,12 +79,18 @@ Smoke runs must leave zero smoke users/orgs/consent rows; helper `src/seed/__smo
 
 **Email** in dev = outbox (`EMAIL_TRANSPORT=outbox`), cwd-relative `.email-outbox/` → each app writes its own dir; mail templates are rendered in-app under `apps/<app>/lib/email/`.
 
-**Scripts:** `apps/web/scripts/__smoke-token.ts` (TOTP/OTP helper), `packages/database/src/seed/__smoke-db.ts` (DB inspector/cleanup), `packages/database/src/seed/__smoke-del-user.ts`.
+**E2E smokes** live in-repo at `packages/database/smoke/` (6 scripts; recovered 2026-10-19 — see §5.1):
+```bash
+BASE=http://localhost:3000 bash packages/database/smoke/smoke-<name>-e2e.sh   # names: consent, verify, 2fa, email, apiroute, security
+```
+They self-clean users+orgs, read the dev outbox, and fit within rate limits; run them one at a time. `BASE` is honored everywhere (verify/email page-fetches follow mail links on `$BASE`).
+
+**Scripts:** `apps/web/scripts/__smoke-token.ts` (TOTP/OTP helper), `packages/database/src/seed/__smoke-db.ts` (session-expiry/set-session-expiry/consents), `packages/database/src/seed/__smoke-del-user.ts` (cascade delete one smoke user; orgs must be deleted separately).
 
 ## 5. Open items & blockers
 
-1. **⚠ HIGH — E2E smoke scripts lost.** `/tmp/opencode` was wiped (13:30→18:28); all six `smoke-*-e2e.sh` are gone and were never committed. **Regenerate them from §3's specs and store in the repo** (e.g. `packages/database/smoke/`), never in `/tmp`. Helper scripts survive in git (§4).
-2. **Port 3000 conflict.** The user's `tijwa-invoice-app` (PID 85579, started 11:37) holds 3000; `web` fell back to 3001 (PID 186179); `sisohome-admin` is *configured* for 3001 → collision pending. Plan: user stops invoice-app → restart `web` on 3000 → admin keeps 3001. All smokes hardcode `localhost:3000`.
+1. ~~**E2E smoke scripts lost**~~ **RESOLVED 19:00, 2026-10-19.** `/tmp/opencode` had been wiped; all six scripts were reconstructed verbatim by replaying every `write`/`edit`/bash-patch from opencode's session DB (`opencode.db` → `part.data`, strict chronological replay — the apiroute 20:21 `sed` was a no-op in the original too, so it was omitted) and committed to **`packages/database/smoke/`**. All 6 re-passed end-to-end afterwards. Two one-line portability patches added (`PAGE_URL` host rewrite in verify + email so page-fetches honor `BASE`; identical behavior on :3000). **Lesson: never store durable work in `/tmp`.**
+2. **Port 3000 conflict.** The user's `tijwa-invoice-app` (PID 85579, started 11:37) still holds 3000 at 19:03; `web` fell back to 3001 (PID 186179); `sisohome-admin` is *configured* for 3001 → collision pending. Plan: user stops invoice-app → restart `web` on 3000 → admin keeps 3001. Smokes default to `localhost:3000` (override with `BASE=`).
 3. **Accepted security leftovers** (audited, not approved for fixing): `admin` template role lacks `role.manage`; dead `PolicyEngine`; no auth-event audit trail; no org-enforceable MFA; plaintext temp passwords; consent gate for pre-existing users deferred to next password change (approved).
 4. **`FOUNDATION_SUMMARY.md` staleness** — claims "no business-specific seed data" (now 4 kind templates) and unwired `protectRoute` (use `apiRoute`/`requireAuth`). Not yet edited.
 5. **`db.md` empty**; `README.md` still upstream template boilerplate.
@@ -93,6 +99,7 @@ Smoke runs must leave zero smoke users/orgs/consent rows; helper `src/seed/__smo
 ## 6. Recent commits (tip of `main`)
 
 ```text
+40ccd27 docs: STATUS.md living state doc + AGENTS.md pointer
 777c74b chore: add sisohome-admin app as cross-vertical template
 9749ad0 docs: foundation adoption guide for other verticals
 5950bf9 chore(database): smoke helper inspects consent rows
