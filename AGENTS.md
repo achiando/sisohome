@@ -1,3 +1,9 @@
+<!-- BEGIN:project-state -->
+# Project State — read STATUS.md first
+
+This repo keeps a living state document: **`STATUS.md`** (repo root). Read it at the start of any session for: what is built and verified, the doc map, open blockers, and the operating playbook (dev servers, DB, verify commands). Update its snapshot and tables whenever work completes — commit it together with the work.
+<!-- END:project-state -->
+
 <!-- BEGIN:nextjs-agent-rules -->
 # This is NOT the Next.js you know
 
