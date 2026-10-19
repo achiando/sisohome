@@ -46,3 +46,5 @@ next-env.d.ts
 
 # dev email outbox (packages/email writes .eml here)
 .email-outbox/
+# CocoIndex Code (ccc)
+/.cocoindex_code/

@@ -85,6 +85,8 @@ BASE=http://localhost:3000 bash packages/database/smoke/smoke-<name>-e2e.sh   # 
 ```
 They self-clean users+orgs, read the dev outbox, and fit within rate limits; run them one at a time. `BASE` is honored everywhere (verify/email page-fetches follow mail links on `$BASE`).
 
+**Code search** — semantic index via `ccc` (skill `.agents/skills/ccc`, installed 2026-10-19 with `uv tool install 'cocoindex-code[full]'`): `ccc search "<concept>"`; after significant code changes run `ccc index` (settings in `.cocoindex_code/`, gitignored; 627 files / 4897 chunks indexed).
+
 **Scripts:** `apps/web/scripts/__smoke-token.ts` (TOTP/OTP helper), `packages/database/src/seed/__smoke-db.ts` (session-expiry/set-session-expiry/consents), `packages/database/src/seed/__smoke-del-user.ts` (cascade delete one smoke user; orgs must be deleted separately).
 
 ## 5. Open items & blockers
