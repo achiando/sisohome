@@ -67,6 +67,12 @@ export interface ResponsiveDataListingProps<T> {
   filters?: FilterConfig[];
   /** Render filters as a scrollable chip row (mobile-friendly, design.json mobile.filters). */
   filterChips?: boolean;
+  /**
+   * Render each filter as its own visible dropdown beside the search box
+   * (desktop `sm+`, siso-design/portfolio-property.webp). Below `sm` the
+   * filters stay reachable through the Filters popover.
+   */
+  inlineFilters?: boolean;
   primaryAction?: {
     label: string;
     icon?: React.ComponentType<{ className?: string }>;
@@ -112,6 +118,7 @@ export function ResponsiveDataListing<T>({
   searchPlaceholder = 'Search...',
   filters = [],
   filterChips = false,
+  inlineFilters = false,
   primaryAction,
   secondaryActions = [],
   emptyState,
@@ -204,9 +211,40 @@ export function ResponsiveDataListing<T>({
             </div>
           )}
 
+          {/* Inline filter dropdowns (sm+) — one visible select per filter,
+              matching the portfolio-property register design. */}
+          {inlineFilters && filters.length > 0 && (
+            <div className="hidden sm:flex items-center gap-2">
+              {filters.map((filter) => (
+                <select
+                  key={filter.key}
+                  value={filter.value}
+                  onChange={(e) => filter.onChange(e.target.value)}
+                  aria-label={filter.label}
+                  className={cn(
+                    'h-11 shrink-0 border-border/70 bg-background text-foreground rounded-xl px-3.5 py-2 text-xs sm:text-sm',
+                    'focus:ring-2 focus:ring-primary/20 focus:border-primary/50 outline-none transition-all shadow-sm',
+                    filter.value !== '' && 'border-primary/50 text-primary bg-primary/5 font-medium',
+                  )}
+                >
+                  <option value="">{filter.label}</option>
+                  {filter.options
+                    .filter((opt) => opt.value !== '')
+                    .map((opt) => (
+                      <option key={opt.value} value={opt.value}>
+                        {opt.label}
+                      </option>
+                    ))}
+                </select>
+              ))}
+            </div>
+          )}
+
           {/* Filters — popover anchored to the button; no page overlay, the
-              list stays visible and interactive underneath. */}
+              list stays visible and interactive underneath. Hidden on sm+ when
+              inlineFilters already shows the dropdowns. */}
           {filters.length > 0 && (
+            <div className={cn(inlineFilters && 'sm:hidden')}>
             <Popover open={filtersOpen} onOpenChange={setFiltersOpen}>
               <PopoverTrigger asChild>
                 <Button
@@ -254,6 +292,7 @@ export function ResponsiveDataListing<T>({
                 </div>
               </PopoverContent>
             </Popover>
+            </div>
           )}
         </div>
       </div>

@@ -15,6 +15,7 @@ import {
   Users,
   Wallet,
   Wrench,
+  Handshake,
   CalendarDays,
   FileText,
   BarChart3,
@@ -22,6 +23,8 @@ import {
   BookOpen,
   HelpCircle,
   MessageCircleQuestion,
+  Boxes,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react'
 
@@ -33,6 +36,8 @@ export interface NavEntry {
   uiPermission?: string
   /** Pin to the mobile bottom tab bar (app-style primary navigation). */
   tab?: boolean
+  /** Nested entries rendered as an expandable sub-nav (Portfolio register). */
+  children?: NavEntry[]
 }
 
 export interface NavSection {
@@ -46,13 +51,29 @@ export const menuSection: NavSection = {
   overline: 'Menu',
   items: [
     { label: 'Overview', href: '/', icon: LayoutDashboard, tab: true },
-    { label: 'Portfolio', href: '/portfolio', icon: Building2, uiPermission: 'resource.read' },
-    { label: 'Leasing', href: '/leasing', icon: KeyRound, uiPermission: 'resource.read' },
+    // Real domain keys from the permission catalog (phase-2 slices land the
+    // pages behind each link; nav hides items the session's keys exclude).
+    // Portfolio carries the register sub-nav (Properties / Units / Owners /
+    // Agreements) — same pattern as the siso-design portfolio mockup.
+    {
+      label: 'Portfolio',
+      href: '/portfolio',
+      icon: Building2,
+      uiPermission: 'property.list',
+      children: [
+        { label: 'Properties', href: '/portfolio', icon: Building2, uiPermission: 'property.list' },
+        { label: 'Units', href: '/units', icon: Boxes, uiPermission: 'unit.list' },
+        { label: 'Owners', href: '/portfolio/owners', icon: UserRound, uiPermission: 'ownership.list' },
+        { label: 'Agreements', href: '/portfolio/owners/agreements', icon: Handshake, uiPermission: 'agreement.list' },
+      ],
+    },
+    { label: 'Leasing', href: '/leasing', icon: KeyRound, uiPermission: 'lease.list' },
     { label: 'People', href: '/people', icon: Users, uiPermission: 'user.read', tab: true },
-    { label: 'Finances', href: '/finances', icon: Wallet, uiPermission: 'resource.read' },
-    { label: 'Maintenance', href: '/maintenance', icon: Wrench, uiPermission: 'resource.read' },
-    { label: 'Calendar', href: '/calendar', icon: CalendarDays, uiPermission: 'resource.read' },
-    { label: 'Documents', href: '/documents', icon: FileText, uiPermission: 'resource.read' },
+    { label: 'Finances', href: '/finances', icon: Wallet, uiPermission: 'charge.list' },
+    { label: 'Maintenance', href: '/maintenance', icon: Wrench, uiPermission: 'maintenance.list' },
+    { label: 'Sales', href: '/sales', icon: Handshake, uiPermission: 'listing.list' },
+    { label: 'Calendar', href: '/calendar', icon: CalendarDays, uiPermission: 'property.read' },
+    { label: 'Documents', href: '/documents', icon: FileText, uiPermission: 'document.read' },
     { label: 'Reports', href: '/reports', icon: BarChart3, uiPermission: 'audit.read' },
     // Single Settings entry — opens the settings area, which carries its own
     // nested nav (Profile, General, Roles & Permissions, Integrations).
@@ -89,7 +110,9 @@ export function isActive(pathname: string, href: string): boolean {
  * Exact matches win; otherwise the longest matching section prefix is used.
  */
 export function navTitleForPath(pathname: string): string | null {
-  const all = navSections.flatMap((section) => section.items)
+  const all = navSections.flatMap((section) =>
+    section.items.flatMap((item) => [item, ...(item.children ?? [])]),
+  )
   for (const item of all) {
     if (item.href === pathname) return item.label
   }

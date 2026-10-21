@@ -31,9 +31,14 @@ export function MoreSheet({
   const sections = navSections
     .map((section) => ({
       ...section,
-      items: section.items.filter(
-        (item) => !item.tab && hasUiPermission(item.uiPermission),
-      ),
+      items: section.items
+        .filter((item) => !item.tab && hasUiPermission(item.uiPermission))
+        .map((item) => ({
+          ...item,
+          children: (item.children ?? []).filter(
+            (child) => !child.tab && hasUiPermission(child.uiPermission),
+          ),
+        })),
     }))
     .filter((section) => section.items.length > 0)
 
@@ -54,22 +59,43 @@ export function MoreSheet({
               {section.items.map((item) => {
                 const active = isActive(pathname, item.href)
                 return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => onOpenChange(false)}
-                    aria-current={active ? 'page' : undefined}
-                    className={cn(
-                      'flex h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors',
-                      active
-                        ? 'bg-accent text-foreground'
-                        : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
-                    )}
-                  >
-                    <item.icon className="size-5 shrink-0" />
-                    <span className="flex-1 truncate">{item.label}</span>
-                    {active && <span className="size-1.5 rounded-full bg-primary" />}
-                  </Link>
+                  <div key={item.href}>
+                    <Link
+                      href={item.href}
+                      onClick={() => onOpenChange(false)}
+                      aria-current={active ? 'page' : undefined}
+                      className={cn(
+                        'flex h-12 items-center gap-3 rounded-xl px-3 text-sm font-medium transition-colors',
+                        active
+                          ? 'bg-accent text-foreground'
+                          : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                      )}
+                    >
+                      <item.icon className="size-5 shrink-0" />
+                      <span className="flex-1 truncate">{item.label}</span>
+                      {active && <span className="size-1.5 rounded-full bg-primary" />}
+                    </Link>
+                    {item.children.map((child) => {
+                      const childActive = isActive(pathname, child.href)
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          onClick={() => onOpenChange(false)}
+                          aria-current={childActive ? 'page' : undefined}
+                          className={cn(
+                            'flex h-11 items-center gap-3 rounded-xl pr-3 pl-11 text-sm font-medium transition-colors',
+                            childActive
+                              ? 'bg-accent text-foreground'
+                              : 'text-muted-foreground hover:bg-accent/50 hover:text-foreground',
+                          )}
+                        >
+                          <span className="flex-1 truncate">{child.label}</span>
+                          {childActive && <span className="size-1.5 rounded-full bg-primary" />}
+                        </Link>
+                      )
+                    })}
+                  </div>
                 )
               })}
             </div>

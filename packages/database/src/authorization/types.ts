@@ -41,6 +41,8 @@ export enum PermissionAction {
   PUBLISH = 'publish',
   ARCHIVE = 'archive',
   RESTORE = 'restore',
+  UPLOAD = 'upload',           // File upload (document.upload)
+  ISSUE = 'issue',             // Issue evidence (receipt.issue)
   
   // Special actions
   SHARE = 'share',
@@ -61,7 +63,39 @@ export enum ResourceType {
   ROLE = 'role',
   PERMISSION = 'permission',
   AUDIT_LOG = 'audit_log',
-  
+
+  // Property domain (Phase 2 batch 1)
+  PROPERTY = 'property',
+  UNIT = 'unit',
+  OWNERSHIP = 'ownership',
+  AGREEMENT = 'agreement',
+
+  // Tenancy domain (Phase 2 batch 2)
+  TENANT = 'tenant',
+  LEASE = 'lease',
+
+  // Applications & ledger (Phase 2 batch 3)
+  APPLICATION = 'application',
+  CHARGE = 'charge',
+  PAYMENT = 'payment',
+  EXPENSE = 'expense',
+  ADJUSTMENT = 'adjustment',
+  STATEMENT = 'statement',
+  RECEIPT = 'receipt',
+
+  // Operations (Phase 2 batch 4)
+  MAINTENANCE = 'maintenance',
+  WORK_ORDER = 'work_order',
+  INSPECTION = 'inspection',
+  SCHEDULE = 'schedule',
+
+  // Marketing & sales (Phase 2 batch 5)
+  LISTING = 'listing',
+  LEAD = 'lead',
+  VIEWING = 'viewing',
+  OFFER = 'offer',
+  HANDOFF = 'handoff',
+
   // Generic resources for future domains
   RESOURCE = 'resource',
   PROJECT = 'project',

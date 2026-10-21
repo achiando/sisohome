@@ -70,6 +70,15 @@ model User {
   emailOtpCodes        EmailOtpCode[]
   emailVerificationTokens EmailVerificationToken[]
   consents             UserConsent[]
+  propertyStaffAssignments         PropertyStaffAssignment[]
+  propertyStaffAssignmentsAssigned PropertyStaffAssignment[] @relation("StaffAssignedBy")
+  ownerPartyLinks                  PropertyOwnerParty[]
+  tenants                          Tenant[]                   // portal accounts
+  tenantPortalInvitesInvited       TenantPortalInvite[]       @relation("TenantInviteInviter")
+  documentVersionsUploaded         DocumentVersion[]
+  workOrderAssignments             WorkOrderAssignment[]      // as assignee
+  inspectionsPerformed             Inspection[]
+  assignedLeads                    Lead[]
 
   @@map("users")
   @@index([email])
@@ -299,6 +308,55 @@ model Organization {
   locations         OrganizationLocation[]
   sessions          Session[]
 
+  // Property domain (Phase 2) — see the property-domain section below for
+  // what portfolio vs management scoping means.
+  portfolioProperties       Property[]
+  portfolioAgreements       PropertyManagementAgreement[] @relation("AgreementPortfolio")
+  managedAgreements         PropertyManagementAgreement[] @relation("AgreementManagement")
+  buildings                 Building[]
+  units                     Unit[]
+  unitTypeTemplates         UnitType[]
+  ownerPartyScopes          PropertyOwnerParty[] @relation("OwnerPartyScope")
+  ownerParties              PropertyOwnerParty[] @relation("OwnerPartyLinkedOrg")
+  propertyOwnerships        PropertyOwnership[]
+  propertyStaffAssignments  PropertyStaffAssignment[]
+  propertyDocuments         PropertyDocument[]
+
+  // Tenancy (batch 2)
+  tenants               Tenant[]
+  tenantPortalInvites   TenantPortalInvite[]
+  leases                Lease[]
+  leaseUnits            LeaseUnit[]
+  leaseTenants          LeaseTenant[]
+
+  // Applications & ledger (batch 3)
+  rentalApplications    RentalApplication[]
+  chargeSchedules       ChargeSchedule[]
+  charges               Charge[]
+  payments              Payment[]
+  paymentAllocations    PaymentAllocation[]
+  financialAdjustments  FinancialAdjustment[]
+  propertyExpenses      PropertyExpense[]
+  receipts              Receipt[]
+
+  // Operations (batch 4)
+  maintenanceTickets      MaintenanceTicket[]
+  workOrders              WorkOrder[]
+  workOrderAssignments    WorkOrderAssignment[]
+  workOrderAssignmentsAsAssignee WorkOrderAssignment[] @relation("WorkOrderAssigneeOrg")
+  inspections             Inspection[]
+  recurringSchedules      RecurringSchedule[]
+
+  // Marketing & sales (batch 5)
+  portfolioListings     Listing[]      @relation("ListingPortfolio")
+  marketingListings     Listing[]      @relation("ListingMarketing")
+  leads                 Lead[]
+  handoffsFrom          Handoff[]      @relation("HandoffFrom")
+  handoffsTo            Handoff[]      @relation("HandoffTo")
+  propertyViewings      PropertyViewing[]
+  offers                Offer[]
+  propertyDeals         PropertyDeal[]
+
   @@map("organizations")
   @@index([slug])
   @@index([status])
@@ -513,4 +571,1893 @@ model AuditLog {
   @@index([action])
   @@index([resourceType, resourceId])
   @@index([createdAt])
+}
+
+// ============================================================================
+// PROPERTY DOMAIN — the physical asset (Phase 2, batch 1)
+//
+// Property = the physical asset only (property.md §2): no balances, no
+// tenant data, no occupancy counters that can drift — those are derived from
+// lease/ledger records (later batches). Unit defaults are templates: changing
+// them never rewrites a live lease or a posted charge.
+//
+// Tenancy rule for this domain: every row carries an explicit organization
+// scope. `Property.portfolioOrganizationId` is the canonical operational
+// workspace (BUILD.md Phase 2 / sisohome-1.md §4) — normally the owner's
+// platform org, or the managing company's org when the owner has no account.
+// Ownership is NOT this field; it lives in PropertyOwnership. Every child row
+// carries `organizationId` equal to the property's portfolio org, so the
+// standard `where: { organizationId: actor.organizationId }` pattern holds for
+// the portfolio org. Other orgs (a PM company) reach these rows only through a
+// valid PropertyManagementAgreement join — permission ∧ relationship, enforced
+// server-side in the API layer (apiRoute).
+//
+// Audits: rows in this domain are audited through the generic AuditLog
+// (resourceType = 'property' | 'unit' | 'agreement' | ... , action =
+// '<key>.<action>') written via AuditService — no per-domain audit table.
+// ============================================================================
+
+enum PropertyCategory {
+  RESIDENTIAL   // Homes people live in
+  LAND          // Plots/farms — no building required
+  COMMERCIAL    // Retail, office, mall
+  INDUSTRIAL    // Warehouses, factories, yards
+  MIXED_USE     // One property, multiple categories
+  SPECIAL       // Hospital, school, church, hotel, petrol station, parking
+}
+
+// Granular subtype (research-property-3 §1.2) — pairs with category; type
+// specific behavior rides on (category, propertyType) + attributes Json, never
+// separate tables per type.
+enum PropertyType {
+  // RESIDENTIAL
+  APARTMENT_BLOCK
+  APARTMENT
+  HOUSE
+  TOWNHOUSE
+  VILLA
+  MAISONETTE
+  BEDSITTER
+  SERVICED_APARTMENT
+  GUEST_HOUSE
+  STUDENT_HOUSING
+  RETIREMENT_HOME
+  // LAND
+  RESIDENTIAL_PLOT
+  COMMERCIAL_PLOT
+  AGRICULTURAL_LAND
+  INDUSTRIAL_PLOT
+  MIXED_PLOT
+  FARM
+  // COMMERCIAL
+  OFFICE_BUILDING
+  RETAIL_SHOP
+  MALL
+  STRIP_CENTER
+  RESTAURANT
+  BANK_BRANCH
+  MIXED_COMMERCIAL
+  // INDUSTRIAL
+  WAREHOUSE
+  FACTORY
+  WORKSHOP
+  YARD
+  SILO
+  // SPECIAL
+  HOTEL
+  HOSPITAL
+  SCHOOL
+  CHURCH
+  PETROL_STATION
+  PARKING_GARAGE
+  STORAGE_FACILITY
+}
+
+enum PropertyStatus {
+  DRAFT     // Incomplete record — not yet marketed or leased
+  ACTIVE    // In the operational portfolio
+  INACTIVE  // Temporarily out of operation, history kept
+  ARCHIVED  // Retired from the portfolio; never hard-deleted with history
+}
+
+enum TitleType {
+  FREEHOLD
+  LEASEHOLD
+  SECTIONAL_TITLE   // Strata — unit-level titles (Sectional Properties Act)
+  CUSTOMARY
+  UNKNOWN
+}
+
+enum RateClearanceStatus {
+  UNKNOWN
+  CLEARED
+  OUTSTANDING
+}
+
+enum AreaUnit {
+  SQM
+  SQFT
+  ACRE
+  HECTARE
+}
+
+enum PropertyCondition {
+  NEW
+  GOOD
+  FAIR
+  NEEDS_WORK
+}
+
+// Rentable/sellable space kinds (digits are illegal in Prisma enum values:
+// "1BR" → BED_1, "4BR+" → BED_4_PLUS).
+enum UnitKind {
+  STUDIO
+  BEDSITTER
+  BED_1
+  BED_2
+  BED_3
+  BED_4_PLUS
+  MAISONETTE
+  VILLA
+  SHOP
+  OFFICE
+  WAREHOUSE
+  KIOSK
+  SHOWROOM
+  PARKING
+  PLOT
+  FLOOR
+  MEZZANINE
+}
+
+enum UnitStatus {
+  VACANT
+  OCCUPIED    // Opinionated cache — recomputed from lease dates, not truth
+  RESERVED
+  MAINTENANCE
+  BLOCKED
+}
+
+enum BillingFrequency {
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+  CUSTOM
+}
+
+enum OwnerPartyType {
+  PERSON
+  COMPANY
+  ASSOCIATION   // Management corporation / body corporate (strata)
+  ORGANIZATION  // A platform organization (link via linkedOrganizationId)
+}
+
+enum AgreementStatus {
+  DRAFT
+  ACTIVE
+  SUSPENDED
+  ENDED
+  TERMINATED
+}
+
+// Polymorphic target of a property-family document (entityId has no FK by
+// design — Prisma cannot express polymorphic references).
+enum DocumentEntityType {
+  PROPERTY
+  BUILDING
+  UNIT
+  OWNERSHIP
+  AGREEMENT
+  OWNER_PARTY
+  TENANT   // ID copies, pay slips, references — private, PII-gated
+  LEASE    // signed agreements, notices — versioned via DocumentVersion
+  APPLICATION   // screening docs (batch 3)
+  EXPENSE       // expense receipts (batch 3)
+  WORK_ORDER    // contractor quotes / completion proof (batch 4)
+  INSPECTION    // evidence photos / reports (batch 4)
+  LISTING       // listing media (batch 5)
+  DEAL          // due-diligence pack (batch 5)
+}
+
+// Drives checklists (Kenya sale/land pack: research-property-4) and gallery
+// grouping (PHOTO rows carry caption/sortOrder/isCover).
+enum DocumentKind {
+  TITLE_DEED
+  OFFICIAL_SEARCH
+  RATES_CLEARANCE
+  LAND_RENT_CLEARANCE
+  LCB_CONSENT
+  SURVEY_PLAN
+  PPA2
+  LRA_FORM_33
+  STAMP_DUTY_RECEIPT
+  SITE_PLAN
+  FLOOR_PLAN
+  PHOTO
+  PHOTO_ID
+  INSURANCE
+  INSPECTION_REPORT
+  CONTRACT
+  CORRESPONDENCE
+  OTHER
+  // Tenancy (batch 2)
+  TENANCY_AGREEMENT
+  DEPOSIT_RECEIPT
+  NOTICE
+  INVENTORY_REPORT
+  // Applications & finance (batch 3)
+  PAYSLIP
+  BANK_STATEMENT
+  // Sales (batch 5)
+  VALUATION_REPORT
+}
+
+model Property {
+  id                      String         @id @default(uuid()) @db.Uuid
+  portfolioOrganizationId String         @map("portfolio_organization_id") @db.Uuid
+
+  // Identity — `code` is the human property reference (SHP-0001); NULL codes
+  // are allowed repeatedly (Postgres treats NULLs as distinct in uniques).
+  code            String?
+  name            String
+  description     String?
+  category        PropertyCategory
+  propertyType    PropertyType   @map("property_type")
+  status          PropertyStatus @default(DRAFT)
+  tags            String[]       @default([])
+  currency        String         @default("KES") @db.VarChar(3)
+  // Configurable property-level defaults (rent frequency, deposit months,
+  // late-fee rule, notice days, service-charge rate — property.md §2).
+  defaults        Json?
+  // Type-specific extras escape hatch (avoid schema churn per property type).
+  attributes      Json?
+
+  // Location & map pin — coordinates are THE pin (research-property-2 §3);
+  // links (Maps search/directions/satellite) are derived from them at render
+  // time, never stored.
+  addressLine1    String         @map("address_line1")
+  addressLine2    String?        @map("address_line2")
+  locality        String
+  region          String?
+  postalCode      String?        @map("postal_code")
+  country         String
+  formattedAddress String?       @map("formatted_address")
+  latitude        Decimal?       @db.Decimal(9, 6)
+  longitude       Decimal?       @db.Decimal(9, 6)
+  googlePlaceId   String?        @map("google_place_id")
+  directionsNote  String?        @map("directions_note")
+  landmark        String?
+  virtualTourUrl  String?        @map("virtual_tour_url")
+  videoUrl        String?        @map("video_url")
+
+  // Legal / title — required before a sale listing (research-property-4),
+  // optional for a lease-only MVP.
+  titleType             TitleType?            @map("title_type")
+  titleNumber           String?               @map("title_number")
+  registryReference     String?               @map("registry_reference")
+  surveyPlanNumber      String?               @map("survey_plan_number")
+  landControlArea       String?               @map("land_control_area")
+  zoning                String?
+  rateClearanceStatus   RateClearanceStatus?  @map("rate_clearance_status")
+  rateClearanceExpiresAt DateTime?            @map("rate_clearance_expires_at")
+  encumbrances          String?
+
+  // Physical attributes
+  yearBuilt          Int?              @map("year_built")
+  yearRenovated      Int?              @map("year_renovated")
+  floors             Int?
+  plotSizeValue      Decimal?          @map("plot_size_value") @db.Decimal(14, 4)
+  plotSizeUnit       AreaUnit?         @map("plot_size_unit")
+  buildingAreaValue  Decimal?          @map("building_area_value") @db.Decimal(14, 4)
+  buildingAreaUnit   AreaUnit?         @map("building_area_unit")
+  glaValue           Decimal?          @map("gla_value") @db.Decimal(14, 4)
+  condition          PropertyCondition?
+  parkingSpaces      Int?              @map("parking_spaces")
+  amenities          String[]          @default([])
+  utilities          String[]          @default([])
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  portfolioOrganization Organization @relation(fields: [portfolioOrganizationId], references: [id], onDelete: Restrict)
+
+  buildings            Building[]
+  units                Unit[]
+  ownerships           PropertyOwnership[]
+  managementAgreements PropertyManagementAgreement[]
+  staffAssignments     PropertyStaffAssignment[]
+  documents            PropertyDocument[]
+  leases               Lease[]
+  rentalApplications   RentalApplication[]
+  chargeSchedules      ChargeSchedule[]
+  charges              Charge[]
+  payments             Payment[]
+  financialAdjustments FinancialAdjustment[]
+  propertyExpenses     PropertyExpense[]
+  maintenanceTickets   MaintenanceTicket[]
+  workOrders           WorkOrder[]
+  inspections          Inspection[]
+  recurringSchedules   RecurringSchedule[]
+  listings             Listing[]
+  propertyViewings     PropertyViewing[]
+  offers               Offer[]
+  propertyDeals        PropertyDeal[]
+  interestedLeads      Lead[]
+
+  @@unique([portfolioOrganizationId, code])
+  @@index([portfolioOrganizationId, status])
+  @@index([portfolioOrganizationId, category])
+  @@map("properties")
+}
+
+model Building {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+
+  code        String  // "Block A", "Tower 2" — unique within the property
+  name        String?
+  floors      Int?
+  description String?
+  yearBuilt   Int?    @map("year_built")
+  isActive    Boolean @default(true) @map("is_active")
+
+  // Building-level extras. `amenities` holds what the building adds — never
+  // duplicates the property's own amenities (enforced on write). Utility
+  // accounts identify shared services per block.
+  amenities         String[] @default([])
+  accountNumber     String?  @map("account_number")
+  waterMeterNumber  String?  @map("water_meter_number")
+  electricityMeterNumber String? @map("electricity_meter_number") // prepaid token meter
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  units        Unit[]
+
+  @@unique([propertyId, code])
+  @@map("buildings")
+  @@index([organizationId])
+  @@index([propertyId])
+}
+
+model Unit {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  propertyId     String    @map("property_id") @db.Uuid
+  buildingId     String?   @map("building_id") @db.Uuid // null = unit sits directly on the property
+
+  unitRef  String   @map("unit_ref") // unique within property: "A-12", "SHOP-04"
+  label    String   // display label (defaults to unitRef)
+  unitType UnitKind @map("unit_type")
+  floor    Int?
+  areaValue Decimal? @map("area_value") @db.Decimal(14, 4)
+  areaUnit  AreaUnit? @map("area_unit")
+  bedrooms  Int?
+  bathrooms Int?
+  status    UnitStatus @default(VACANT)
+  parkingBays Int?    @map("parking_bays")
+  amenities String[]  @default([]) // unit-specific only — property-level amenities are stripped on write
+  notes     String?
+  attributes Json?    // type-specific extras
+  isActive  Boolean   @default(true) @map("is_active")
+
+  // Per-unit utility accounts — individual service identifiers (water
+  // meter, prepaid electricity/token meter, billing account no.).
+  accountNumber          String? @map("account_number")
+  waterMeterNumber       String? @map("water_meter_number")
+  electricityMeterNumber String? @map("electricity_meter_number") // prepaid token meter
+
+  // Unit defaults are templates, not obligations (property.md §2) — changing
+  // them never rewrites a live lease or posted charge.
+  defaultRent             Decimal?         @map("default_rent") @db.Decimal(12, 2)
+  currency                String?          @db.VarChar(3)
+  billingFrequency        BillingFrequency? @map("billing_frequency")
+  depositDefault          Decimal?         @map("deposit_default") @db.Decimal(4, 2) // months of rent
+  recurringChargesDefault Json?            @map("recurring_charges_default")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  building     Building?    @relation(fields: [buildingId], references: [id], onDelete: SetNull)
+  ownerships   PropertyOwnership[]
+  leaseTerms   LeaseUnit[]
+  rentalApplications RentalApplication[]
+  chargeSchedules    ChargeSchedule[]
+  charges            Charge[]
+  propertyExpenses   PropertyExpense[]
+  maintenanceTickets MaintenanceTicket[]
+  workOrders         WorkOrder[]
+  inspections        Inspection[]
+  recurringSchedules RecurringSchedule[]
+  listings           Listing[]
+  propertyViewings   PropertyViewing[]
+
+  @@unique([propertyId, unitRef])
+  @@map("units")
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([buildingId])
+  @@index([status])
+}
+
+// Reusable bulk-onboarding template ("add units 101–124 from one row").
+model UnitType {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  name           String
+  description    String?
+  bedrooms       Int?
+  bathrooms      Int?
+  areaValue      Decimal? @map("area_value") @db.Decimal(14, 4)
+  areaUnit       AreaUnit? @map("area_unit")
+  baseRent       Decimal? @map("base_rent") @db.Decimal(12, 2) // in the property currency
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, name])
+  @@map("unit_types")
+  @@index([organizationId])
+}
+
+// An owner as a party record: a person, company, association (strata
+// management corporation) or a platform organization. Owners are not users —
+// owner-portal access comes later (Phase 4+); until then owners are managed
+// by org members. `organizationId` is the portfolio tenant scope of this row.
+model PropertyOwnerParty {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid
+  partyType      OwnerPartyType  @map("party_type")
+  name           String
+  email          String?
+  phone          String?
+  kraPin         String?         @map("kra_pin")
+  addressLine1   String?         @map("address_line1")
+  city           String?
+  region         String?
+  country        String?
+  // Set when the party corresponds to a platform organization / user
+  // (org-owned properties, future owner portal).
+  linkedOrganizationId String?   @map("linked_organization_id") @db.Uuid
+  linkedUserId         String?   @map("linked_user_id") @db.Uuid
+  notes          String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization       Organization  @relation("OwnerPartyScope", fields: [organizationId], references: [id], onDelete: Restrict)
+  linkedOrganization Organization? @relation("OwnerPartyLinkedOrg", fields: [linkedOrganizationId], references: [id], onDelete: SetNull)
+  linkedUser         User?         @relation(fields: [linkedUserId], references: [id], onDelete: SetNull)
+
+  ownerships       PropertyOwnership[]
+  managedAgreements PropertyManagementAgreement[]
+  dealsAsBuyer     PropertyDeal[]
+
+  @@map("property_owner_parties")
+  @@index([organizationId])
+  @@index([partyType])
+  @@index([linkedOrganizationId])
+  @@index([linkedUserId])
+}
+
+// Ownership is separate from the managing organization (research-property-3
+// §2: shapes A–D). Exactly one of propertyId / unitId must be set — whole-
+// property ownership vs unit-level (strata) ownership; Prisma cannot express
+// XOR, so the API layer validates it.
+model PropertyOwnership {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String?  @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+  ownerPartyId   String   @map("owner_party_id") @db.Uuid
+
+  sharePercent Decimal? @map("share_percent") @db.Decimal(5, 2) // % of the property (multi-owner investor shape)
+  unitFactor   Decimal? @map("unit_factor") @db.Decimal(10, 6)  // strata unit entitlement share (service-charge basis)
+  titleNumber  String?  @map("title_number")                    // sectional title for unit-level ownership
+
+  startsAt DateTime  @map("starts_at")
+  endsAt   DateTime? @map("ends_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property?    @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  ownerParty   PropertyOwnerParty @relation(fields: [ownerPartyId], references: [id], onDelete: Restrict)
+
+  @@index([organizationId])
+  @@index([propertyId, startsAt, endsAt])
+  @@index([unitId])
+  @@index([ownerPartyId])
+  @@map("property_ownerships")
+}
+
+// Owner-to-manager authorization (BUILD.md acceptance criterion: a PM org
+// reaches only properties under a valid agreement). Access rules live in the
+// typed columns (status, startsAt, endsAt, managementOrganizationId) — never
+// only inside `scope` Json. One row per managed property; a portfolio-wide
+// contract is represented by one row per property it covers.
+model PropertyManagementAgreement {
+  id             String          @id @default(uuid()) @db.Uuid
+  organizationId String          @map("organization_id") @db.Uuid // portfolio tenant scope
+  propertyId     String          @map("property_id") @db.Uuid
+  managementOrganizationId String @map("management_organization_id") @db.Uuid
+  ownerPartyId   String          @map("owner_party_id") @db.Uuid
+
+  status  AgreementStatus @default(DRAFT)
+  startsAt DateTime  @map("starts_at")
+  endsAt   DateTime? @map("ends_at")
+  // Agreement-specific configuration (scope of services, fee notes). Access
+  // decisions must never depend on this blob alone.
+  scope   Json?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization         Organization @relation("AgreementPortfolio", fields: [organizationId], references: [id], onDelete: Restrict)
+  managementOrganization Organization @relation("AgreementManagement", fields: [managementOrganizationId], references: [id], onDelete: Restrict)
+  property             Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  ownerParty           PropertyOwnerParty @relation(fields: [ownerPartyId], references: [id], onDelete: Restrict)
+
+  // The signed contract is a PropertyDocument with entityType = AGREEMENT.
+  @@index([organizationId, status])
+  @@index([propertyId, status])
+  @@index([managementOrganizationId, status])
+  @@index([ownerPartyId])
+  @@map("property_management_agreements")
+}
+
+// Row-scope relationship for assigned-scoped roles (caretaker, site staff):
+// permission key passes first, this narrows WHICH properties. Creation and
+// revocation ride the existing relationship.* keys — no new permission family.
+model PropertyStaffAssignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  userId         String   @map("user_id") @db.Uuid
+  title          String?  // e.g. "Site caretaker"
+  startsAt       DateTime @default(now()) @map("starts_at")
+  endsAt         DateTime? @map("ends_at")
+  isActive       Boolean  @default(true) @map("is_active")
+  assignedBy     String?  @map("assigned_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  assignedByUser User?      @relation("StaffAssignedBy", fields: [assignedBy], references: [id], onDelete: SetNull)
+
+  @@map("property_staff_assignments")
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([userId])
+  @@index([isActive])
+}
+
+// One physical file in private object storage (signed URLs) + its metadata;
+// doubles as the property media gallery (kind = PHOTO rows carry caption,
+// sortOrder, isCover). `entityType`/`entityId` is a polymorphic pointer — no
+// FK by design; `propertyId` keeps the row in the property tree for
+// scoping/cascade. Lease documents get their own versioned model later.
+model PropertyDocument {
+  id             String            @id @default(uuid()) @db.Uuid
+  organizationId String            @map("organization_id") @db.Uuid
+  propertyId     String?           @map("property_id") @db.Uuid
+  entityType     DocumentEntityType @map("entity_type")
+  entityId       String            @map("entity_id") @db.Uuid
+  kind           DocumentKind
+
+  storageKey String   @map("storage_key") // object-storage path (private)
+  fileName   String   @map("file_name")
+  mimeType   String?  @map("mime_type")
+  sizeBytes  Int?     @map("size_bytes")
+  caption    String?
+  sortOrder  Int      @default(0) @map("sort_order")
+  isCover    Boolean  @default(false) @map("is_cover")
+  takenAt    DateTime? @map("taken_at")
+  version    Int      @default(1)
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property?    @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  versions     DocumentVersion[]
+
+  @@index([organizationId, entityType, entityId])
+  @@index([entityType, entityId])
+  @@index([propertyId, kind])
+  @@map("property_documents")
+}
+
+// ============================================================================
+// TENANCY — tenants, leases, versioned lease documents (Phase 2, batch 2)
+//
+// Core rule (research-property-3 §4.1): Tenant ≠ User ≠ Lease.
+//   - `Tenant` is a party record (person or company), org-scoped — BUILD.md:
+//     "Tenant (separate from User)". One tenant → many leases.
+//   - `Lease` is the contractual source of truth for a tenancy; occupancy of
+//     a Unit is consistent with lease dates (Unit.status stays an opinionated
+//     cache, recomputed on lease transitions — never the only truth).
+//
+// Tenancy/org linkage follows the property-domain rule: every row carries
+// `organizationId` = the owning property's portfolio org (single tenant
+// boundary). A PM org reads/writes tenancy rows only through its valid
+// management agreement for that property (permission ∧ relationship).
+//
+// TENANT PORTAL (design-ready, UI later): a tenant may be granted a portal
+// account WITHOUT becoming an organization member.
+//   - Link: `Tenant.portalUserId` → `User` (many tenants may share one user;
+//     no uniqueness — the same person can also be staff of another org).
+//   - Lifecycle: `TenantPortalStatus` NOT_INVITED → INVITED → ACTIVE →
+//     SUSPENDED. Invites are single-use hashed tokens (`TenantPortalInvite`),
+//     same one-shot pattern as EmailVerificationToken; redeeming proves email
+//     possession, so the linked User is created/verified at acceptance.
+//   - Auth: portal sessions are ordinary User sessions with
+//     `Session.organizationId = null`; a future portal guard resolves the
+//     Tenant via the user link and scopes every query to
+//     `LeaseTenant → tenant.userId = actor.userId` ∧ active lease dates.
+//     Org routes already require active membership, so a portal-only user
+//     sees nothing of the org app — isolation is structural.
+//   - PII: `tenant.read` gates every tenant access; ID/financial documents
+//     never appear in list responses; Tenant.notes are internal-only.
+//
+// Audits: tenant/lease lifecycle events flow through the generic AuditLog
+// (resourceType 'tenant' | 'lease' | ...) — no per-domain audit table.
+// ============================================================================
+
+enum TenantPartyType {
+  PERSON
+  COMPANY
+}
+
+enum TenantIdType {
+  NATIONAL_ID
+  PASSPORT
+  ALIEN_ID
+  REG_NO       // company registration number
+}
+
+enum ContactChannel {
+  SMS
+  WHATSAPP     // the norm for Kenya platforms
+  EMAIL
+}
+
+enum TenantStatus {
+  PROSPECT     // enquiry captured
+  APPLICANT    // rental application in screening
+  ACTIVE       // holds at least one current lease
+  PAST         // record kept for history; never hard-deleted with ledger history
+  // Blacklisting deferred (research-property-3 §6.5) — use internal notes.
+}
+
+enum TenantPortalStatus {
+  NOT_INVITED
+  INVITED
+  ACTIVE
+  SUSPENDED    // portal access revoked; tenancy continues
+}
+
+enum LeaseStatus {
+  DRAFT
+  PENDING_APPROVAL  // awaiting signature/approval
+  SCHEDULED         // approved, awaiting start date
+  ACTIVE
+  ENDING            // notice given / ending period
+  TERMINATED        // ended early
+  CLOSED            // finalized; balances reconciled (never erased)
+  CANCELLED         // never started
+}
+
+enum LeaseTenureType {
+  LEASE           // standard tenancy
+  LICENSE         // short-term/kiosk/ATM casual occupation (research §6.2)
+}
+
+enum LeasePartyRelationship {
+  PRIMARY      // main tenant on the lease
+  JOINT        // joint tenant (without duplicating the lease)
+  GUARANTOR    // co-signer; guarantee survives renewals
+  OCCUPANT     // occupant named on the lease, not liable for rent
+}
+
+model Tenant {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  tenantRef      String?  @map("tenant_ref") // human code, e.g. TEN-0001
+
+  // Identity
+  displayName String          @map("display_name") // legal name
+  partyType   TenantPartyType @default(PERSON) @map("party_type")
+  email       String?
+  phone       String?
+  altPhone    String?         @map("alt_phone")
+  idType      TenantIdType?   @map("id_type")
+  idNumber    String?         @map("id_number")
+  nationality String?
+  kraPin      String?         @map("kra_pin")
+  dateOfBirth DateTime?       @map("date_of_birth")
+
+  // Employment / finance (values live in screened documents; flags only here)
+  employer       String?
+  jobTitle       String?      @map("job_title")
+  incomeVerified Boolean      @default(false) @map("income_verified")
+  bankReference  String?      @map("bank_reference")
+
+  // Contacts
+  addressLine1                String? @map("address_line1")
+  addressLine2                String? @map("address_line2")
+  city                        String?
+  postalAddress               String? @map("postal_address")
+  emergencyContactName        String? @map("emergency_contact_name")
+  emergencyContactRelationship String? @map("emergency_contact_relationship")
+  emergencyContactPhone       String? @map("emergency_contact_phone")
+  preferredChannel            ContactChannel @default(WHATSAPP) @map("preferred_channel")
+
+  // Guarantor as captured on the applicant form. The formal lease-level
+  // guarantor is a LeaseTenant row with relationship = GUARANTOR.
+  guarantorName        String? @map("guarantor_name")
+  guarantorPhone       String? @map("guarantor_phone")
+  guarantorEmployer    String? @map("guarantor_employer")
+  guarantorRelationship String? @map("guarantor_relationship")
+
+  status TenantStatus @default(ACTIVE)
+
+  // ── Portal account (optional; see section header) ──────────────────────
+  portalUserId     String?            @map("portal_user_id") @db.Uuid
+  portalStatus     TenantPortalStatus @default(NOT_INVITED) @map("portal_status")
+  portalInvitedAt  DateTime?          @map("portal_invited_at")
+  portalActivatedAt DateTime?         @map("portal_activated_at")
+
+  notes String? // internal only — never rendered in the tenant's portal
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  portalUser   User?        @relation(fields: [portalUserId], references: [id], onDelete: SetNull)
+
+  leases          LeaseTenant[]
+  portalInvites   TenantPortalInvite[]
+  rentalApplications RentalApplication[]
+  charges         Charge[]
+  payments        Payment[]
+  maintenanceTickets MaintenanceTicket[] // as reporter (portal)
+  propertyViewings   PropertyViewing[]
+  // ID copies, pay slips, references → PropertyDocument(entityType = TENANT)
+
+  @@unique([organizationId, email])
+  @@unique([organizationId, tenantRef])
+  @@map("tenants")
+  @@index([organizationId])
+  @@index([status])
+  @@index([phone])
+  @@index([portalUserId])
+}
+
+// One-shot hashed portal invite (same pattern as EmailVerificationToken):
+// SHA-256 at rest, single-use via usedAt, short expiry. Acceptance creates or
+// links the User, proves email (emailVerifiedAt set) and flips the tenant to
+// portalStatus = ACTIVE.
+model TenantPortalInvite {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+  email          String
+  tokenHash      String   @unique @map("token_hash")
+  expiresAt      DateTime @map("expires_at")
+  usedAt         DateTime? @map("used_at")
+  invitedByUserId String? @map("invited_by_user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  organization  Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  tenant        Tenant       @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  invitedByUser User?        @relation("TenantInviteInviter", fields: [invitedByUserId], references: [id], onDelete: SetNull)
+
+  @@map("tenant_portal_invites")
+  @@index([tenantId])
+  @@index([organizationId])
+}
+
+model Lease {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  leaseRef       String?  @map("lease_ref") // human code, e.g. LSE-0001
+
+  status LeaseStatus    @default(DRAFT)
+  // A lease covers units of exactly ONE property (enforced at the API layer).
+  tenureType LeaseTenureType @default(LEASE) @map("tenure_type")
+
+  startsAt DateTime  @map("starts_at")
+  // Null endsAt = periodic (month-to-month) tenancy.
+  endsAt   DateTime? @map("ends_at")
+  noticeDate DateTime? @map("notice_date") // expected move-out once ENDING
+  signedAt DateTime?  @map("signed_at")
+
+  currency        String           @default("KES") @db.VarChar(3)
+  billingFrequency BillingFrequency @default(MONTHLY) @map("billing_frequency")
+  paymentDueDay   Int?             @map("payment_due_day") // 1–28
+  depositMonths   Decimal?         @map("deposit_months") @db.Decimal(4, 2)
+  noticeDays      Int?             @map("notice_days")
+  autoRenew       Boolean          @default(false) @map("auto_renew")
+  terms           String? // general terms / free-text clauses
+
+  // Renewal chains: a new lease may point at the one it renews. Renewal is a
+  // NEW lease (history-preserving), never a mutation of the old one
+  // (property.md §3).
+  renewalOfId String? @map("renewal_of_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  renewalOf    Lease?       @relation("LeaseRenewal", fields: [renewalOfId], references: [id], onDelete: SetNull)
+  renewals     Lease[]      @relation("LeaseRenewal")
+
+  units    LeaseUnit[]
+  parties  LeaseTenant[]
+  chargeSchedules ChargeSchedule[]
+  charges         Charge[]
+  payments        Payment[]
+  // Signed agreements / notices → PropertyDocument(entityType = LEASE) with
+  // DocumentVersion history.
+
+  // Overlapping ACTIVE leases for the same unit are prevented in a
+  // serializable API transaction (Prisma/Postgres cannot express a partial
+  // unique across the LeaseUnit join).
+  @@unique([organizationId, leaseRef])
+  @@map("leases")
+  @@index([organizationId, status])
+  @@index([propertyId, status])
+  @@index([startsAt, endsAt])
+  @@index([renewalOfId])
+}
+
+// Units covered by a lease, with per-unit terms (a lease may span several
+// units; rent can differ per unit — property.md §3).
+model LeaseUnit {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  leaseId        String   @map("lease_id") @db.Uuid
+  unitId         String   @map("unit_id") @db.Uuid
+
+  monthlyRent      Decimal           @map("monthly_rent") @db.Decimal(12, 2)
+  currency         String?           @db.VarChar(3) // falls back to lease currency
+  billingFrequency BillingFrequency? @map("billing_frequency")
+  depositAmount    Decimal?          @map("deposit_amount") @db.Decimal(12, 2) // absolute override of lease depositMonths
+  notes            String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lease        Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  unit         Unit         @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@unique([leaseId, unitId])
+  @@map("lease_units")
+  @@index([organizationId])
+  @@index([unitId])
+}
+
+// Tenants on a lease and their relationship to the tenancy — joint tenants
+// are extra rows, never a duplicated lease (property.md §3).
+model LeaseTenant {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  leaseId        String   @map("lease_id") @db.Uuid
+  tenantId       String   @map("tenant_id") @db.Uuid
+
+  relationship LeasePartyRelationship @default(PRIMARY)
+  shareOfRent  Decimal?               @map("share_of_rent") @db.Decimal(12, 2)
+  notes        String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lease        Lease        @relation(fields: [leaseId], references: [id], onDelete: Cascade)
+  tenant       Tenant       @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+
+  @@unique([leaseId, tenantId])
+  @@map("lease_tenants")
+  @@index([organizationId])
+  @@index([tenantId])
+}
+
+// Replace-history for a PropertyDocument (BUILD.md's "LeaseDocument/
+// DocumentVersion" = PropertyDocument(entityType = LEASE) + this table).
+// When a file is replaced, the outgoing bytes are archived here and the
+// PropertyDocument row points at the new storageKey (version bumped).
+// Version rows are only ever read through their authorized parent document,
+// so they carry no organizationId of their own.
+model DocumentVersion {
+  id         String   @id @default(uuid()) @db.Uuid
+  documentId String   @map("document_id") @db.Uuid
+  version    Int
+  storageKey String   @map("storage_key")
+  fileName   String   @map("file_name")
+  mimeType   String?  @map("mime_type")
+  sizeBytes  Int?     @map("size_bytes")
+  uploadedBy String?  @map("uploaded_by") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  document   PropertyDocument @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  uploadedByUser User?         @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+
+  @@unique([documentId, version])
+  @@map("document_versions")
+  @@index([documentId])
+}
+
+// ============================================================================
+// APPLICATIONS & FINANCIAL LEDGER (Phase 2, batch 3)
+//
+// property.md §4: one reusable ledger — rent, utilities, expenses and
+// payments share Charge/Payment/Allocation instead of parallel balance
+// systems. Rules that must never be violated:
+//   - A balance is ALWAYS derived (amount − allocations ± adjustments);
+//     nothing stores a "current balance" that can drift.
+//   - A posted Charge is immutable in amount; partial payment = allocations.
+//   - Submit ≠ approve: adjustments and expenses are approved by a DIFFERENT
+//     user than the submitter (keys enforce it; schema records both actors).
+//
+// Org linkage: same portfolio rule — rows live in the property's portfolio
+// org; a PM org reaches them through its management agreement.
+//
+// Rental applications: the letting fork of the sales pipeline
+// (research-property-4 §1) — applicant must already exist as a Tenant party
+// (status APPLICANT); conversion to tenancy creates Lease/LeaseTenant rows
+// and links leaseId on the application.
+// ============================================================================
+
+enum ApplicationStatus {
+  SUBMITTED
+  SCREENING
+  APPROVED
+  CONDITIONAL
+  DENIED
+  WITHDRAWN
+}
+
+enum ChargeType {
+  RENT
+  SERVICE_CHARGE
+  WATER
+  ELECTRICITY
+  GARBAGE
+  INSURANCE
+  LATE_FEE
+  OTHER
+}
+
+enum PaymentMethod {
+  CASH
+  MPESA
+  BANK_TRANSFER
+  CARD
+  CHEQUE
+  OTHER
+}
+
+enum AdjustmentType {
+  CREDIT
+  WAIVER
+  REVERSAL
+  WRITE_OFF
+}
+
+enum AdjustmentStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum PropertyExpenseStatus {
+  SUBMITTED
+  APPROVED
+  REJECTED
+  PAID
+}
+
+enum PropertyExpenseCategory {
+  REPAIRS
+  CLEANING
+  SECURITY
+  UTILITIES
+  MANAGEMENT_FEE
+  MARKETING
+  INSURANCE
+  OTHER
+}
+
+model RentalApplication {
+  id                String            @id @default(uuid()) @db.Uuid
+  organizationId    String            @map("organization_id") @db.Uuid
+  propertyId        String            @map("property_id") @db.Uuid
+  unitId            String?           @map("unit_id") @db.Uuid
+  applicantTenantId String            @map("applicant_tenant_id") @db.Uuid
+
+  status           ApplicationStatus @default(SUBMITTED)
+  incomeVerified   Boolean           @default(false) @map("income_verified")
+  internalNotes    String?           @map("internal_notes") // never shown to the applicant
+  submittedAt      DateTime          @default(now()) @map("submitted_at")
+  decidedAt        DateTime?         @map("decided_at")
+  // Plain uuid on purpose (audit actor, not an auth relationship).
+  decidedByUserId  String?           @map("decided_by_user_id") @db.Uuid
+  // Set when this application converts into a tenancy.
+  leaseId          String?           @map("lease_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  applicant    Tenant       @relation(fields: [applicantTenantId], references: [id], onDelete: Restrict)
+
+  // Screening docs (ID, pay slips, bank statements) → PropertyDocument
+  // (entityType = APPLICATION).
+
+  @@map("rental_applications")
+  @@index([organizationId, status])
+  @@index([propertyId])
+  @@index([applicantTenantId])
+}
+
+// Recurring rule: WHAT to charge and WHEN — never an amount already billed
+// (property.md §4). Exactly one scope target (lease | property | unit) is
+// required — enforced at the API layer (Prisma cannot express XOR).
+model ChargeSchedule {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  leaseId        String?  @map("lease_id") @db.Uuid
+  propertyId     String?  @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+
+  name       String
+  chargeType ChargeType @map("charge_type")
+  amount     Decimal    @db.Decimal(12, 2)
+  currency   String     @default("KES") @db.VarChar(3)
+  frequency  BillingFrequency @default(MONTHLY)
+  startDate  DateTime   @map("start_date")
+  endDate    DateTime?  @map("end_date")
+  nextRunAt  DateTime?  @map("next_run_at")
+  lastRunAt  DateTime?  @map("last_run_at")
+  isActive   Boolean    @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  lease        Lease?       @relation(fields: [leaseId], references: [id], onDelete: Restrict)
+  property     Property?    @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  charges Charge[]
+
+  @@map("charge_schedules")
+  @@index([organizationId])
+  @@index([leaseId])
+  @@index([nextRunAt])
+}
+
+// An amount owed. Balance is DERIVED (amount − allocations ± adjustments) —
+// never stored. postedAt null = draft; posting is what makes it collectable.
+model Charge {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  propertyId     String    @map("property_id") @db.Uuid
+  unitId         String?   @map("unit_id") @db.Uuid
+  leaseId        String?   @map("lease_id") @db.Uuid
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  scheduleId     String?   @map("schedule_id") @db.Uuid // source rule (traceability)
+
+  chargeType ChargeType @map("charge_type")
+  title      String?
+  amount     Decimal    @db.Decimal(12, 2)
+  currency   String     @default("KES") @db.VarChar(3)
+  dueDate    DateTime   @map("due_date")
+  billingPeriodStart DateTime? @map("billing_period_start")
+  billingPeriodEnd   DateTime? @map("billing_period_end")
+  postedAt   DateTime?  @map("posted_at")
+  notes      String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  lease        Lease?       @relation(fields: [leaseId], references: [id], onDelete: Restrict)
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  schedule     ChargeSchedule? @relation(fields: [scheduleId], references: [id], onDelete: SetNull)
+
+  allocations     PaymentAllocation[]
+  adjustments     FinancialAdjustment[]
+
+  @@map("charges")
+  @@index([organizationId, dueDate])
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([leaseId])
+  @@index([scheduleId])
+}
+
+model Payment {
+  id             String    @id @default(uuid()) @db.Uuid
+  organizationId String    @map("organization_id") @db.Uuid
+  propertyId     String    @map("property_id") @db.Uuid
+  tenantId       String?   @map("tenant_id") @db.Uuid
+  leaseId        String?   @map("lease_id") @db.Uuid
+
+  amount    Decimal       @db.Decimal(12, 2)
+  currency  String        @default("KES") @db.VarChar(3)
+  method    PaymentMethod
+  reference String? // M-Pesa code, cheque no., bank ref
+  receivedAt DateTime     @map("received_at")
+  // Plain uuids — audit actors, not auth relationships.
+  receivedByUserId   String? @map("received_by_user_id") @db.Uuid
+  reconciledByUserId String? @map("reconciled_by_user_id") @db.Uuid
+  reconciledAt       DateTime? @map("reconciled_at")
+  notes      String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: Restrict)
+  lease        Lease?       @relation(fields: [leaseId], references: [id], onDelete: Restrict)
+
+  allocations PaymentAllocation[]
+  receipts    Receipt[]
+
+  @@map("payments")
+  @@index([organizationId, receivedAt])
+  @@index([propertyId])
+  @@index([tenantId])
+  @@index([reference])
+}
+
+// A payment may be partially allocated, multi-allocated, or temporarily
+// unallocated (property.md §4).
+model PaymentAllocation {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  paymentId      String   @map("payment_id") @db.Uuid
+  chargeId       String   @map("charge_id") @db.Uuid
+  amount         Decimal  @db.Decimal(12, 2)
+  allocatedAt    DateTime @default(now()) @map("allocated_at")
+  allocatedByUserId String? @map("allocated_by_user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  payment      Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  charge       Charge       @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+
+  @@map("payment_allocations")
+  @@index([paymentId])
+  @@index([chargeId])
+  @@index([organizationId])
+}
+
+// Credits / waivers / reversals / write-offs against a charge. Approve ≠
+// submit (schema records both actors; keys enforce the separation).
+model FinancialAdjustment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  chargeId       String   @map("charge_id") @db.Uuid
+
+  type   AdjustmentType
+  amount Decimal  @db.Decimal(12, 2)
+  reason String
+  status AdjustmentStatus @default(PENDING)
+
+  submittedByUserId String?  @map("submitted_by_user_id") @db.Uuid
+  approvedByUserId  String?  @map("approved_by_user_id") @db.Uuid
+  decidedAt         DateTime? @map("decided_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  charge       Charge       @relation(fields: [chargeId], references: [id], onDelete: Restrict)
+
+  @@map("financial_adjustments")
+  @@index([organizationId, status])
+  @@index([chargeId])
+}
+
+// Property money-out (owner-paid costs). Submit ≠ approve; PAID is set by
+// finance after approval. Receipts attach as PropertyDocument(entityType =
+// EXPENSE).
+model PropertyExpense {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+
+  vendorName String?
+  category   PropertyExpenseCategory @default(OTHER)
+  amount     Decimal  @db.Decimal(12, 2)
+  currency   String   @default("KES") @db.VarChar(3)
+  incurredAt DateTime @map("incurred_at")
+  description String?
+
+  status       PropertyExpenseStatus @default(SUBMITTED)
+  submittedByUserId String? @map("submitted_by_user_id") @db.Uuid
+  approvedByUserId  String? @map("approved_by_user_id") @db.Uuid
+  decidedAt         DateTime? @map("decided_at")
+  paidAt            DateTime? @map("paid_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@map("property_expenses")
+  @@index([organizationId, status])
+  @@index([propertyId])
+}
+
+// Evidence for a recorded payment — issued once, never edited.
+model Receipt {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  paymentId      String   @map("payment_id") @db.Uuid
+  receiptNumber  String?  @map("receipt_number") // human sequence, unique per org
+  amount         Decimal? @db.Decimal(12, 2) // defaults to full payment amount
+  issuedAt       DateTime @default(now()) @map("issued_at")
+  issuedByUserId String?  @map("issued_by_user_id") @db.Uuid
+  storageKey     String?  @map("storage_key") // rendered PDF, if generated
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  payment      Payment      @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  @@unique([organizationId, receiptNumber])
+  @@map("receipts")
+  @@index([paymentId])
+}
+
+// ============================================================================
+// OPERATIONS — maintenance, work orders, inspections, schedules (batch 4)
+//
+// Cross-org (BUILD.md maintenance-company kind): a WorkOrder lives in the
+// property's portfolio org; WorkOrderAssignment.assigneeOrganizationId links
+// staff of ANOTHER org (the maintenance company). MM users query
+// `workOrder.findMany({ where: { assignments: { some: {
+// assigneeOrganizationId: actor.organizationId } } } })` — permission ∧
+// relationship, no shared-org shortcut.
+//
+// Tenants report issues too: MaintenanceTicket.reportedByTenantId links the
+// portal tenant (batch 2) — the future portal guard scopes it.
+// ============================================================================
+
+enum MaintenanceCategory {
+  PLUMBING
+  ELECTRICAL
+  HVAC
+  STRUCTURAL
+  JOINERY
+  PAINTING
+  CLEANING
+  LANDSCAPING
+  SECURITY
+  PEST_CONTROL
+  GENERAL
+}
+
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum MaintenanceStatus {
+  OPEN
+  IN_PROGRESS
+  ON_HOLD
+  RESOLVED
+  CLOSED
+  CANCELLED
+}
+
+enum WorkOrderStatus {
+  PENDING      // awaiting authorization
+  AUTHORIZED
+  SCHEDULED
+  IN_PROGRESS
+  ON_HOLD
+  COMPLETED
+  CANCELLED
+}
+
+enum WorkOrderAssignmentStatus {
+  ASSIGNED
+  DECLINED
+  COMPLETED
+}
+
+enum InspectionStatus {
+  SCHEDULED
+  IN_PROGRESS
+  PASSED
+  FAILED
+  CANCELLED
+}
+
+enum InspectionKind {
+  MOVE_IN
+  MOVE_OUT
+  ROUTINE
+  SAFETY
+  COMPLIANCE
+  OTHER
+}
+
+enum ScheduleKind {
+  INSPECTION
+  VISIT
+  CLEANING
+  MAINTENANCE
+  OTHER
+}
+
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+}
+
+model MaintenanceTicket {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+
+  title       String
+  description String?
+  category    MaintenanceCategory @default(GENERAL)
+  priority    TicketPriority      @default(MEDIUM)
+  status      MaintenanceStatus   @default(OPEN)
+
+  reportedByUserId   String?  @map("reported_by_user_id") @db.Uuid
+  reportedByTenantId String?  @map("reported_by_tenant_id") @db.Uuid
+  reportedAt         DateTime @default(now()) @map("reported_at")
+  resolvedAt         DateTime? @map("resolved_at")
+  closedAt           DateTime? @map("closed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  reportedByTenant Tenant?  @relation(fields: [reportedByTenantId], references: [id], onDelete: SetNull)
+
+  workOrders WorkOrder[]
+
+  @@map("maintenance_tickets")
+  @@index([organizationId, status])
+  @@index([propertyId])
+  @@index([priority])
+  @@index([reportedByTenantId])
+}
+
+model WorkOrder {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+  ticketId       String?  @map("ticket_id") @db.Uuid
+
+  title       String
+  description String?
+  priority    TicketPriority   @default(MEDIUM)
+  status      WorkOrderStatus  @default(PENDING)
+
+  estimatedCost Decimal? @map("estimated_cost") @db.Decimal(12, 2)
+  finalCost     Decimal? @map("final_cost") @db.Decimal(12, 2)
+  currency      String   @default("KES") @db.VarChar(3)
+
+  scheduledFor     DateTime? @map("scheduled_for")
+  completedAt      DateTime? @map("completed_at")
+  authorizedAt     DateTime? @map("authorized_at")
+  authorizedByUserId String?  @map("authorized_by_user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  ticket       MaintenanceTicket? @relation(fields: [ticketId], references: [id], onDelete: SetNull)
+
+  assignments  WorkOrderAssignment[]
+  inspections  Inspection[]
+
+  @@map("work_orders")
+  @@index([organizationId, status])
+  @@index([propertyId])
+  @@index([ticketId])
+  @@index([scheduledFor])
+}
+
+model WorkOrderAssignment {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid // work order's portfolio org
+  workOrderId    String   @map("work_order_id") @db.Uuid
+  assigneeUserId String   @map("assignee_user_id") @db.Uuid
+  // Non-null when the assignee belongs to a different org (maintenance
+  // company) — the cross-org relationship MM orgs query by.
+  assigneeOrganizationId String? @map("assignee_organization_id") @db.Uuid
+  assignedByUserId       String? @map("assigned_by_user_id") @db.Uuid
+
+  status      WorkOrderAssignmentStatus @default(ASSIGNED)
+  assignedAt  DateTime @default(now()) @map("assigned_at")
+  completedAt DateTime? @map("completed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization        Organization  @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  workOrder           WorkOrder     @relation(fields: [workOrderId], references: [id], onDelete: Cascade)
+  assigneeUser        User          @relation(fields: [assigneeUserId], references: [id], onDelete: Restrict)
+  assigneeOrganization Organization? @relation("WorkOrderAssigneeOrg", fields: [assigneeOrganizationId], references: [id], onDelete: Restrict)
+
+  @@index([workOrderId])
+  @@index([assigneeUserId])
+  @@index([assigneeOrganizationId])
+  @@index([organizationId])
+}
+
+model Inspection {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+  workOrderId    String?  @map("work_order_id") @db.Uuid
+
+  kind          InspectionKind   @default(ROUTINE)
+  status        InspectionStatus @default(SCHEDULED)
+  scheduledFor  DateTime?        @map("scheduled_for")
+  completedAt   DateTime?        @map("completed_at")
+  inspectorUserId String         @map("inspector_user_id") @db.Uuid
+  findings      String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  workOrder    WorkOrder?   @relation(fields: [workOrderId], references: [id], onDelete: SetNull)
+  inspector    User         @relation(fields: [inspectorUserId], references: [id], onDelete: Restrict)
+
+  // Evidence photos → PropertyDocument(entityType = INSPECTION).
+
+  @@map("inspections")
+  @@index([organizationId, status])
+  @@index([propertyId])
+  @@index([inspectorUserId])
+  @@index([scheduledFor])
+}
+
+// Recurring operational jobs (research-property-1 §1.5 schedule.*).
+model RecurringSchedule {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+
+  title     String
+  kind      ScheduleKind     @default(OTHER)
+  frequency ScheduleFrequency @default(MONTHLY)
+  startDate DateTime         @map("start_date")
+  endDate   DateTime?        @map("end_date")
+  nextDueAt DateTime?        @map("next_due_at")
+  assigneeUserId String?     @map("assignee_user_id") @db.Uuid
+  isActive  Boolean          @default(true) @map("is_active")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  @@map("recurring_schedules")
+  @@index([organizationId])
+  @@index([propertyId])
+  @@index([nextDueAt])
+}
+
+// ============================================================================
+// MARKETING & SALES — listings, leads, viewings, offers, deals, handoffs
+// (Phase 2, batch 5; research-property-4)
+//
+// Cross-org rules:
+//   - Listing.marketingOrganizationId shares a published listing with a
+//     MARKETING_AGENT org — agents read listing PROJECTIONS, never the full
+//     Property row of another org.
+//   - Handoff is a RELATIONSHIP row (research-property-4 §9.1 decision):
+//     Lead.organizationId stays with the capturing org forever; the receiver
+//     sees a handed-off lead through `handoffs.some({ toOrganizationId,
+//     status: ACCEPTED })`. No permission grants cross-org access by itself.
+//   - Offer counters are NEW rows (supersedesOfferId) — negotiation history
+//     is never overwritten (mirror of lease amendments).
+//   - Deal completion writes the PropertyOwnership transfer (API layer).
+// ============================================================================
+
+enum ListingPurpose {
+  SALE
+  RENT
+}
+
+enum ListingStatus {
+  DRAFT
+  PUBLISHED
+  PAUSED
+  UNDER_OFFER
+  SOLD
+  RENTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum ListingPriceFrequency {
+  TOTAL
+  MONTHLY
+  PER_SQM
+  ON_REQUEST
+}
+
+enum ListingSourceChannel {
+  DIRECT
+  MARKETING_AGENT
+  IMPORT
+}
+
+enum CommissionBasis {
+  PERCENT
+  FIXED
+}
+
+enum PriceHistoryEvent {
+  LISTED
+  REDUCED
+  INCREASED
+  WITHDRAWN
+  SOLD
+}
+
+enum LeadSource {
+  WEBSITE
+  WHATSAPP
+  REFERRAL
+  SIGNBOARD
+  PORTAL
+  CALL_IN
+  OTHER
+}
+
+enum LeadStatus {
+  NEW
+  QUALIFIED
+  MATCHED
+  VIEWING
+  OFFERING
+  WON
+  LOST
+  WITHDRAWN
+}
+
+enum HandoffStatus {
+  OFFERED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+enum ViewingStatus {
+  SCHEDULED
+  COMPLETED
+  NO_SHOW
+  CANCELLED
+}
+
+enum ViewingFeedback {
+  INTERESTED
+  REVIEWING
+  DECLINED
+}
+
+enum OfferStatus {
+  SUBMITTED
+  COUNTERED
+  ACCEPTED
+  REJECTED
+  WITHDRAWN
+  EXPIRED
+}
+
+enum DealStatus {
+  AGREED
+  DUE_DILIGENCE
+  COMPLETION_PENDING
+  COMPLETED
+  COLLAPSED
+}
+
+model Listing {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid // portfolio org
+  // The MARKETING_AGENT org this listing is shared with (agents read the
+  // projection, never the full Property row).
+  marketingOrganizationId String?  @map("marketing_organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+
+  purpose  ListingPurpose
+  status   ListingStatus @default(DRAFT)
+  title    String
+  description String?
+  highlights String[] @default([])
+
+  askingPrice     Decimal?  @map("asking_price") @db.Decimal(12, 2)
+  currency        String    @default("KES") @db.VarChar(3)
+  priceFrequency  ListingPriceFrequency @default(TOTAL) @map("price_frequency")
+  priceOnRequest  Boolean   @default(false) @map("price_on_request")
+
+  // Default deal terms (research-property-4 §3.1).
+  commissionRate  Decimal?  @map("commission_rate") @db.Decimal(5, 2)
+  commissionBasis CommissionBasis @default(PERCENT) @map("commission_basis")
+
+  sourceChannel ListingSourceChannel @default(DIRECT) @map("source_channel")
+  publishedAt   DateTime?  @map("published_at")
+  expiresAt     DateTime?  @map("expires_at")
+  listedByUserId String?    @map("listed_by_user_id") @db.Uuid
+  contactPhone  String?     @map("contact_phone")
+  contactEmail  String?     @map("contact_email")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization         Organization  @relation("ListingPortfolio", fields: [organizationId], references: [id], onDelete: Restrict)
+  marketingOrganization Organization? @relation("ListingMarketing", fields: [marketingOrganizationId], references: [id], onDelete: SetNull)
+  property             Property      @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit                 Unit?         @relation(fields: [unitId], references: [id], onDelete: Restrict)
+
+  priceHistory ListingPriceHistory[]
+  offers       Offer[]
+  handoffs     Handoff[]
+  leads        Lead[]
+
+  // Listing media → PropertyDocument(entityType = LISTING); price changes
+  // are recorded as ListingPriceHistory events, never silent overwrites.
+
+  @@map("listings")
+  @@index([organizationId, status])
+  @@index([marketingOrganizationId])
+  @@index([propertyId])
+  @@index([purpose])
+}
+
+model ListingPriceHistory {
+  id         String   @id @default(uuid()) @db.Uuid
+  listingId  String   @map("listing_id") @db.Uuid
+  price      Decimal  @db.Decimal(12, 2)
+  event      PriceHistoryEvent
+  note       String?
+  changedAt  DateTime @default(now()) @map("changed_at")
+  changedByUserId String? @map("changed_by_user_id") @db.Uuid
+
+  listing Listing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("listing_price_history")
+  @@index([listingId])
+}
+
+// House hunter / buyer. organizationId = the org that CAPTURED the lead and
+// never changes (handoff is the relationship row, not a re-point).
+model Lead {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+
+  displayName String
+  phone       String?
+  email       String?
+  preferredChannel ContactChannel @default(WHATSAPP) @map("preferred_channel")
+  source      LeadSource
+  status      LeadStatus @default(NEW)
+
+  budgetMin Decimal? @map("budget_min") @db.Decimal(12, 2)
+  budgetMax Decimal? @map("budget_max") @db.Decimal(12, 2)
+  criteria  Json?    // { type, beds, locations[], size }
+  notes     String?
+  nextActionAt DateTime? @map("next_action_at")
+
+  assignedToUserId String? @map("assigned_to_user_id") @db.Uuid
+  propertyId       String? @map("property_id") @db.Uuid // interest target
+  listingId        String? @map("listing_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  assignedTo   User?        @relation(fields: [assignedToUserId], references: [id], onDelete: SetNull)
+  property     Property?    @relation(fields: [propertyId], references: [id], onDelete: SetNull)
+  listing      Listing?     @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  handoffs  Handoff[]
+  viewings  PropertyViewing[]
+  offers    Offer[]
+  deals     PropertyDeal[]
+
+  @@map("leads")
+  @@index([organizationId, status])
+  @@index([assignedToUserId])
+  @@index([nextActionAt])
+}
+
+// Cross-org lead transfer (BUILD.md handoff.create). The capturing org's
+// Lead row is immutable; ACCEPTED grants the receiver operational access via
+// this relationship — never via permission alone.
+model Handoff {
+  id                 String   @id @default(uuid()) @db.Uuid
+  fromOrganizationId String   @map("from_organization_id") @db.Uuid
+  toOrganizationId   String   @map("to_organization_id") @db.Uuid
+  leadId             String   @map("lead_id") @db.Uuid
+  listingId          String?  @map("listing_id") @db.Uuid
+
+  status  HandoffStatus @default(OFFERED)
+  message String?
+  respondedAt       DateTime? @map("responded_at")
+  respondedByUserId String?   @map("responded_by_user_id") @db.Uuid
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  fromOrganization Organization @relation("HandoffFrom", fields: [fromOrganizationId], references: [id], onDelete: Restrict)
+  toOrganization   Organization @relation("HandoffTo", fields: [toOrganizationId], references: [id], onDelete: Restrict)
+  lead             Lead         @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  listing          Listing?     @relation(fields: [listingId], references: [id], onDelete: SetNull)
+
+  @@map("handoffs")
+  @@index([toOrganizationId, status])
+  @@index([fromOrganizationId])
+  @@index([leadId])
+}
+
+model PropertyViewing {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  unitId         String?  @map("unit_id") @db.Uuid
+  leadId         String?  @map("lead_id") @db.Uuid
+  tenantId       String?  @map("tenant_id") @db.Uuid // renewal/transfer viewings
+
+  scheduledAt      DateTime        @map("scheduled_at")
+  durationMinutes  Int?            @map("duration_minutes")
+  agentUserId      String?         @map("agent_user_id") @db.Uuid
+  status           ViewingStatus   @default(SCHEDULED)
+  feedback         ViewingFeedback?
+  notes            String?
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  unit         Unit?        @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  tenant       Tenant?      @relation(fields: [tenantId], references: [id], onDelete: SetNull)
+
+  @@map("property_viewings")
+  @@index([organizationId, scheduledAt])
+  @@index([propertyId])
+  @@index([leadId])
+}
+
+// Never overwrite an offer — a counter is a NEW row with
+// supersedesOfferId pointing at the previous one.
+model Offer {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  listingId      String   @map("listing_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  leadId         String?  @map("lead_id") @db.Uuid
+
+  amount    Decimal  @db.Decimal(12, 2)
+  currency  String   @default("KES") @db.VarChar(3)
+  offerDate DateTime @map("offer_date")
+  status    OfferStatus @default(SUBMITTED)
+  terms     Json?    // payment plan, contingencies, deposit %
+  expiresAt DateTime? @map("expires_at")
+
+  supersedesOfferId String? @map("supersedes_offer_id") @db.Uuid
+  respondedByUserId String? @map("responded_by_user_id") @db.Uuid
+  respondedAt       DateTime? @map("responded_at")
+  acceptedAt        DateTime? @map("accepted_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  listing      Listing      @relation(fields: [listingId], references: [id], onDelete: Restrict)
+  property     Property     @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  lead         Lead?        @relation(fields: [leadId], references: [id], onDelete: SetNull)
+  supersedes   Offer?       @relation("OfferCounter", fields: [supersedesOfferId], references: [id], onDelete: SetNull)
+  counters     Offer[]      @relation("OfferCounter")
+  deal         PropertyDeal?
+
+  @@map("offers")
+  @@index([organizationId, status])
+  @@index([listingId])
+  @@index([leadId])
+  @@index([supersedesOfferId])
+}
+
+// Progression room for an accepted offer. checklist Json = category-aware
+// gates (land vs building, research-property-4 §4) — SOFT-gated in v1.
+// Completion writes the PropertyOwnership transfer (API layer).
+model PropertyDeal {
+  id             String   @id @default(uuid()) @db.Uuid
+  organizationId String   @map("organization_id") @db.Uuid
+  offerId        String   @unique @map("offer_id") @db.Uuid
+  propertyId     String   @map("property_id") @db.Uuid
+  buyerLeadId    String?  @map("buyer_lead_id") @db.Uuid
+  buyerOwnerPartyId String? @map("buyer_owner_party_id") @db.Uuid
+
+  salePrice Decimal @map("sale_price") @db.Decimal(12, 2)
+  currency  String  @default("KES") @db.VarChar(3)
+  status    DealStatus @default(AGREED)
+  checklist Json?   // [{ key, label, mandatory, done, ownerUserId, dueAt }]
+  commissionAmount Decimal? @map("commission_amount") @db.Decimal(12, 2)
+  completionDate   DateTime? @map("completion_date")
+  notes     String?
+  openedAt  DateTime @default(now()) @map("opened_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  organization    Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  offer           Offer            @relation(fields: [offerId], references: [id], onDelete: Restrict)
+  property        Property         @relation(fields: [propertyId], references: [id], onDelete: Restrict)
+  buyerLead       Lead?            @relation(fields: [buyerLeadId], references: [id], onDelete: SetNull)
+  buyerOwnerParty PropertyOwnerParty? @relation(fields: [buyerOwnerPartyId], references: [id], onDelete: SetNull)
+
+  // Due-diligence docs → PropertyDocument(entityType = DEAL).
+
+  @@map("property_deals")
+  @@index([organizationId, status])
+  @@index([propertyId])
+  @@index([buyerLeadId])
 }

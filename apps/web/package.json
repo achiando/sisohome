@@ -14,6 +14,7 @@
   "dependencies": {
     "@prisma/client": "7.10.0",
     "@workspace/auth-ui": "workspace:*",
+    "@workspace/cloudinary": "workspace:*",
     "@workspace/database": "workspace:*",
     "@workspace/email": "workspace:*",
     "@workspace/ui": "workspace:*",

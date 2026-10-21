@@ -11,6 +11,7 @@ export type {
   FieldType,
   FieldDef,
   BaseFieldDef,
+  SelectOption,
   FormMode,
   FormVariant,
   UploadedFile,

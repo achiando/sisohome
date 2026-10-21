@@ -269,6 +269,41 @@ export function FormField({
           />
         )
 
+      case "checkbox-group": {
+        const selected: string[] = Array.isArray(value) ? (value as string[]) : []
+        const toggle = (optionValue: string) => {
+          onChange(
+            selected.includes(optionValue)
+              ? selected.filter((v) => v !== optionValue)
+              : [...selected, optionValue],
+          )
+        }
+        return (
+          <div className="grid grid-cols-1 gap-x-4 gap-y-0.5 sm:grid-cols-2 lg:grid-cols-3">
+            {field.options.map((o: SelectOption) => (
+              <Label
+                key={o.value}
+                htmlFor={`${id}-${o.value}`}
+                className={cn(
+                  "flex h-9 cursor-pointer items-center gap-2 rounded-lg px-1.5 transition-colors hover:bg-muted/60",
+                  (o.disabled || field.disabled) && "pointer-events-none opacity-50",
+                )}
+              >
+                <Checkbox
+                  id={`${id}-${o.value}`}
+                  checked={selected.includes(o.value)}
+                  onCheckedChange={() => toggle(o.value)}
+                  disabled={o.disabled || field.disabled}
+                />
+                <Text variant="body" as="span">
+                  {o.label}
+                </Text>
+              </Label>
+            ))}
+          </div>
+        )
+      }
+
       case "radio":
         return (
           <RadioGroup
@@ -357,6 +392,7 @@ export function FormField({
             maxFiles={field.maxFiles}
             maxSizeMB={field.maxSizeMB}
             existingUrls={field.existingUrls}
+            onUpload={field.onUpload}
             error={error}
             // Pass controlled files from form state down so previews survive re-renders
             files={(value as UploadedFile[]) ?? []}

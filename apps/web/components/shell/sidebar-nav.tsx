@@ -14,7 +14,7 @@
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { useMemo, useState } from "react"
-import { Search, ChevronsUpDown, LogOut } from "lucide-react"
+import { Search, ChevronsUpDown, LogOut, ChevronRight } from "lucide-react"
 
 import {
   SidebarHeader,
@@ -26,6 +26,10 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
+  SidebarMenuAction,
+  SidebarMenuSub,
+  SidebarMenuSubItem,
+  SidebarMenuSubButton,
   SidebarSeparator,
   useSidebar,
 } from "@workspace/ui/components/sidebar"
@@ -47,8 +51,10 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const { setOpenMobile } = useSidebar()
   const { user, logout } = useAuth()
   const [query, setQuery] = useState("")
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({})
 
-  // Filter menu items by permission + search query.
+  // Filter menu items by permission + search query. A parent stays visible
+  // when the query matches one of its children.
   const sections = useMemo(() => {
     const q = query.trim().toLowerCase()
     return navSections
@@ -56,12 +62,26 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
         ...section,
         items: section.items
           .filter((item: NavEntry) => hasUiPermission(item.uiPermission))
-          .filter((item: NavEntry) =>
-            q ? item.label.toLowerCase().includes(q) : true
+          .map((item: NavEntry) => ({
+            ...item,
+            children: (item.children ?? []).filter(
+              (child) =>
+                hasUiPermission(child.uiPermission) &&
+                (q ? child.label.toLowerCase().includes(q) : true),
+            ),
+          }))
+          .filter(
+            (item: NavEntry & { children: NavEntry[] }) =>
+              q
+                ? item.label.toLowerCase().includes(q) || item.children.length > 0
+                : true,
           ),
       }))
       .filter((section) => section.items.length > 0)
   }, [hasUiPermission, query])
+
+  const toggleExpanded = (href: string) =>
+    setExpanded((prev) => ({ ...prev, [href]: !prev[href] }))
 
   const handleNavigate = () => {
     setOpenMobile(false)
@@ -136,8 +156,12 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             </SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {section.items.map((item: NavEntry) => {
+                {section.items.map((item) => {
                   const active = isActive(pathname, item.href)
+                  const hasChildren = item.children.length > 0
+                  const childActive =
+                    hasChildren && item.children.some((c) => isActive(pathname, c.href))
+                  const isOpen = expanded[item.href] ?? (active || childActive)
                   return (
                     <SidebarMenuItem key={item.href}>
                       <SidebarMenuButton
@@ -154,6 +178,38 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
                         <item.icon className="size-4 shrink-0" />
                         <span className="truncate">{item.label}</span>
                       </SidebarMenuButton>
+                      {hasChildren && (
+                        <SidebarMenuAction
+                          showOnHover={false}
+                          onClick={() => toggleExpanded(item.href)}
+                          aria-expanded={isOpen}
+                          aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${item.label} sub-nav`}
+                          className="size-6 data-[state=open]:rotate-90"
+                          data-state={isOpen ? 'open' : 'closed'}
+                        >
+                          <ChevronRight className="size-3.5 transition-transform duration-200" />
+                        </SidebarMenuAction>
+                      )}
+                      {hasChildren && isOpen && (
+                        <SidebarMenuSub>
+                          {item.children.map((child) => {
+                            const childOn = isActive(pathname, child.href)
+                            return (
+                              <SidebarMenuSubItem key={child.href}>
+                                <SidebarMenuSubButton
+                                  render={
+                                    <Link href={child.href} onClick={handleNavigate} />
+                                  }
+                                  isActive={childOn}
+                                  className="h-9 rounded-lg"
+                                >
+                                  <span className="truncate">{child.label}</span>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            )
+                          })}
+                        </SidebarMenuSub>
+                      )}
                     </SidebarMenuItem>
                   )
                 })}

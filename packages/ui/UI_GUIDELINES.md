@@ -93,7 +93,7 @@ This document defines the comprehensive design system for `@workspace/ui` - a re
 - `text | email | number | password`
 - `phone` - with country code and flag (default: Kenya/KE)
 - `textarea`
-- `select | multi-select`
+- `select | multi-select | checkbox-group`
 - `radio | checkbox | toggle`
 - `date | datetime`
 - `file`

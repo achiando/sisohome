@@ -13,6 +13,7 @@ export type FieldType =
   | "textarea"
   | "select"
   | "multi-select"
+  | "checkbox-group"
   | "radio"
   | "checkbox"
   | "toggle"
@@ -68,6 +69,16 @@ export interface MultiSelectField extends BaseFieldDef {
   options: SelectOption[]
 }
 
+/**
+ * Multi-value picker rendered as a visible list of checkboxes — the right
+ * control when every option should be scannable at a glance (amenities,
+ * utilities). Value shape matches `multi-select`: `string[]`.
+ */
+export interface CheckboxGroupField extends BaseFieldDef {
+  type: "checkbox-group"
+  options: SelectOption[]
+}
+
 export interface RadioField extends BaseFieldDef {
   type: "radio"
   options: SelectOption[]
@@ -96,6 +107,12 @@ export interface FileFieldDef extends BaseFieldDef {
   maxSizeMB?: number
   /** Existing URLs to show in edit mode */
   existingUrls?: string[]
+  /**
+   * Per-file uploader (e.g. Cloudinary via an API route). Called once per
+   * added file; must resolve to the STORED URL — form values then carry
+   * `UploadedFile[]` whose `url` fields are ready for the DB.
+   */
+  onUpload?: (file: File, onProgress: (pct: number) => void) => Promise<string>
 }
 
 export interface CustomField extends BaseFieldDef {
@@ -113,6 +130,7 @@ export type FieldDef =
   | TextareaField
   | SelectField
   | MultiSelectField
+  | CheckboxGroupField
   | RadioField
   | CheckboxField
   | ToggleField

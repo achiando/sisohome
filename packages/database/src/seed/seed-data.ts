@@ -373,11 +373,43 @@ export async function seedExampleUser(organizationId: string) {
   }
 }
 
+/**
+ * Heal pass: re-enrich EVERY organization's kind template roles with any
+ * permission keys added since the org was created. `seedOrgKindRoles` only
+ * inserts missing rolePermission rows (skipDuplicates) and never clobbers
+ * owner edits, so this is safe to run on every seed. Without it, orgs
+ * created before a permission batch (e.g. leasing keys added in Phase 2)
+ * keep their old, smaller owner/admin/... roles forever.
+ */
+export async function healAllOrgKindRoles() {
+  const orgs = await prisma.organization.findMany({
+    select: { id: true, name: true, kind: true },
+  });
+  let healed = 0;
+  for (const org of orgs) {
+    if (!org.kind) {
+      console.warn(`⚠️  Skipping role heal for org ${org.name} (${org.id}): no kind set`);
+      continue;
+    }
+    try {
+      await seedOrgKindRoles(prisma as never, org.id, org.kind);
+      healed++;
+    } catch (error) {
+      // Unknown/legacy kind — skip rather than fail the whole seed.
+      console.warn(`⚠️  Skipping role heal for org ${org.name} (${org.id}, kind ${org.kind}):`, error);
+    }
+  }
+  console.log(`✅ Role-template heal complete: ${healed}/${orgs.length} organizations enriched`);
+}
+
 // Main seed function
 export async function main() {
   try {
     await seedFoundation();
-    
+
+    // Heal existing orgs' template roles (idempotent — see jsdoc above).
+    await healAllOrgKindRoles();
+
     // Optionally seed example data for development
     if (process.env.NODE_ENV !== 'production') {
       const exampleOrg = await seedExampleOrganization();
