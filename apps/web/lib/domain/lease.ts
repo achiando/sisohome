@@ -312,7 +312,7 @@ function assertDates(startsAt: Date, endsAt: Date | null | undefined): void {
 
 export async function listLeases(
   actor: ScopeActor,
-  filters: { status?: string; propertyId?: string; expiringInDays?: string } = {},
+  filters: { status?: string; propertyId?: string; unitId?: string; expiringInDays?: string } = {},
 ) {
   const where: Prisma.LeaseWhereInput = { property: propertyScopeWhere(actor) };
   const status = pick(filters.status, LEASE_STATUS_VALUES, 'status');
@@ -320,6 +320,19 @@ export async function listLeases(
   if (filters.propertyId) {
     await requirePropertyInScope(actor, filters.propertyId);
     where.propertyId = filters.propertyId;
+  }
+  if (filters.unitId) {
+    if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(filters.unitId)) {
+      throw new RouteError(400, 'unitId must be a valid id');
+    }
+    // Unit resolution through the parent scope — a cross-tenant or unknown
+    // unit 404s instead of silently filtering to an empty list.
+    const unit = await db.unit.findFirst({
+      where: { id: filters.unitId, property: propertyScopeWhere(actor) },
+      select: { id: true },
+    });
+    if (!unit) throw new RouteError(404, 'Unit not found');
+    where.units = { some: { unitId: unit.id } };
   }
   const days = filters.expiringInDays ? intOrNull(filters.expiringInDays, 'expiringInDays') : null;
   if (days !== null && days !== undefined) {

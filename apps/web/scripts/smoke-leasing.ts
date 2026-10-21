@@ -344,6 +344,32 @@ try {
     const unitBRow = await prisma.unit.findUnique({ where: { id: unitId2 } });
     check('unit B cache flipped to OCCUPIED', unitBRow?.status === 'OCCUPIED');
 
+    // Unit detail read + ?unitId register filter (unit detail page).
+    const unitBDetail = await expectOk('getUnit returns active occupant', () =>
+      units.getUnit(actor, unitId2),
+    );
+    check(
+      'occupant = tenant B on ACTIVE lease',
+      unitBDetail?.occupant?.tenantId === tenantB,
+      `occupant=${unitBDetail?.occupant?.tenantId}`,
+    );
+    const byUnit = await expectOk('listLeases filtered by unitId', () =>
+      leases.listLeases(actor, { unitId: unitId2 }),
+    );
+    check(
+      'unitId filter returns only lease B',
+      byUnit != null && byUnit.length === 1 && byUnit[0]?.id === leaseB.id,
+      `count=${byUnit?.length}`,
+    );
+    if (stranger) {
+      await expectStatus('listLeases unitId out of scope → 404', 404, () =>
+        leases.listLeases(stranger, { unitId: unitId2 }),
+      );
+    }
+    await expectStatus('listLeases unitId malformed → 400', 400, () =>
+      leases.listLeases(actor, { unitId: 'not-a-uuid' }),
+    );
+
     const terminated = await expectOk('terminate lease B', () => leases.terminateLease(actor, leaseB.id));
     check('lease B TERMINATED', terminated?.status === 'TERMINATED');
     const unitBAfter = await prisma.unit.findUnique({ where: { id: unitId2 } });

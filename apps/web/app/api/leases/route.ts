@@ -16,6 +16,7 @@ export const GET = apiRoute({
     const rows = await lease.listLeases(actor, {
       status: query.get('status') ?? undefined,
       propertyId: query.get('propertyId') ?? undefined,
+      unitId: query.get('unitId') ?? undefined,
       expiringInDays: query.get('expiringInDays') ?? undefined,
     });
     const leases = includeTenantPii

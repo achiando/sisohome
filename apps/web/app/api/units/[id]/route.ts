@@ -1,11 +1,20 @@
+import { authorizationService } from '@/lib/auth';
 import { apiRoute, RouteError } from '@/lib/api-route';
 import * as units from '@/lib/domain/unit';
 
-/** GET /api/units/[id] — parent-scoped unit + derived occupancy. */
+/**
+ * GET /api/units/[id] — parent-scoped unit + derived occupancy + active
+ * occupant. Contact PII only with tenant.read (same mask as the lists).
+ */
 export const GET = apiRoute<{ id: string }>({
   permissions: 'unit.read',
-  async handler({ actor, params }) {
-    const unit = await units.getUnit(actor, params.id);
+  async handler({ actor, ctx, params }) {
+    const granted = ctx.organizationId
+      ? await authorizationService.getUserPermissions(ctx.userId, ctx.organizationId)
+      : [];
+    const unit = await units.getUnit(actor, params.id, {
+      includeTenantContact: granted.includes('tenant.read' as never),
+    });
     return { unit };
   },
 });

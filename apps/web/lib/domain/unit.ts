@@ -603,14 +603,23 @@ async function resolveBuilding(propertyId: string, buildingId: unknown): Promise
   return b.id;
 }
 
-export async function getUnit(actor: ScopeActor, id: string) {
+/**
+ * Single unit for the detail route — lease-derived occupancy plus the active
+ * occupant (same join as listUnits; contact PII follows the tenant.read mask).
+ */
+export async function getUnit(
+  actor: ScopeActor,
+  id: string,
+  opts: { includeTenantContact?: boolean } = {},
+) {
   const row = await db.unit.findFirst({
     where: { id, property: propertyScopeWhere(actor) },
     include: { building: true },
   });
   if (!row) throw new RouteError(404, 'Unit not found');
   const [shaped] = await shapeUnits([row]);
-  return shaped;
+  const occupants = await occupantMap([id], opts.includeTenantContact ?? false);
+  return { ...shaped, occupant: occupants.get(id) ?? null };
 }
 
 export async function createUnit(actor: ScopeActor, propertyId: string, input: Raw) {

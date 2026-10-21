@@ -90,7 +90,7 @@ export default function GlobalUnitsPage() {
     showProperty: true,
     showTenant: hasUiPermission('tenant.read'),
     showRent: hasUiPermission('charge.list'),
-    onOpen: (u) => router.push(`/portfolio/${u.propertyId}/units/${u.id}/edit`),
+    onOpen: (u) => router.push(`/portfolio/${u.propertyId}/units/${u.id}`),
     onEdit: (u) => router.push(`/portfolio/${u.propertyId}/units/${u.id}/edit`),
     onAddTenant: hasUiPermission('lease.create')
       ? (u) => router.push(`/leasing/leases/new?propertyId=${u.propertyId}&unitId=${u.id}`)

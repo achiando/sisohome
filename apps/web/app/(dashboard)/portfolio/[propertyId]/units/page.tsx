@@ -179,6 +179,9 @@ export default function UnitManagerPage() {
     showProperty: false,
     showTenant: hasUiPermission('tenant.read'),
     showRent: hasUiPermission('charge.list'),
+    onOpen: hasUiPermission('unit.read')
+      ? (u) => router.push(`/portfolio/${propertyId}/units/${u.id}`)
+      : undefined,
     onEdit: hasUiPermission('unit.update')
       ? (u) => router.push(`/portfolio/${propertyId}/units/${u.id}/edit`)
       : undefined,
