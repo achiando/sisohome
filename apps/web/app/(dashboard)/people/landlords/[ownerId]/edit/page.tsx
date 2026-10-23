@@ -1,6 +1,6 @@
 'use client'
 
-/** /portfolio/owners/[ownerId]/edit — edit owner party via shared form. */
+/** /people/landlords/[ownerId]/edit — edit owner party via shared form. */
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -12,7 +12,7 @@ import { toast } from '@workspace/ui/components/toast'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
-import { OwnerPartyForm, type OwnerPartyFormValues } from '../../../_components/owner-party-form'
+import { OwnerPartyForm, type OwnerPartyFormValues } from '@/app/(dashboard)/portfolio/_components/owner-party-form'
 
 export default function EditOwnerPartyPage() {
   const router = useRouter()
@@ -53,7 +53,7 @@ export default function EditOwnerPartyPage() {
       <ScopeDenied
         title="Cannot edit owner parties"
         message="You need the ownership.update permission. Ask an owner or admin of your organization."
-        backHref="/portfolio/owners"
+        backHref="/people/landlords"
         backLabel="Back to owners"
       />
     )
@@ -64,7 +64,7 @@ export default function EditOwnerPartyPage() {
     return (
       <ScopeDenied
         message="This owner party doesn't exist for your organization."
-        backHref="/portfolio/owners"
+        backHref="/people/landlords"
         backLabel="Back to owners"
       />
     )
@@ -86,7 +86,7 @@ export default function EditOwnerPartyPage() {
         return
       }
       toast.success('Owner party updated')
-      router.push(`/portfolio/owners/${ownerId}`)
+      router.push(`/people/landlords/${ownerId}`)
     } catch {
       toast.error('Network error — owner party not saved')
       setSaving(false)
@@ -96,7 +96,7 @@ export default function EditOwnerPartyPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-2">
-        <Button variant="text" size="sm" onClick={() => router.push(`/portfolio/owners/${ownerId}`)}>
+        <Button variant="text" size="sm" onClick={() => router.push(`/people/landlords/${ownerId}`)}>
           ← {party.name}
         </Button>
       </div>
@@ -107,7 +107,7 @@ export default function EditOwnerPartyPage() {
           initialValues={party}
           saving={saving}
           onSubmit={handleSubmit}
-          onCancel={() => router.push(`/portfolio/owners/${ownerId}`)}
+          onCancel={() => router.push(`/people/landlords/${ownerId}`)}
         />
       </div>
     </div>

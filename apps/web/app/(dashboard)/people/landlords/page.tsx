@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * /portfolio/owners — owner-party directory (plan-slice-1 §4.1).
+ * /people/landlords — owner-party directory (plan-slice-1 §4.1).
  *
  * Flat per-organization directory: parties this org records ownership for.
  * Open → detail (ownerships + agreements), Edit → form. Agreements link in
@@ -143,7 +143,7 @@ export default function OwnersPage() {
         <Button
           variant="outline"
           size="sm"
-          onClick={() => router.push(`/portfolio/owners/${p.id}`)}
+          onClick={() => router.push(`/people/landlords/${p.id}`)}
           aria-label={`Open ${p.name}`}
         >
           Open
@@ -161,7 +161,7 @@ export default function OwnersPage() {
       { label: 'Updated', value: formatDate(p.updatedAt) },
     ],
     actions: (p) => [
-      { label: 'Open', variant: 'outline', onClick: () => router.push(`/portfolio/owners/${p.id}`) },
+      { label: 'Open', variant: 'outline', onClick: () => router.push(`/people/landlords/${p.id}`) },
     ],
   }
 
@@ -174,8 +174,8 @@ export default function OwnersPage() {
       </div>
 
       <PageHeader
-        title="Owners"
-        description="Owner parties your organization records ownership and agreements for."
+        title="Landlords"
+        description="Owner parties your organization records ownership for — landlords, co-owners and investors."
         actions={
           <>
             {hasUiPermission('agreement.list') && (
@@ -184,7 +184,7 @@ export default function OwnersPage() {
               </Button>
             )}
             {hasUiPermission('ownership.create') && (
-              <Button variant="primary" leftIcon={Plus} onClick={() => router.push('/portfolio/owners/new')}>
+              <Button variant="primary" leftIcon={Plus} onClick={() => router.push('/people/landlords/new')}>
                 Add owner party
               </Button>
             )}
@@ -231,7 +231,7 @@ export default function OwnersPage() {
         }}
         primaryAction={
           hasUiPermission('ownership.create')
-            ? { label: 'Add owner party', onClick: () => router.push('/portfolio/owners/new') }
+            ? { label: 'Add owner party', onClick: () => router.push('/people/landlords/new') }
             : undefined
         }
       />

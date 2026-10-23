@@ -9,7 +9,7 @@
  * cover/edit = document.update, delete = document.delete.
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { FileText, History, Image as ImageIcon, Plus, Star, Trash2, Video } from 'lucide-react'
 import type { FormSection, SelectOption } from '@workspace/ui/types/components'
 
@@ -70,7 +70,7 @@ interface VersionRow {
   createdAt: string
 }
 
-interface DocRow {
+export interface DocRow {
   id: string
   entityType: string
   entityId: string
@@ -490,54 +490,25 @@ function FileRow({
   )
 }
 
-export function MediaTab({ propertyId }: { propertyId: string }) {
+export function MediaTab({
+  propertyId,
+  docs,
+  videoUrl,
+  loading,
+  onRefresh,
+}: {
+  propertyId: string
+  docs: DocRow[]
+  videoUrl: string | null
+  loading: boolean
+  onRefresh: () => void
+}) {
   const { hasUiPermission } = useUiPermission()
-  const [docs, setDocs] = useState<DocRow[]>([])
-  const [videoUrl, setVideoUrl] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
   const [kindFilter, setKindFilter] = useState<string>('ALL')
   const [uploadOpen, setUploadOpen] = useState(false)
   const [versionDoc, setVersionDoc] = useState<DocRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<DocRow | null>(null)
   const [busy, setBusy] = useState(false)
-
-  const load = useCallback(() => {
-    let cancelled = false
-    fetch(`/api/documents?entityType=PROPERTY&entityId=${propertyId}`, { credentials: 'include' })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to load documents')
-        const data = await res.json()
-        return (data.documents ?? []) as DocRow[]
-      })
-      .then((list) => {
-        if (!cancelled) setDocs(list)
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('Failed to load documents')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    // Property video/virtual-tour links ride the property record (media-tab
-    // renders them; a failed fetch just hides the block).
-    fetch(`/api/properties/${propertyId}`, { credentials: 'include' })
-      .then(async (res) => {
-        if (!res.ok) return null
-        const data = await res.json()
-        return (data.property?.videoUrl as string | null | undefined) ?? null
-      })
-      .then((url) => {
-        if (!cancelled) setVideoUrl(url)
-      })
-      .catch(() => {
-        /* non-fatal */
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [propertyId])
-
-  useEffect(() => load(), [load])
 
   const presentKinds = useMemo(() => {
     const set = new Set(docs.map((d) => d.kind))
@@ -572,7 +543,7 @@ export function MediaTab({ propertyId }: { propertyId: string }) {
         return
       }
       toast.success('Cover photo updated')
-      load()
+      onRefresh()
     } catch {
       toast.error('Network error')
     } finally {
@@ -592,7 +563,7 @@ export function MediaTab({ propertyId }: { propertyId: string }) {
       }
       toast.success('Document deleted')
       setDeleteTarget(null)
-      load()
+      onRefresh()
     } catch {
       toast.error('Network error')
     } finally {
@@ -722,7 +693,7 @@ export function MediaTab({ propertyId }: { propertyId: string }) {
         versionDoc={versionDoc}
         onCloseUpload={() => setUploadOpen(false)}
         onCloseVersion={() => setVersionDoc(null)}
-        onSaved={load}
+        onSaved={onRefresh}
       />
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>

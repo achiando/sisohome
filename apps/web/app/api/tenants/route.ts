@@ -1,13 +1,15 @@
 import { apiRoute, ok, RouteError } from '@/lib/api-route';
 import * as tenant from '@/lib/domain/tenant';
 
-/** GET /api/tenants — tenant directory (OR-scope: own-captured or lease-linked). */
+/** GET /api/tenants — tenant directory (OR-scope: own-captured or lease-linked).
+ *  `?propertyId=` narrows to tenants leasing at that property (property detail). */
 export const GET = apiRoute({
   permissions: 'tenant.list',
   async handler({ actor, query }) {
     const tenants = await tenant.listTenants(actor, {
       status: query.get('status') ?? undefined,
       q: query.get('q') ?? undefined,
+      propertyId: query.get('propertyId') ?? undefined,
     });
     return { tenants };
   },

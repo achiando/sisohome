@@ -410,6 +410,46 @@ try {
     );
   }
 
+  console.log('— property-scoped tenant directory (?propertyId)');
+  const tenantC = await expectOk('create tenant C (no lease at this property)', () =>
+    tenants.createTenant(actor, {
+      displayName: 'Smoke Tenant C',
+      email: `smoke-c-${Date.now()}@example.com`,
+    }),
+  );
+  if (tenantC) {
+    const scoped = await tenants.listTenants(actor, { propertyId: pid });
+    const scopedIds = scoped.map((t) => t.id);
+    check(
+      'property filter includes a tenant on a lease at that property',
+      scopedIds.includes(tenantA),
+      `returned=${scopedIds.length}`,
+    );
+    check('property filter excludes a leaseless tenant', !scopedIds.includes(tenantC.id));
+    const linked = await prisma.leaseTenant.findMany({
+      where: { lease: { propertyId: pid } },
+      select: { tenantId: true },
+      distinct: ['tenantId'],
+    });
+    check(
+      'property filter returns exactly the lease-linked tenants',
+      linked.length === scopedIds.length && linked.every((r) => scopedIds.includes(r.tenantId)),
+      `expected=${linked.length} got=${scopedIds.length}`,
+    );
+    const elsewhere = await tenants.listTenants(actor, { propertyId: otherPid });
+    check(
+      'property filter scoped to a property with no leases → empty',
+      elsewhere.length === 0,
+      `returned=${elsewhere.length}`,
+    );
+    if (stranger) {
+      await expectStatus('stranger listTenants?propertyId → 404 (property not in scope)', 404, () =>
+        tenants.listTenants(stranger, { propertyId: pid }),
+      );
+    }
+    await prisma.tenant.delete({ where: { id: tenantC.id } }).catch(() => {});
+  }
+
   console.log('— delete guards');
   await expectStatus('tenant on a lease cannot be deleted → 409', 409, () => tenants.removeTenant(actor, tenantA));
   await expectStatus('tenant on an application cannot be deleted → 409', 409, () => tenants.removeTenant(actor, tenantB));
@@ -433,8 +473,12 @@ try {
     .catch(() => {});
   await prisma.rentalApplication.deleteMany({ where: { propertyId: pid } }).catch(() => {});
   await prisma.lease.deleteMany({ where: { propertyId: pid } }).catch(() => {});
-  await prisma.tenantPortalInvite.deleteMany({ where: { tenantId: { in: [tenantA, tenantB].filter(Boolean) } } }).catch(() => {});
-  await prisma.tenant.deleteMany({ where: { id: { in: [tenantA, tenantB].filter(Boolean) } } }).catch(() => {});
+  await prisma.tenantPortalInvite
+    .deleteMany({ where: { tenantId: { in: [tenantA, tenantB].filter(Boolean) } } })
+    .catch(() => {});
+  await prisma.tenant
+    .deleteMany({ where: { id: { in: [tenantA, tenantB].filter(Boolean) } } })
+    .catch(() => {});
   if (unitId) await prisma.unit.delete({ where: { id: unitId } }).catch(() => {});
   if (unitId2) await prisma.unit.delete({ where: { id: unitId2 } }).catch(() => {});
   if (otherUnitId) await prisma.unit.delete({ where: { id: otherUnitId } }).catch(() => {});

@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * /leasing/tenants — tenant directory (plan-slice-2 §3).
+ * /people/tenants — tenant directory (plan-slice-2 §3).
  * UX gate: tenant.list; server gate = /api/tenants.
  */
 
@@ -9,34 +9,16 @@ import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Users } from 'lucide-react'
 
-import {
-  ResponsiveDataListing,
-  type CardMapper,
-  type ColumnDef,
-} from '@workspace/ui/components/shared'
-import { Badge } from '@workspace/ui/components/badge'
+import { ResponsiveDataListing } from '@workspace/ui/components/shared'
 import { Button } from '@workspace/ui/components/button'
 import { toast } from '@workspace/ui/components/toast'
-import { formatDate } from '@/app/(dashboard)/_components/domain/format'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
+import { buildTenantColumns, type TenantListRow } from '@/app/(dashboard)/_components/domain/listing'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { TENANT_STATUSES } from '@/lib/domain/tenant-constants'
-import { TenantPortalBadge, TenantStatusBadge } from '../_components/tenant-status'
 
-type TenantRow = {
-  id: string
-  tenantRef: string | null
-  displayName: string
-  partyType: string
-  phone: string | null
-  email: string | null
-  status: string
-  portalStatus: string
-  incomeVerified: boolean
-  createdAt: string
-  leases: { id: string; status: string }[]
-}
+type TenantRow = TenantListRow
 
 export default function TenantsPage() {
   const router = useRouter()
@@ -91,48 +73,9 @@ export default function TenantsPage() {
     )
   }
 
-  const activeLeaseLabel = (t: TenantRow) => {
-    const active = t.leases.find((l) => l.status === 'ACTIVE' || l.status === 'ENDING')
-    return active ? active.status : '—'
-  }
-
-  const columns: ColumnDef<TenantRow>[] = [
-    {
-      header: 'Tenant',
-      cell: (t) => (
-        <div className="min-w-0">
-          <p className="font-medium">{t.displayName}</p>
-          <p className="text-xs text-muted-foreground">{[t.tenantRef, t.email ?? t.phone].filter(Boolean).join(' · ')}</p>
-        </div>
-      ),
-    },
-    { header: 'Phone', cell: (t) => <span className="text-sm tabular-nums">{t.phone ?? '—'}</span> },
-    { header: 'Status', cell: (t) => <TenantStatusBadge status={t.status} /> },
-    { header: 'Portal', cell: (t) => <TenantPortalBadge status={t.portalStatus} /> },
-    { header: 'Lease', cell: (t) => <Badge variant="neutral" size="sm">{activeLeaseLabel(t)}</Badge> },
-    { header: 'Added', cell: (t) => <span className="text-sm text-muted-foreground">{formatDate(t.createdAt)}</span> },
-    {
-      header: '',
-      className: 'w-24',
-      cell: (t) => (
-        <Button variant="outline" size="sm" onClick={() => router.push(`/leasing/tenants/${t.id}`)} aria-label={`Open ${t.displayName}`}>
-          Open
-        </Button>
-      ),
-    },
-  ]
-
-  const cardMapper: CardMapper<TenantRow> = {
-    id: (t) => t.id,
-    title: (t) => t.displayName,
-    subtitle: (t) => [t.tenantRef, t.email ?? t.phone].filter(Boolean).join(' · ') || undefined,
-    statusBadge: (t) => <TenantStatusBadge status={t.status} />,
-    detailFields: (t) => [
-      { label: 'Portal', value: t.portalStatus.replace(/_/g, ' ').toLowerCase() },
-      { label: 'Lease', value: activeLeaseLabel(t) },
-    ],
-    actions: (t) => [{ label: 'Open', variant: 'outline', onClick: () => router.push(`/leasing/tenants/${t.id}`) }],
-  }
+  const { columns, cardMapper } = buildTenantColumns({
+    onOpen: (t) => router.push(`/people/tenants/${t.id}`),
+  })
 
   return (
     <div className="space-y-6">
@@ -141,7 +84,7 @@ export default function TenantsPage() {
         description="Tenant parties your organization has captured or manages."
         actions={
           hasUiPermission('tenant.create') ? (
-            <Button variant="primary" onClick={() => router.push('/leasing/tenants/new')}>
+            <Button variant="primary" onClick={() => router.push('/people/tenants/new')}>
               Add tenant
             </Button>
           ) : undefined
@@ -181,7 +124,7 @@ export default function TenantsPage() {
         }}
         primaryAction={
           hasUiPermission('tenant.create')
-            ? { label: 'Add tenant', onClick: () => router.push('/leasing/tenants/new') }
+            ? { label: 'Add tenant', onClick: () => router.push('/people/tenants/new') }
             : undefined
         }
       />

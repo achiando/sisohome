@@ -171,7 +171,7 @@ export default function ApplicationsPage() {
         actions={
           <>
             {hasUiPermission('tenant.create') ? (
-              <Button variant="outline" onClick={() => router.push('/leasing/tenants/new')}>
+              <Button variant="outline" onClick={() => router.push('/people/tenants/new')}>
                 Add tenant
               </Button>
             ) : null}

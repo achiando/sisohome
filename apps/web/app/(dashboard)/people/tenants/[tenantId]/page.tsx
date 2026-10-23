@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * /leasing/tenants/[tenantId] — tenant profile (plan-slice-2 §3).
+ * /people/tenants/[tenantId] — tenant profile (plan-slice-2 §3).
  * Tabs: Overview (contact + portal + invite), Leases, Applications,
  * Documents, Notes. PII lives behind tenant.read on the API; the UI gate
  * mirrors it with useUiPermission (UX only).
@@ -21,9 +21,9 @@ import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
-import { PortalInviteDialog } from '../../_components/portal-invite-dialog'
-import { TenantDocumentsTab } from '../../_components/tenant-documents-tab'
-import { TenantPortalBadge, TenantStatusBadge } from '../../_components/tenant-status'
+import { PortalInviteDialog } from '@/app/(dashboard)/leasing/_components/portal-invite-dialog'
+import { TenantDocumentsTab } from '@/app/(dashboard)/leasing/_components/tenant-documents-tab'
+import { TenantPortalBadge, TenantStatusBadge } from '@/app/(dashboard)/leasing/_components/tenant-status'
 
 type LeasePartyRow = {
   id: string
@@ -108,7 +108,7 @@ export default function TenantProfilePage() {
     return (
       <ScopeDenied
         message="This tenant doesn't exist for your organization."
-        backHref="/leasing/tenants"
+        backHref="/people/tenants"
         backLabel="Back to tenants"
       />
     )
@@ -263,7 +263,7 @@ export default function TenantProfilePage() {
               </Button>
             ) : null}
             {hasUiPermission('tenant.update') ? (
-              <Button variant="primary" onClick={() => router.push(`/leasing/tenants/${tenant.id}/edit`)}>
+              <Button variant="primary" onClick={() => router.push(`/people/tenants/${tenant.id}/edit`)}>
                 Edit
               </Button>
             ) : undefined}

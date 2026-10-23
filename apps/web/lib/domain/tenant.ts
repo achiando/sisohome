@@ -21,7 +21,7 @@ import { db } from '@/lib/auth';
 import { RouteError } from '@/lib/api-route';
 import { appUrl } from '@/lib/base-url';
 import { auditLog } from './audit';
-import { propertyScopeWhere, type ScopeActor } from './property-scope';
+import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
 import {
   CONTACT_CHANNEL_VALUES,
   TENANT_ID_TYPE_VALUES,
@@ -93,10 +93,17 @@ export function tenantScopeWhere(actor: ScopeActor): Prisma.TenantWhereInput {
 export interface TenantListFilters {
   status?: string;
   q?: string;
+  /** Restrict to tenants holding a lease on this property (property detail). */
+  propertyId?: string;
 }
 
 export async function listTenants(actor: ScopeActor, filters: TenantListFilters = {}) {
   const where: Prisma.TenantWhereInput = { ...tenantScopeWhere(actor) };
+  if (filters.propertyId) {
+    // Scope the property through the parent scope — a cross-tenant id 404s.
+    await requirePropertyInScope(actor, filters.propertyId);
+    where.leases = { some: { lease: { propertyId: filters.propertyId } } };
+  }
   const status = pick(filters.status, TENANT_STATUS_VALUES, 'status');
   if (status) where.status = status;
   const q = str(filters.q);

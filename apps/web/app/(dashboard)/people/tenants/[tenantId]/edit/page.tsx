@@ -1,6 +1,6 @@
 'use client'
 
-/** /leasing/tenants/[tenantId]/edit — edit tenant via shared wizard. */
+/** /people/tenants/[tenantId]/edit — edit tenant via shared wizard. */
 
 import { useCallback, useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
@@ -12,7 +12,7 @@ import { toast } from '@workspace/ui/components/toast'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
-import { TenantForm, type TenantFormValues } from '../../../_components/tenant-form'
+import { TenantForm, type TenantFormValues } from '@/app/(dashboard)/leasing/_components/tenant-form'
 
 export default function EditTenantPage() {
   const router = useRouter()
@@ -53,7 +53,7 @@ export default function EditTenantPage() {
       <ScopeDenied
         title="Cannot edit tenants"
         message="You need the tenant.update permission. Ask an owner or admin of your organization."
-        backHref="/leasing/tenants"
+        backHref="/people/tenants"
         backLabel="Back to tenants"
       />
     )
@@ -64,7 +64,7 @@ export default function EditTenantPage() {
     return (
       <ScopeDenied
         message="This tenant doesn't exist for your organization."
-        backHref="/leasing/tenants"
+        backHref="/people/tenants"
         backLabel="Back to tenants"
       />
     )
@@ -86,7 +86,7 @@ export default function EditTenantPage() {
         return
       }
       toast.success('Tenant updated')
-      router.push(`/leasing/tenants/${tenantId}`)
+      router.push(`/people/tenants/${tenantId}`)
     } catch {
       toast.error('Network error — tenant not saved')
       setSaving(false)
@@ -96,7 +96,7 @@ export default function EditTenantPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-2">
-        <Button variant="text" size="sm" onClick={() => router.push(`/leasing/tenants/${tenantId}`)}>
+        <Button variant="text" size="sm" onClick={() => router.push(`/people/tenants/${tenantId}`)}>
           ← {tenant.displayName}
         </Button>
       </div>
@@ -107,7 +107,7 @@ export default function EditTenantPage() {
           initialValues={tenant}
           saving={saving}
           onSubmit={handleSubmit}
-          onCancel={() => router.push(`/leasing/tenants/${tenantId}`)}
+          onCancel={() => router.push(`/people/tenants/${tenantId}`)}
         />
       </div>
     </div>

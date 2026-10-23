@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * /portfolio/owners/[ownerId] — owner party detail: contact block, its
+ * /people/landlords/[ownerId] — owner party detail: contact block, its
  * ownership rows (property/unit + share + window), agreements count.
  * Statement download lands in slice 2 with billing (placeholder button).
  */
@@ -75,7 +75,7 @@ export default function OwnerPartyDetailPage() {
     return (
       <ScopeDenied
         message="You need the ownership.list permission to view owner parties."
-        backHref="/portfolio/owners"
+        backHref="/people/landlords"
         backLabel="Back to owners"
       />
     )
@@ -86,7 +86,7 @@ export default function OwnerPartyDetailPage() {
     return (
       <ScopeDenied
         message="This owner party doesn't exist for your organization."
-        backHref="/portfolio/owners"
+        backHref="/people/landlords"
         backLabel="Back to owners"
       />
     )
@@ -97,7 +97,7 @@ export default function OwnerPartyDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
-        <Button variant="text" size="sm" onClick={() => router.push('/portfolio/owners')}>
+        <Button variant="text" size="sm" onClick={() => router.push('/people/landlords')}>
           ← Owners
         </Button>
       </div>
@@ -117,7 +117,7 @@ export default function OwnerPartyDetailPage() {
               <FileText className="size-4" /> Statements
             </Button>
             {hasUiPermission('ownership.update') && (
-              <Button variant="primary" leftIcon={Pencil} onClick={() => router.push(`/portfolio/owners/${party.id}/edit`)}>
+              <Button variant="primary" leftIcon={Pencil} onClick={() => router.push(`/people/landlords/${party.id}/edit`)}>
                 Edit
               </Button>
             )}

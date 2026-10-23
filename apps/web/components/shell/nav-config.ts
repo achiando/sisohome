@@ -24,6 +24,8 @@ import {
   HelpCircle,
   MessageCircleQuestion,
   Boxes,
+  Briefcase,
+  Home,
   UserRound,
   type LucideIcon,
 } from 'lucide-react'
@@ -53,8 +55,9 @@ export const menuSection: NavSection = {
     { label: 'Overview', href: '/', icon: LayoutDashboard, tab: true },
     // Real domain keys from the permission catalog (phase-2 slices land the
     // pages behind each link; nav hides items the session's keys exclude).
-    // Portfolio carries the register sub-nav (Properties / Units / Owners /
+    // Portfolio carries the register sub-nav (Properties / Units /
     // Agreements) — same pattern as the siso-design portfolio mockup.
+    // Owner parties live with the People directory (People → Landlords).
     {
       label: 'Portfolio',
       href: '/portfolio',
@@ -63,12 +66,24 @@ export const menuSection: NavSection = {
       children: [
         { label: 'Properties', href: '/portfolio', icon: Building2, uiPermission: 'property.list' },
         { label: 'Units', href: '/units', icon: Boxes, uiPermission: 'unit.list' },
-        { label: 'Owners', href: '/portfolio/owners', icon: UserRound, uiPermission: 'ownership.list' },
         { label: 'Agreements', href: '/portfolio/owners/agreements', icon: Handshake, uiPermission: 'agreement.list' },
       ],
     },
     { label: 'Leasing', href: '/leasing', icon: KeyRound, uiPermission: 'lease.list' },
-    { label: 'People', href: '/people', icon: Users, uiPermission: 'user.read', tab: true },
+    // People is the directory hub: the parent carries NO uiPermission so a
+    // session holding only one of the three keys still reaches it — each
+    // child gates itself (server enforces every route regardless).
+    {
+      label: 'People',
+      href: '/people',
+      icon: Users,
+      tab: true,
+      children: [
+        { label: 'Tenants', href: '/people/tenants', icon: UserRound, uiPermission: 'tenant.list' },
+        { label: 'Landlords', href: '/people/landlords', icon: Home, uiPermission: 'ownership.list' },
+        { label: 'Employees', href: '/people/employees', icon: Briefcase, uiPermission: 'user.read' },
+      ],
+    },
     { label: 'Finances', href: '/finances', icon: Wallet, uiPermission: 'charge.list' },
     { label: 'Maintenance', href: '/maintenance', icon: Wrench, uiPermission: 'maintenance.list' },
     { label: 'Sales', href: '/sales', icon: Handshake, uiPermission: 'listing.list' },

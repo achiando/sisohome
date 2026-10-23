@@ -7,7 +7,7 @@
  * dialog and the API re-validates the ≤100 budget (400 surfaced as toast).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Users, Plus, Pencil, Trash2 } from 'lucide-react'
 import type { SelectOption } from '@workspace/ui/types/components'
 
@@ -22,12 +22,16 @@ import { formatDate } from '@/app/(dashboard)/_components/domain/format'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { OwnershipDialog, type OwnershipRow } from './ownership-dialog'
 
-type PartyOption = { id: string; name: string; partyType: string }
+/** Owner-party select option (shared with the property page's fetch-all). */
+export type OwnerPartyOption = { id: string; name: string; partyType: string }
 
-type Row = OwnershipRow & {
+export type OwnershipTabRow = OwnershipRow & {
   propertyId?: string | null
   unitId?: string | null
 }
+
+type PartyOption = OwnerPartyOption
+type Row = OwnershipTabRow
 
 function shareBar(share: number) {
   const pct = Math.max(0, Math.min(100, share))
@@ -81,38 +85,23 @@ function OwnershipRowItem({
   )
 }
 
-export function OwnershipTab({ propertyId }: { propertyId: string }) {
+export function OwnershipTab({
+  propertyId,
+  rows,
+  parties,
+  loading,
+  onRefresh,
+}: {
+  propertyId: string
+  rows: Row[]
+  parties: PartyOption[]
+  loading: boolean
+  onRefresh: () => void
+}) {
   const { hasUiPermission } = useUiPermission()
-  const [rows, setRows] = useState<Row[]>([])
-  const [parties, setParties] = useState<PartyOption[]>([])
-  const [loading, setLoading] = useState(true)
   const [dialog, setDialog] = useState<{ open: boolean; row?: Row | null }>({ open: false })
   const [deleteTarget, setDeleteTarget] = useState<Row | null>(null)
   const [busy, setBusy] = useState(false)
-
-  const load = useCallback(() => {
-    let cancelled = false
-    Promise.all([
-      fetch(`/api/properties/${propertyId}/ownerships`, { credentials: 'include' }).then((r) => r.json()),
-      fetch('/api/owner-parties', { credentials: 'include' }).then((r) => r.json()),
-    ])
-      .then(([oRes, pRes]) => {
-        if (cancelled) return
-        setRows((oRes.ownerships ?? []) as Row[])
-        setParties((pRes.parties ?? []) as PartyOption[])
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('Failed to load ownership')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [propertyId])
-
-  useEffect(() => load(), [load])
 
   const partyOptions: SelectOption[] = useMemo(
     () => parties.map((p) => ({ value: p.id, label: p.name })),
@@ -139,7 +128,7 @@ export function OwnershipTab({ propertyId }: { propertyId: string }) {
       }
       toast.success('Ownership removed')
       setDeleteTarget(null)
-      load()
+      onRefresh()
     } catch {
       toast.error('Network error')
     } finally {
@@ -224,7 +213,7 @@ export function OwnershipTab({ propertyId }: { propertyId: string }) {
         propertyId={propertyId}
         row={dialog.row}
         onClose={() => setDialog({ open: false })}
-        onSaved={load}
+        onSaved={onRefresh}
       />
 
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>

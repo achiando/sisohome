@@ -172,7 +172,7 @@ export default function LeasingDashboardPage() {
           label="Tenants on lease"
           value={derived.tenantCount}
           hint="Primary + joint parties"
-          onClick={() => router.push('/leasing/tenants')}
+          onClick={() => router.push('/people/tenants')}
         />
       </div>
 
@@ -308,7 +308,7 @@ export default function LeasingDashboardPage() {
           </Button>
         ) : null}
         {hasUiPermission('tenant.create') ? (
-          <Button variant="outline" onClick={() => router.push('/leasing/tenants/new')}>
+          <Button variant="outline" onClick={() => router.push('/people/tenants/new')}>
             <UserPlus size={16} aria-hidden /> Add tenant
           </Button>
         ) : null}

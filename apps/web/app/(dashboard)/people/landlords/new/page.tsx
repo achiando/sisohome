@@ -1,6 +1,6 @@
 'use client'
 
-/** /portfolio/owners/new — create owner party via shared OwnerPartyForm. */
+/** /people/landlords/new — create owner party via shared OwnerPartyForm. */
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -10,7 +10,7 @@ import { toast } from '@workspace/ui/components/toast'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
-import { OwnerPartyForm, type OwnerPartyFormValues } from '../../_components/owner-party-form'
+import { OwnerPartyForm, type OwnerPartyFormValues } from '@/app/(dashboard)/portfolio/_components/owner-party-form'
 
 export default function NewOwnerPartyPage() {
   const router = useRouter()
@@ -23,7 +23,7 @@ export default function NewOwnerPartyPage() {
       <ScopeDenied
         title="Cannot add owner parties"
         message="You need the ownership.create permission. Ask an owner or admin of your organization."
-        backHref="/portfolio/owners"
+        backHref="/people/landlords"
         backLabel="Back to owners"
       />
     )
@@ -46,7 +46,7 @@ export default function NewOwnerPartyPage() {
         return
       }
       toast.success('Owner party created')
-      router.push('/portfolio/owners')
+      router.push('/people/landlords')
     } catch {
       toast.error('Network error — owner party not created')
       setSaving(false)
@@ -56,7 +56,7 @@ export default function NewOwnerPartyPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-2">
-        <Button variant="text" size="sm" onClick={() => router.push('/portfolio/owners')}>
+        <Button variant="text" size="sm" onClick={() => router.push('/people/landlords')}>
           ← Owners
         </Button>
       </div>
@@ -70,7 +70,7 @@ export default function NewOwnerPartyPage() {
           saving={saving}
           serverErrors={serverErrors}
           onSubmit={handleSubmit}
-          onCancel={() => router.push('/portfolio/owners')}
+          onCancel={() => router.push('/people/landlords')}
         />
       </div>
     </div>

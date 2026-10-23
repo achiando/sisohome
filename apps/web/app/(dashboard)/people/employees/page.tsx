@@ -1,7 +1,7 @@
 'use client'
 
 /**
- * People — member management for the active organization.
+ * /people/employees — Employees: member management for the active org.
  *
  * One form handles both create and edit (see _components/member-form.tsx).
  * The server is the real gate (user.read / user.create + membership.invite /
@@ -399,8 +399,8 @@ export default function PeoplePage() {
   return (
     <div className="space-y-6">
       <ResponsiveDataListing<Member>
-        title="People"
-        description="Manage members of your organization"
+        title="Employees"
+        description="Members of your organization — invitations, roles and access."
         count={members.length}
         hideHeaderOnMobile
         items={filtered}

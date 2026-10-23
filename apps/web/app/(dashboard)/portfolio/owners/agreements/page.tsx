@@ -242,7 +242,7 @@ export default function AgreementsPage() {
         actions={
           <>
             {hasUiPermission('ownership.list') && (
-              <Button variant="outline" onClick={() => router.push('/portfolio/owners')}>
+              <Button variant="outline" onClick={() => router.push('/people/landlords')}>
                 Owners
               </Button>
             )}

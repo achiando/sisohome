@@ -172,7 +172,7 @@ export default function ApplicationReviewPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => router.push(`/leasing/tenants/${app.applicant.id}`)}
+            onClick={() => router.push(`/people/tenants/${app.applicant.id}`)}
           >
             Open tenant profile
           </Button>

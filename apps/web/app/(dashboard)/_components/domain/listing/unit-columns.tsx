@@ -9,7 +9,13 @@
 import type { CardMapper, ColumnDef } from '@workspace/ui/components/shared'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
-import { Boxes } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@workspace/ui/components/dropdown-menu'
+import { Boxes, MoreHorizontal, Pencil, Trash2, UserPlus } from 'lucide-react'
 
 import { UnitStatusBadge } from '@/app/(dashboard)/portfolio/_components/unit-status'
 import { formatUnitKind } from '@/lib/domain/unit-constants'
@@ -43,6 +49,31 @@ export function buildUnitColumns({
   cardMapper: CardMapper<UnitListRow>
 } {
   const hasActions = Boolean(onOpen || onEdit || onDelete || onAddTenant)
+
+  // Quick View + overflow menu (mirrors the property register row actions).
+  const overflowActions: Array<{
+    key: 'edit' | 'addTenant' | 'delete'
+    label: string
+    icon: typeof Pencil
+    destructive?: boolean
+    onSelect: (row: UnitListRow) => void
+  }> = [
+    ...(onEdit ? [{ key: 'edit' as const, label: 'Edit', icon: Pencil, onSelect: onEdit }] : []),
+    ...(onAddTenant
+      ? [{ key: 'addTenant' as const, label: 'Add tenant', icon: UserPlus, onSelect: onAddTenant }]
+      : []),
+    ...(onDelete
+      ? [
+          {
+            key: 'delete' as const,
+            label: 'Delete',
+            icon: Trash2,
+            destructive: true,
+            onSelect: onDelete,
+          },
+        ]
+      : []),
+  ]
 
   const columns: ColumnDef<UnitListRow>[] = [
     ...(showProperty
@@ -105,52 +136,52 @@ export function buildUnitColumns({
       ? ([
           {
             header: '',
-            className: 'w-48',
-            cell: (u) => (
-              <div className="flex justify-end gap-2">
-                {onOpen ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onOpen(u)}
-                    aria-label={`View unit ${u.unitRef}`}
-                  >
-                    View
-                  </Button>
-                ) : null}
-                {onEdit ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onEdit(u)}
-                    aria-label={`Edit unit ${u.unitRef}`}
-                  >
-                    Edit
-                  </Button>
-                ) : null}
-                {onAddTenant && u.occupancy === 'VACANT' ? (
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => onAddTenant(u)}
-                    aria-label={`Add tenant to unit ${u.unitRef}`}
-                  >
-                    Add tenant
-                  </Button>
-                ) : null}
-                {onDelete ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="text-destructive"
-                    onClick={() => onDelete(u)}
-                    aria-label={`Delete unit ${u.unitRef}`}
-                  >
-                    Delete
-                  </Button>
-                ) : null}
-              </div>
-            ),
+            className: 'w-32',
+            cell: (u) => {
+              const items = overflowActions.filter(
+                (a) => a.key !== 'addTenant' || u.occupancy === 'VACANT',
+              )
+              return (
+                <div className="flex items-center justify-end gap-1">
+                  {onOpen ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => onOpen(u)}
+                      aria-label={`View unit ${u.unitRef}`}
+                    >
+                      View
+                    </Button>
+                  ) : null}
+                  {items.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="size-9 rounded-lg"
+                          aria-label={`Actions for unit ${u.unitRef}`}
+                        >
+                          <MoreHorizontal className="size-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-48 min-w-0">
+                        {items.map((item) => (
+                          <DropdownMenuItem
+                            key={item.key}
+                            variant={item.destructive ? 'destructive' : 'default'}
+                            onSelect={() => item.onSelect(u)}
+                          >
+                            <item.icon className="size-4" />
+                            {item.label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
+                </div>
+              )
+            },
           },
         ] as ColumnDef<UnitListRow>[])
       : []),

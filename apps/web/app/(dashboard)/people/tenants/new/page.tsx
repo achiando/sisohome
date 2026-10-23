@@ -1,6 +1,6 @@
 'use client'
 
-/** /leasing/tenants/new — capture a tenant via shared wizard. */
+/** /people/tenants/new — capture a tenant via shared wizard. */
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
@@ -10,7 +10,7 @@ import { toast } from '@workspace/ui/components/toast'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
-import { TenantForm, type TenantFormValues } from '../../_components/tenant-form'
+import { TenantForm, type TenantFormValues } from '@/app/(dashboard)/leasing/_components/tenant-form'
 
 export default function NewTenantPage() {
   const router = useRouter()
@@ -22,7 +22,7 @@ export default function NewTenantPage() {
       <ScopeDenied
         title="Cannot create tenants"
         message="You need the tenant.create permission. Ask an owner or admin of your organization."
-        backHref="/leasing/tenants"
+        backHref="/people/tenants"
         backLabel="Back to tenants"
       />
     )
@@ -44,7 +44,7 @@ export default function NewTenantPage() {
         return
       }
       toast.success('Tenant created')
-      router.push(`/leasing/tenants/${data.tenant.id}`)
+      router.push(`/people/tenants/${data.tenant.id}`)
     } catch {
       toast.error('Network error — tenant not saved')
       setSaving(false)
@@ -54,13 +54,13 @@ export default function NewTenantPage() {
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <div className="flex items-center gap-2">
-        <Button variant="text" size="sm" onClick={() => router.push('/leasing/tenants')}>
+        <Button variant="text" size="sm" onClick={() => router.push('/people/tenants')}>
           ← Tenants
         </Button>
       </div>
       <PageHeader title="Add tenant" description="Capture a tenant party record." />
       <div className="rounded-2xl border border-border bg-card p-4 shadow-xs sm:p-6">
-        <TenantForm mode="create" saving={saving} onSubmit={handleSubmit} onCancel={() => router.push('/leasing/tenants')} />
+        <TenantForm mode="create" saving={saving} onSubmit={handleSubmit} onCancel={() => router.push('/people/tenants')} />
       </div>
     </div>
   )

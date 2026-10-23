@@ -4,14 +4,17 @@
  * /portfolio/[propertyId] — property detail shell (plan-slice-1 §4.2,
  * redesigned per siso-design/portfolio-property.webp): vertical SectionNav
  * rail (?tab= deep links preserved) + Overview hero (cover slot, chips,
- * address/maps), KPI row (units, lease-derived occupancy ring, balance
- * placeholder, buildings) and a details grid. Actions gated with
- * hasUiPermission; the API enforces for real.
+ * address/maps), KPI row (units, lease-derived occupancy ring, balance,
+ * buildings) and a details grid. The Units tab reuses the SAME responsive
+ * listing kit as the unit manager (ResponsiveDataListing + buildUnitColumns):
+ * table on desktop, swipe cards on mobile, search + status/building filters.
+ * Actions gated with hasUiPermission; the API enforces for real.
  */
 
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import type { Property, UnitStatus } from '@workspace/database'
+import { LayoutGrid, Users } from 'lucide-react'
+import type { Property } from '@workspace/database'
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@workspace/ui/components/alert-dialog'
 import { Badge } from '@workspace/ui/components/badge'
@@ -20,12 +23,21 @@ import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/componen
 import { PageLoader } from '@workspace/ui/components/loader'
 import { Text } from '@workspace/ui/components/text'
 import { toast } from '@workspace/ui/components/toast'
+import { ResponsiveDataListing } from '@workspace/ui/components/shared'
 
 import { SectionNav } from '@/app/(dashboard)/_components/domain/section-nav'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
-import { CoverThumb, MoneyCell, OccupancyRing } from '@/app/(dashboard)/_components/domain/listing'
+import {
+  CoverThumb,
+  MoneyCell,
+  OccupancyRing,
+  buildTenantColumns,
+  buildUnitColumns,
+  type TenantListRow,
+  type UnitListRow,
+} from '@/app/(dashboard)/_components/domain/listing'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import {
   hasMapPin,
@@ -35,11 +47,21 @@ import {
   mapsSatelliteUrl,
 } from '@/lib/maps'
 import { PROPERTY_CATEGORIES, type PropertyDefaultsInput } from '@/lib/domain/property-constants'
+import { UNIT_STATUSES } from '@/lib/domain/unit-constants'
+import { TENANT_STATUSES } from '@/lib/domain/tenant-constants'
 import { PropertyStatusBadge, humanizeAction } from '../_components/property-status'
-import { UnitStatusBadge } from '../_components/unit-status'
-import { OwnershipTab } from '../_components/ownership-tab'
-import { ManagementTab } from '../_components/management-tab'
-import { MediaTab } from '../_components/media-tab'
+import {
+  OwnershipTab,
+  type OwnershipTabRow,
+  type OwnerPartyOption,
+} from '../_components/ownership-tab'
+import {
+  ManagementTab,
+  type AgreementRow,
+  type AssignmentRow,
+  type MemberOption,
+} from '../_components/management-tab'
+import { MediaTab, type DocRow } from '../_components/media-tab'
 
 type PropertyDetail = Property & {
   _count: { units: number; buildings: number; ownerships: number; documents: number }
@@ -47,7 +69,11 @@ type PropertyDetail = Property & {
   coverPhoto?: string | null
   /** Derived outstanding balance — present when the caller holds charge.list. */
   balance?: { amount: string; currency: string } | null
+  videoUrl?: string | null
 }
+
+type ActivityEntry = { id: string; action: string; actorUserId: string | null; createdAt: string }
+type BuildingRow = { id: string; code: string; name?: string | null }
 
 function Chip({ children }: { children: ReactNode }) {
   return (
@@ -66,35 +92,8 @@ function DetailRow({ label, value }: { label: string; value: ReactNode }) {
   )
 }
 
-/** Activity tab — own fetch (mounts only when the tab opens). */
-function ActivityTab({ propertyId }: { propertyId: string }) {
-  const [entries, setEntries] = useState<
-    { id: string; action: string; actorUserId: string | null; createdAt: string }[]
-  >([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let cancelled = false
-    fetch(`/api/properties/${propertyId}/activity`, { credentials: 'include' })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to load activity')
-        const data = await res.json()
-        return (data.entries ?? []) as typeof entries
-      })
-      .then((list) => {
-        if (!cancelled) setEntries(list)
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('Failed to load activity')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [propertyId])
-
+/** Activity tab — data arrives with the page-level fetch-all. */
+function ActivityTab({ entries, loading }: { entries: ActivityEntry[]; loading: boolean }) {
   if (loading) return <PageLoader title="Loading activity…" description="" />
   if (entries.length === 0) {
     return (
@@ -123,90 +122,309 @@ function ActivityTab({ propertyId }: { propertyId: string }) {
   )
 }
 
-/** Units section — occupancy summary + deep link to the unit manager. */
-function UnitsTab({ propertyId }: { propertyId: string }) {
+/**
+ * Units section — SAME responsive listing kit as the unit manager page
+ * (ResponsiveDataListing + buildUnitColumns): desktop table, mobile cards,
+ * search + status/building filters, row actions (View/Edit/Add tenant/Delete)
+ * and an occupancy summary. Deeper tooling (buildings, bulk add, CSV import)
+ * lives one hop away via the "Unit manager" action.
+ */
+function UnitsTab({
+  propertyId,
+  units,
+  buildings,
+  loading,
+  onRefresh,
+}: {
+  propertyId: string
+  units: UnitListRow[]
+  buildings: BuildingRow[]
+  loading: boolean
+  onRefresh: () => void
+}) {
   const router = useRouter()
   const { hasUiPermission } = useUiPermission()
-  const [units, setUnits] = useState<
-    { id: string; unitRef: string; unitType: string; occupancy: string }[]
-  >([])
-  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [buildingFilter, setBuildingFilter] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<UnitListRow | null>(null)
+  const [busy, setBusy] = useState(false)
 
-  useEffect(() => {
-    let cancelled = false
-    fetch(`/api/properties/${propertyId}/units`, { credentials: 'include' })
-      .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to load units')
-        const data = await res.json()
-        return (data.units ?? []) as typeof units
-      })
-      .then((list) => {
-        if (!cancelled) setUnits(list)
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('Failed to load units')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
+  const confirmDelete = async () => {
+    if (!deleteTarget) return
+    setBusy(true)
+    try {
+      const res = await fetch(`/api/units/${deleteTarget.id}`, { method: 'DELETE', credentials: 'include' })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error ?? 'Failed to delete unit')
+        return
+      }
+      toast.success('Unit deleted')
+      setDeleteTarget(null)
+      onRefresh()
+    } catch {
+      toast.error('Network error')
+    } finally {
+      setBusy(false)
     }
-  }, [propertyId])
+  }
 
-  if (loading) return <PageLoader title="Loading units…" description="" />
+  const filtered = (() => {
+    let list = units
+    if (statusFilter) list = list.filter((u) => u.occupancy === statusFilter)
+    if (buildingFilter) {
+      list = buildingFilter === 'none'
+        ? list.filter((u) => !u.building)
+        : list.filter((u) => u.building?.id === buildingFilter)
+    }
+    const q = search.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (u) =>
+          u.unitRef.toLowerCase().includes(q) ||
+          (u.label ?? '').toLowerCase().includes(q) ||
+          (u.building ? `${u.building.code} ${u.building.name ?? ''}`.toLowerCase().includes(q) : false),
+      )
+    }
+    return list
+  })()
 
-  const occupied = units.filter((u) => u.occupancy === 'OCCUPIED').length
-  const vacant = units.filter((u) => u.occupancy === 'VACANT').length
+  const occupancy = (() => {
+    const occupied = units.filter((u) => u.occupancy === 'OCCUPIED').length
+    const vacant = units.filter((u) => u.occupancy === 'VACANT').length
+    return { occupied, vacant, other: units.length - occupied - vacant }
+  })()
+
+  const { columns, cardMapper } = buildUnitColumns({
+    showProperty: false,
+    showTenant: hasUiPermission('tenant.read'),
+    showRent: hasUiPermission('charge.list'),
+    onOpen: hasUiPermission('unit.read')
+      ? (u) => router.push(`/portfolio/${propertyId}/units/${u.id}`)
+      : undefined,
+    onEdit: hasUiPermission('unit.update')
+      ? (u) => router.push(`/portfolio/${propertyId}/units/${u.id}/edit`)
+      : undefined,
+    onDelete: hasUiPermission('unit.delete') ? (u) => setDeleteTarget(u) : undefined,
+    onAddTenant: hasUiPermission('lease.create')
+      ? (u) => router.push(`/leasing/leases/new?propertyId=${propertyId}&unitId=${u.id}`)
+      : undefined,
+  })
+
+  return (
+    <div className="space-y-4">
+      <div className="grid gap-3 sm:grid-cols-3">
+        <Card variant="outlined" size="sm">
+          <CardContent className="p-4">
+            <Text variant="caption" className="text-muted-foreground">Occupied</Text>
+            <Text variant="title" className="tabular-nums">{occupancy.occupied}</Text>
+          </CardContent>
+        </Card>
+        <Card variant="outlined" size="sm">
+          <CardContent className="p-4">
+            <Text variant="caption" className="text-muted-foreground">Vacant</Text>
+            <Text variant="title" className="tabular-nums">{occupancy.vacant}</Text>
+          </CardContent>
+        </Card>
+        <Card variant="outlined" size="sm">
+          <CardContent className="p-4">
+            <Text variant="caption" className="text-muted-foreground">Other (reserved / blocked)</Text>
+            <Text variant="title" className="tabular-nums">{occupancy.other}</Text>
+          </CardContent>
+        </Card>
+      </div>
+
+      <ResponsiveDataListing<UnitListRow>
+        title="Units"
+        items={filtered}
+        columns={columns}
+        cardMapper={cardMapper}
+        loading={loading}
+        skeletonCount={5}
+        count={units.length}
+        searchQuery={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search reference, label or building"
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [{ value: '', label: 'Status' }, ...UNIT_STATUSES],
+          },
+          {
+            key: 'building',
+            label: 'Building',
+            value: buildingFilter,
+            onChange: setBuildingFilter,
+            options: [
+              { value: '', label: 'Building' },
+              { value: 'none', label: 'No building' },
+              ...buildings.map((b) => ({ value: b.id, label: b.name ? `${b.code} — ${b.name}` : b.code })),
+            ],
+          },
+        ]}
+        inlineFilters
+        rowKey={(u) => u.id}
+        emptyState={{
+          icon: LayoutGrid,
+          title: units.length > 0 ? 'No units match' : 'No units yet',
+          description:
+            units.length > 0
+              ? 'Try different filters or search terms.'
+              : 'Add a single unit or generate a numbered run like 101–124.',
+        }}
+        primaryAction={
+          hasUiPermission('unit.create')
+            ? { label: 'Add unit', icon: LayoutGrid, onClick: () => router.push(`/portfolio/${propertyId}/units/new`) }
+            : undefined
+        }
+        secondaryActions={
+          hasUiPermission('unit.list')
+            ? [
+                {
+                  label: 'Unit manager',
+                  icon: LayoutGrid,
+                  onClick: () => router.push(`/portfolio/${propertyId}/units`),
+                },
+              ]
+            : undefined
+        }
+      />
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete unit {deleteTarget?.unitRef}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The unit record is removed permanently. Units with leases or charges can’t be deleted —
+              you’ll get an error.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction disabled={busy} onClick={() => confirmDelete()}>
+              Delete unit
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  )
+}
+
+/**
+ * Tenants section — parties holding a lease at THIS property (the People
+ * register lists every party the org captured; this is the property-scoped
+ * slice of the same directory). Shares `buildTenantColumns` so both listings
+ * render identical columns and mobile cards.
+ */
+function TenantsTab({
+  propertyId,
+  tenants,
+  loading,
+}: {
+  propertyId: string
+  tenants: TenantListRow[]
+  loading: boolean
+}) {
+  const router = useRouter()
+  const { hasUiPermission } = useUiPermission()
+  const [search, setSearch] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+
+  const filtered = useMemo(() => {
+    let list = tenants
+    if (statusFilter) list = list.filter((t) => t.status === statusFilter)
+    const q = search.trim().toLowerCase()
+    if (q) {
+      list = list.filter(
+        (t) =>
+          t.displayName.toLowerCase().includes(q) ||
+          (t.email ?? '').toLowerCase().includes(q) ||
+          (t.phone ?? '').includes(q) ||
+          (t.tenantRef ?? '').toLowerCase().includes(q),
+      )
+    }
+    return list
+  }, [tenants, search, statusFilter])
+
+  const { columns, cardMapper } = buildTenantColumns({
+    onOpen: (t) => router.push(`/people/tenants/${t.id}`),
+  })
+
+  const withActiveLease = tenants.filter((t) =>
+    t.leases.some((l) => l.status === 'ACTIVE' || l.status === 'ENDING'),
+  ).length
+  const portalActive = tenants.filter((t) => t.portalStatus === 'ACTIVE').length
+
+  if (loading) return <PageLoader title="Loading tenants…" description="" />
 
   return (
     <div className="space-y-4">
       <div className="grid gap-3 sm:grid-cols-3">
         <Card variant="outlined" size="sm">
           <CardContent className="flex flex-col gap-1 p-4">
-            <Text variant="caption" className="text-muted-foreground">Occupied</Text>
-            <Text variant="title" className="tabular-nums">{occupied}</Text>
+            <Text variant="caption" className="text-muted-foreground">Tenants</Text>
+            <Text variant="title" className="tabular-nums">{tenants.length}</Text>
           </CardContent>
         </Card>
         <Card variant="outlined" size="sm">
           <CardContent className="flex flex-col gap-1 p-4">
-            <Text variant="caption" className="text-muted-foreground">Vacant</Text>
-            <Text variant="title" className="tabular-nums">{vacant}</Text>
+            <Text variant="caption" className="text-muted-foreground">With active lease</Text>
+            <Text variant="title" className="tabular-nums">{withActiveLease}</Text>
           </CardContent>
         </Card>
         <Card variant="outlined" size="sm">
           <CardContent className="flex flex-col gap-1 p-4">
-            <Text variant="caption" className="text-muted-foreground">Total</Text>
-            <Text variant="title" className="tabular-nums">{units.length}</Text>
+            <Text variant="caption" className="text-muted-foreground">Portal active</Text>
+            <Text variant="title" className="tabular-nums">{portalActive}</Text>
           </CardContent>
         </Card>
       </div>
 
-      {units.length === 0 ? (
-        <Card variant="outlined" size="sm" className="items-center p-8 text-center">
-          <Text variant="bodyMuted">No units yet — add one or generate a run like 101–124.</Text>
-        </Card>
-      ) : (
-        <Card variant="outlined">
-          <CardContent className="divide-y divide-border p-0">
-            {units.slice(0, 8).map((u) => (
-              <div key={u.id} className="flex items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{u.unitRef}</p>
-                  <p className="text-xs text-muted-foreground">{u.unitType.replace(/_/g, ' ').toLowerCase()}</p>
-                </div>
-                <UnitStatusBadge status={u.occupancy as UnitStatus} />
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
-      {hasUiPermission('unit.list') && (
-        <Button variant="outline" onClick={() => router.push(`/portfolio/${propertyId}/units`)}>
-          Manage units
-        </Button>
-      )}
+      <ResponsiveDataListing<TenantListRow>
+        title="Tenants"
+        hideHeaderOnMobile
+        items={filtered}
+        columns={columns}
+        cardMapper={cardMapper}
+        loading={false}
+        skeletonCount={5}
+        count={tenants.length}
+        searchQuery={search}
+        onSearchChange={setSearch}
+        searchPlaceholder="Search name, email, phone or ref"
+        filters={[
+          {
+            key: 'status',
+            label: 'Status',
+            value: statusFilter,
+            onChange: setStatusFilter,
+            options: [{ value: '', label: 'All statuses' }, ...TENANT_STATUSES],
+          },
+        ]}
+        filterChips
+        rowKey={(t) => t.id}
+        emptyState={{
+          icon: Users,
+          title: 'No tenants here yet',
+          description:
+            tenants.length > 0
+              ? 'No tenants match these filters.'
+              : 'Nobody is leasing at this property yet. Create a lease to bring a tenant in.',
+        }}
+        primaryAction={
+          hasUiPermission('lease.create')
+            ? {
+                label: 'Add lease',
+                onClick: () => router.push(`/leasing/leases/new?propertyId=${propertyId}`),
+              }
+            : undefined
+        }
+      />
     </div>
   )
 }
@@ -218,26 +436,86 @@ export default function PropertyDetailPage() {
   const { hasUiPermission } = useUiPermission()
 
   const [property, setProperty] = useState<PropertyDetail | null>(null)
+  const [units, setUnits] = useState<UnitListRow[]>([])
+  const [buildings, setBuildings] = useState<BuildingRow[]>([])
+  const [tenants, setTenants] = useState<TenantListRow[]>([])
+  const [ownerships, setOwnerships] = useState<OwnershipTabRow[]>([])
+  const [ownerParties, setOwnerParties] = useState<OwnerPartyOption[]>([])
+  const [agreements, setAgreements] = useState<AgreementRow[]>([])
+  const [assignments, setAssignments] = useState<AssignmentRow[]>([])
+  const [members, setMembers] = useState<MemberOption[]>([])
+  const [documents, setDocuments] = useState<DocRow[]>([])
+  const [activity, setActivity] = useState<ActivityEntry[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [busy, setBusy] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
 
+  /**
+   * Single fetch-all on open (and after every mutation via onRefresh): one
+   * round-trip bundle instead of a fetch per tab activation. Slices the caller
+   * lacks permission for are skipped client-side (and 401/403 degrade to an
+   * empty list) so a partial-failure user never sees toast spam.
+   */
   const load = useCallback(() => {
     let cancelled = false
-    fetch(`/api/properties/${propertyId}`, { credentials: 'include' })
-      .then(async (res) => {
-        const data = await res.json().catch(() => ({}))
-        if (!res.ok) throw new Error(data.error ?? 'Failed to load property')
-        return data.property as PropertyDetail
-      })
-      .then((p) => {
-        if (!cancelled) setProperty(p)
-      })
-      .catch((err: unknown) => {
+
+    const list = <T,>(url: string, key: string, label: string, enabled = true): Promise<T[]> => {
+      if (!enabled) return Promise.resolve([])
+      return fetch(url, { credentials: 'include' })
+        .then(async (res) => {
+          if (res.status === 401 || res.status === 403) return []
+          if (!res.ok) {
+            toast.error(`Failed to load ${label}`)
+            return []
+          }
+          const data = (await res.json().catch(() => ({}))) as Record<string, unknown>
+          return (data?.[key] ?? []) as T[]
+        })
+        .catch(() => {
+          toast.error(`Failed to load ${label}`)
+          return [] as T[]
+        })
+    }
+
+    Promise.all([
+      fetch(`/api/properties/${propertyId}`, { credentials: 'include' }).then(
+        async (res) => {
+          const data = (await res.json().catch(() => ({}))) as { error?: string; property?: PropertyDetail }
+          if (!res.ok || !data.property) throw new Error(data.error ?? 'Failed to load property')
+          return { ok: true as const, property: data.property }
+        },
+        (err: unknown) => ({ ok: false as const, error: err }),
+      ),
+      list<UnitListRow>(`/api/properties/${propertyId}/units`, 'units', 'units', hasUiPermission('unit.list')),
+      list<BuildingRow>(`/api/properties/${propertyId}/buildings`, 'buildings', 'buildings', hasUiPermission('unit.list')),
+      list<TenantListRow>(`/api/tenants?propertyId=${propertyId}`, 'tenants', 'tenants', hasUiPermission('tenant.list')),
+      list<OwnershipTabRow>(`/api/properties/${propertyId}/ownerships`, 'ownerships', 'ownership', hasUiPermission('ownership.list')),
+      list<OwnerPartyOption>('/api/owner-parties', 'parties', 'owner parties', hasUiPermission('ownership.list')),
+      list<AgreementRow>(`/api/agreements?propertyId=${propertyId}`, 'agreements', 'agreements', hasUiPermission('agreement.list')),
+      list<AssignmentRow>(`/api/properties/${propertyId}/staff`, 'assignments', 'staff', hasUiPermission('agreement.list')),
+      list<MemberOption>('/api/members', 'members', 'members', hasUiPermission('property.update')),
+      list<DocRow>(`/api/documents?entityType=PROPERTY&entityId=${propertyId}`, 'documents', 'documents', hasUiPermission('document.read')),
+      list<ActivityEntry>(`/api/properties/${propertyId}/activity`, 'entries', 'activity'),
+    ])
+      .then(([propRes, u, b, t, o, op, a, s, m, d, act]) => {
         if (cancelled) return
-        setNotFound(true)
-        toast.error(err instanceof Error ? err.message : 'Property not found')
+        if (!propRes.ok) {
+          setNotFound(true)
+          toast.error(propRes.error instanceof Error ? propRes.error.message : 'Property not found')
+          return
+        }
+        setProperty(propRes.property)
+        setUnits(u)
+        setBuildings(b)
+        setTenants(t)
+        setOwnerships(o)
+        setOwnerParties(op)
+        setAgreements(a)
+        setAssignments(s)
+        setMembers(m.filter((row) => row.userId))
+        setDocuments(d)
+        setActivity(act)
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -245,6 +523,10 @@ export default function PropertyDetailPage() {
     return () => {
       cancelled = true
     }
+    // hasUiPermission is a per-render closure (see use-ui-permission) — adding
+    // it to deps would refetch on every render. Property change is the only
+    // meaningful trigger; permission flips ride a full navigation.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [propertyId])
 
   useEffect(() => load(), [load])
@@ -343,15 +625,15 @@ export default function PropertyDetailPage() {
                 <Chip key={t}>{t}</Chip>
               ))}
             </div>
-            <div className="space-y-1 text-sm">
-              <p className="text-foreground">{addressText || 'No address yet'}</p>
+            <div className="space-y-1">
+              <Text variant="body">{addressText || 'No address yet'}</Text>
               {property.landmark ? (
-                <p className="text-muted-foreground">Near {property.landmark}</p>
+                <Text variant="bodyMuted">Near {property.landmark}</Text>
               ) : null}
               {pin ? (
-                <p className="text-xs text-muted-foreground">Pin: {lat.toFixed(6)}, {lng.toFixed(6)}</p>
+                <Text variant="caption">Pin: {lat.toFixed(6)}, {lng.toFixed(6)}</Text>
               ) : (
-                <p className="text-xs text-warning">No map pin yet</p>
+                <Text variant="caption" className="text-warning">No map pin yet</Text>
               )}
             </div>
             <div className="flex flex-wrap gap-2">
@@ -369,7 +651,7 @@ export default function PropertyDetailPage() {
               </Button>
             </div>
             {property.description ? (
-              <p className="text-sm text-muted-foreground">{property.description}</p>
+              <Text variant="bodyMuted">{property.description}</Text>
             ) : null}
           </div>
         </CardContent>
@@ -511,20 +793,84 @@ export default function PropertyDetailPage() {
 
   const sections = [
     { id: 'overview', label: 'Overview', content: overview },
-    { id: 'units', label: 'Units', content: <UnitsTab propertyId={propertyId} /> },
+    {
+      id: 'units',
+      label: 'Units',
+      content: (
+        <UnitsTab
+          propertyId={propertyId}
+          units={units}
+          buildings={buildings}
+          loading={loading}
+          onRefresh={load}
+        />
+      ),
+    },
+    ...(hasUiPermission('tenant.list')
+      ? [
+          {
+            id: 'tenants',
+            label: 'Tenants',
+            content: <TenantsTab propertyId={propertyId} tenants={tenants} loading={loading} />,
+          },
+        ]
+      : []),
     ...(hasUiPermission('ownership.list')
-      ? [{ id: 'ownership', label: 'Ownership', content: <OwnershipTab propertyId={propertyId} /> }]
+      ? [
+          {
+            id: 'ownership',
+            label: 'Ownership',
+            content: (
+              <OwnershipTab
+                propertyId={propertyId}
+                rows={ownerships}
+                parties={ownerParties}
+                loading={loading}
+                onRefresh={load}
+              />
+            ),
+          },
+        ]
       : []),
     ...(hasUiPermission('agreement.list')
-      ? [{ id: 'management', label: 'Management', content: <ManagementTab propertyId={propertyId} /> }]
+      ? [
+          {
+            id: 'management',
+            label: 'Management',
+            content: (
+              <ManagementTab
+                propertyId={propertyId}
+                agreements={agreements}
+                assignments={assignments}
+                members={members}
+                loading={loading}
+                onRefresh={load}
+              />
+            ),
+          },
+        ]
       : []),
     ...(hasUiPermission('document.read')
-      ? [{ id: 'media', label: 'Media', content: <MediaTab propertyId={propertyId} /> }]
+      ? [
+          {
+            id: 'media',
+            label: 'Media',
+            content: (
+              <MediaTab
+                propertyId={propertyId}
+                docs={documents}
+                videoUrl={property.videoUrl ?? null}
+                loading={loading}
+                onRefresh={load}
+              />
+            ),
+          },
+        ]
       : []),
     {
       id: 'activity',
       label: 'Activity',
-      content: <ActivityTab propertyId={propertyId} />,
+      content: <ActivityTab entries={activity} loading={loading} />,
     },
   ]
 

@@ -9,7 +9,7 @@
  * Staff: assign/revoke (arm 3 from startsAt; revoke flips isActive=false).
  */
 
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Handshake, Plus, UserPlus, XCircle, CheckCircle2, StopCircle } from 'lucide-react'
 import type { AgreementStatus } from '@workspace/database'
@@ -26,7 +26,7 @@ import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { AgreementStatusBadge } from './agreement-status'
 import { StaffDialog } from './staff-dialog'
 
-type AgreementRow = {
+export type AgreementRow = {
   id: string
   status: AgreementStatus
   startsAt: string
@@ -37,8 +37,8 @@ type AgreementRow = {
   scope?: unknown
 }
 
-type MemberOption = { userId: string; name?: string | null; email?: string | null }
-type AssignmentRow = {
+export type MemberOption = { userId: string; name?: string | null; email?: string | null }
+export type AssignmentRow = {
   id: string
   isActive: boolean
   title?: string | null
@@ -55,46 +55,26 @@ function scopeNotes(scope: unknown): string {
   return ''
 }
 
-export function ManagementTab({ propertyId }: { propertyId: string }) {
+export function ManagementTab({
+  propertyId,
+  agreements,
+  assignments,
+  members,
+  loading,
+  onRefresh,
+}: {
+  propertyId: string
+  agreements: AgreementRow[]
+  assignments: AssignmentRow[]
+  members: MemberOption[]
+  loading: boolean
+  onRefresh: () => void
+}) {
   const router = useRouter()
   const { hasUiPermission } = useUiPermission()
 
-  const [agreements, setAgreements] = useState<AgreementRow[]>([])
-  const [assignments, setAssignments] = useState<AssignmentRow[]>([])
-  const [members, setMembers] = useState<MemberOption[]>([])
-  const [loading, setLoading] = useState(true)
   const [staffOpen, setStaffOpen] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
-
-  const load = useCallback(() => {
-    let cancelled = false
-    Promise.all([
-      fetch(`/api/agreements?propertyId=${propertyId}`, { credentials: 'include' }).then((r) => r.json()),
-      fetch(`/api/properties/${propertyId}/staff`, { credentials: 'include' }).then((r) => r.json()),
-      hasUiPermission('property.update')
-        ? fetch('/api/members', { credentials: 'include' }).then((r) => r.json())
-        : Promise.resolve({ members: [] }),
-    ])
-      .then(([aRes, sRes, mRes]) => {
-        if (cancelled) return
-        setAgreements((aRes.agreements ?? []) as AgreementRow[])
-        setAssignments((sRes.assignments ?? []) as AssignmentRow[])
-        setMembers(((mRes.members ?? []) as MemberOption[]).filter((m) => m.userId))
-      })
-      .catch(() => {
-        if (!cancelled) toast.error('Failed to load management data')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-    // hasUiPermission is stable for a session — re-run only on property change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [propertyId])
-
-  useEffect(() => load(), [load])
 
   const memberOptions: SelectOption[] = useMemo(
     () =>
@@ -118,7 +98,7 @@ export function ManagementTab({ propertyId }: { propertyId: string }) {
         return
       }
       toast.success(action === 'approve' ? 'Agreement approved — manager access is live' : 'Agreement ended')
-      load()
+      onRefresh()
     } catch {
       toast.error('Network error')
     } finally {
@@ -139,7 +119,7 @@ export function ManagementTab({ propertyId }: { propertyId: string }) {
         return
       }
       toast.success('Assignment revoked')
-      load()
+      onRefresh()
     } catch {
       toast.error('Network error')
     } finally {
@@ -297,7 +277,7 @@ export function ManagementTab({ propertyId }: { propertyId: string }) {
         memberOptions={memberOptions}
         propertyId={propertyId}
         onClose={() => setStaffOpen(false)}
-        onSaved={load}
+        onSaved={onRefresh}
       />
 
       {agreements.length === 0 && !canPropose ? (
