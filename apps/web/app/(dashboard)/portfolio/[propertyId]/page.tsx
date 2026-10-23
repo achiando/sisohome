@@ -25,6 +25,7 @@ import { Text } from '@workspace/ui/components/text'
 import { toast } from '@workspace/ui/components/toast'
 import { ResponsiveDataListing } from '@workspace/ui/components/shared'
 
+import { AddTenantDialog } from '@/app/(dashboard)/_components/domain/add-tenant-dialog'
 import { SectionNav } from '@/app/(dashboard)/_components/domain/section-nav'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
@@ -148,6 +149,7 @@ function UnitsTab({
   const [statusFilter, setStatusFilter] = useState('')
   const [buildingFilter, setBuildingFilter] = useState('')
   const [deleteTarget, setDeleteTarget] = useState<UnitListRow | null>(null)
+  const [addTenantUnit, setAddTenantUnit] = useState<UnitListRow | null>(null)
   const [busy, setBusy] = useState(false)
 
   const confirmDelete = async () => {
@@ -200,6 +202,7 @@ function UnitsTab({
     showProperty: false,
     showTenant: hasUiPermission('tenant.read'),
     showRent: hasUiPermission('charge.list'),
+    showBills: hasUiPermission('charge.list'),
     onOpen: hasUiPermission('unit.read')
       ? (u) => router.push(`/portfolio/${propertyId}/units/${u.id}`)
       : undefined,
@@ -207,9 +210,7 @@ function UnitsTab({
       ? (u) => router.push(`/portfolio/${propertyId}/units/${u.id}/edit`)
       : undefined,
     onDelete: hasUiPermission('unit.delete') ? (u) => setDeleteTarget(u) : undefined,
-    onAddTenant: hasUiPermission('lease.create')
-      ? (u) => router.push(`/leasing/leases/new?propertyId=${propertyId}&unitId=${u.id}`)
-      : undefined,
+    onAddTenant: hasUiPermission('lease.create') ? (u) => setAddTenantUnit(u) : undefined,
   })
 
   return (
@@ -311,6 +312,14 @@ function UnitsTab({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AddTenantDialog
+        open={Boolean(addTenantUnit)}
+        unitId={addTenantUnit?.id ?? ''}
+        unitLabel={addTenantUnit ? addTenantUnit.label || addTenantUnit.unitRef : null}
+        onClose={() => setAddTenantUnit(null)}
+        onSaved={onRefresh}
+      />
     </div>
   )
 }

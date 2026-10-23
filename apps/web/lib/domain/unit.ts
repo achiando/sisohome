@@ -241,6 +241,48 @@ async function occupantMap(
   return out;
 }
 
+/** Active non-rent recurring bills attached directly to a unit (register column). */
+export interface UnitBillSummary {
+  id: string;
+  name: string;
+  chargeType: string;
+  amount: string;
+  currency: string;
+  frequency: string;
+}
+
+async function billMap(unitIds: string[]): Promise<Map<string, UnitBillSummary[]>> {
+  if (unitIds.length === 0) return new Map();
+  const rows = await db.chargeSchedule.findMany({
+    where: { unitId: { in: unitIds }, isActive: true, chargeType: { not: 'RENT' } },
+    select: {
+      id: true,
+      unitId: true,
+      name: true,
+      chargeType: true,
+      amount: true,
+      currency: true,
+      frequency: true,
+    },
+    orderBy: [{ name: 'asc' }],
+  });
+  const out = new Map<string, UnitBillSummary[]>();
+  for (const row of rows) {
+    if (!row.unitId) continue;
+    const list = out.get(row.unitId) ?? [];
+    list.push({
+      id: row.id,
+      name: row.name,
+      chargeType: row.chargeType as string,
+      amount: row.amount.toString(),
+      currency: row.currency,
+      frequency: row.frequency as string,
+    });
+    out.set(row.unitId, list);
+  }
+  return out;
+}
+
 /**
  * Recompute the OCCUPIED/VACANT cache from lease truth for the given units
  * (plan-slice-2 §2.3 — called on lease approve/terminate/close/renew).
@@ -449,7 +491,12 @@ export async function listUnits(
   });
   const shaped = await shapeUnits(rows);
   const occupants = await occupantMap(rows.map((r) => r.id), opts.includeTenantContact ?? false);
-  return shaped.map((r) => ({ ...r, occupant: occupants.get(r.id) ?? null }));
+  const bills = await billMap(rows.map((r) => r.id));
+  return shaped.map((r) => ({
+    ...r,
+    occupant: occupants.get(r.id) ?? null,
+    bills: bills.get(r.id) ?? [],
+  }));
 }
 
 export interface UnitListFilters {
@@ -508,10 +555,12 @@ export async function listAllUnits(actor: ScopeActor, opts: UnitListFilters = {}
   });
   const shaped = await shapeUnits(rows);
   const occupants = await occupantMap(rows.map((r) => r.id), opts.includeTenantContact ?? false);
+  const bills = await billMap(rows.map((r) => r.id));
   return shaped.map((r) => ({
     ...r,
     coverPhoto: r.property.documents[0]?.storageKey ?? null,
     occupant: occupants.get(r.id) ?? null,
+    bills: bills.get(r.id) ?? [],
   }));
 }
 

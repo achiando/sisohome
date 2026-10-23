@@ -3,7 +3,9 @@
  * Property column only on the global /units register; Tenant respects the
  * tenant.read UI gate; Market Rent prefers the live lease unit rent and falls
  * back to the unit's template default. "Add tenant" appears on vacant rows and
- * jumps into the lease wizard with the unit prefilled (plan decision).
+ * opens the one-dialog quick tenancy flow (plan-slice-2b). "Bills" lists
+ * active non-rent recurring charges on the unit (waste, water…) with their
+ * collection frequency — same charge.list gate as Market Rent.
  */
 
 import type { CardMapper, ColumnDef } from '@workspace/ui/components/shared'
@@ -18,6 +20,7 @@ import {
 import { Boxes, MoreHorizontal, Pencil, Trash2, UserPlus } from 'lucide-react'
 
 import { UnitStatusBadge } from '@/app/(dashboard)/portfolio/_components/unit-status'
+import { chargeTypeLabel, frequencyLabel } from '@/lib/domain/charge-constants'
 import { formatUnitKind } from '@/lib/domain/unit-constants'
 import { MoneyCell, TenantCell, UnitCell } from './cells'
 import type { UnitListRow } from './types'
@@ -29,6 +32,8 @@ export interface UnitColumnOptions {
   showTenant: boolean
   /** charge.list */
   showRent: boolean
+  /** charge.list — the "Bills" column (non-rent recurring charges). */
+  showBills: boolean
   onOpen?: (row: UnitListRow) => void
   onEdit?: (row: UnitListRow) => void
   onDelete?: (row: UnitListRow) => void
@@ -40,6 +45,7 @@ export function buildUnitColumns({
   showProperty,
   showTenant,
   showRent,
+  showBills,
   onOpen,
   onEdit,
   onDelete,
@@ -132,6 +138,32 @@ export function buildUnitColumns({
           },
         ] as ColumnDef<UnitListRow>[])
       : []),
+    ...(showBills
+      ? ([
+          {
+            header: 'Bills',
+            className: 'w-44',
+            cell: (u) => {
+              const bills = u.bills ?? []
+              if (bills.length === 0) return <span className="text-sm text-muted-foreground">—</span>
+              const shown = bills.slice(0, 2)
+              return (
+                <div className="flex flex-col gap-1">
+                  {shown.map((b) => (
+                    <span key={b.id} className="truncate text-xs" title={`${b.name} · ${chargeTypeLabel(b.chargeType)} · ${frequencyLabel(b.frequency)}`}>
+                      {chargeTypeLabel(b.chargeType)} · {frequencyLabel(b.frequency).toLowerCase()} · {b.currency}{' '}
+                      {Number(b.amount).toLocaleString()}
+                    </span>
+                  ))}
+                  {bills.length > 2 ? (
+                    <span className="text-xs text-muted-foreground">+{bills.length - 2} more</span>
+                  ) : null}
+                </div>
+              )
+            },
+          },
+        ] as ColumnDef<UnitListRow>[])
+      : []),
     ...(hasActions
       ? ([
           {
@@ -214,6 +246,14 @@ export function buildUnitColumns({
             : u.defaultRent != null
               ? String(u.defaultRent)
               : '—',
+        })
+      }
+      if (showBills && (u.bills ?? []).length > 0) {
+        fields.push({
+          label: 'Bills',
+          value: (u.bills ?? [])
+            .map((b) => `${chargeTypeLabel(b.chargeType)} (${frequencyLabel(b.frequency).toLowerCase()})`)
+            .join(', '),
         })
       }
       return fields

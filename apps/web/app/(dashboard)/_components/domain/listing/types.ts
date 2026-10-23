@@ -52,4 +52,6 @@ export type UnitListRow = Unit & {
     currency: string | null
   }
   coverPhoto?: string | null
+  /** Active non-rent recurring bills attached to the unit (charge.list). */
+  bills?: { id: string; name: string; chargeType: string; amount: string; currency: string; frequency: string }[]
 }

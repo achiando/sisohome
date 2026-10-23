@@ -30,6 +30,8 @@ import { PageLoader } from '@workspace/ui/components/loader'
 import { toast } from '@workspace/ui/components/toast'
 
 import { DetailTabs, type DetailTab } from '@/app/(dashboard)/_components/domain/detail-tabs'
+import { AddTenantDialog } from '@/app/(dashboard)/_components/domain/add-tenant-dialog'
+import { UnitBillsCard } from '@/app/(dashboard)/portfolio/_components/unit-bills-card'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { formatDate, formatMoney, formatRelativeDay } from '@/app/(dashboard)/_components/domain/format'
@@ -120,7 +122,7 @@ function infoRow(icon: ReactNode, label: string, value: string | number | null |
 }
 
 /** Leases tab — own fetch (mounts only when the tab opens). */
-function LeasesTab({ unitId }: { unitId: string }) {
+function LeasesTab({ unitId, onAddTenant }: { unitId: string; onAddTenant?: () => void }) {
   const router = useRouter()
   const { hasUiPermission } = useUiPermission()
   const allowed = hasUiPermission('lease.list')
@@ -172,16 +174,8 @@ function LeasesTab({ unitId }: { unitId: string }) {
     return (
       <Card variant="outlined" size="sm" className="items-center p-8 text-center">
         <p className="text-sm font-medium">No leases for this unit</p>
-        {hasUiPermission('lease.create') ? (
-          <Button
-            variant="outline"
-            size="sm"
-            className="mt-3"
-            onClick={() => {
-              const params = new URLSearchParams({ unitId })
-              router.push(`/leasing/leases/new?${params.toString()}`)
-            }}
-          >
+        {hasUiPermission('lease.create') && onAddTenant ? (
+          <Button variant="outline" size="sm" className="mt-3" onClick={onAddTenant}>
             Add tenant
           </Button>
         ) : null}
@@ -349,6 +343,7 @@ export default function UnitDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [addTenantOpen, setAddTenantOpen] = useState(false)
 
   const load = useCallback(() => {
     let cancelled = false
@@ -560,6 +555,8 @@ export default function UnitDetailPage() {
             <p className="mt-2 whitespace-pre-wrap text-sm text-muted-foreground">{unit.notes}</p>
           </div>
         ) : null}
+
+        <UnitBillsCard unitId={unitId} currency={currency} />
       </div>
     ),
   }
@@ -567,7 +564,7 @@ export default function UnitDetailPage() {
   const leasesTab: DetailTab = {
     id: 'leases',
     label: 'Leases',
-    content: <LeasesTab unitId={unitId} />,
+    content: <LeasesTab unitId={unitId} onAddTenant={() => setAddTenantOpen(true)} />,
   }
 
   const photosTab: DetailTab = {
@@ -596,12 +593,7 @@ export default function UnitDetailPage() {
               </Button>
             ) : null}
             {hasUiPermission('lease.create') && unit.occupancy === 'VACANT' ? (
-              <Button
-                variant="primary"
-                onClick={() =>
-                  router.push(`/leasing/leases/new?propertyId=${propertyId}&unitId=${unitId}`)
-                }
-              >
+              <Button variant="primary" onClick={() => setAddTenantOpen(true)}>
                 Add tenant
               </Button>
             ) : null}
@@ -633,6 +625,17 @@ export default function UnitDetailPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AddTenantDialog
+        open={addTenantOpen}
+        unitId={unitId}
+        unitLabel={unit.label || unit.unitRef}
+        onClose={() => setAddTenantOpen(false)}
+        onSaved={(leaseId) => {
+          load()
+          if (leaseId) router.push(`/leasing/leases/${leaseId}`)
+        }}
+      />
     </div>
   )
 }

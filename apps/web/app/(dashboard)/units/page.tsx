@@ -5,7 +5,8 @@
  * portfolio.webp). Server gate = GET /api/units (unit.list, property-scoped);
  * tenant names follow the tenant.read UI gate; market rent follows
  * charge.list. View/Edit jump to the existing per-property unit pages;
- * Add tenant jumps into the lease wizard with the unit prefilled.
+ * Add tenant opens the one-dialog quick tenancy flow (the 4-step wizard
+ * stays at /leasing/leases/new for multi-unit agreements).
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
@@ -14,6 +15,7 @@ import { Boxes } from 'lucide-react'
 
 import { ResponsiveDataListing } from '@workspace/ui/components/shared'
 import { toast } from '@workspace/ui/components/toast'
+import { AddTenantDialog } from '@/app/(dashboard)/_components/domain/add-tenant-dialog'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { buildUnitColumns, type UnitListRow } from '@/app/(dashboard)/_components/domain/listing'
@@ -32,6 +34,7 @@ export default function GlobalUnitsPage() {
   const [search, setSearch] = useState('')
   const [propertyFilter, setPropertyFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [addTenantUnit, setAddTenantUnit] = useState<UnitListRow | null>(null)
 
   const load = useCallback(() => {
     let cancelled = false
@@ -90,11 +93,10 @@ export default function GlobalUnitsPage() {
     showProperty: true,
     showTenant: hasUiPermission('tenant.read'),
     showRent: hasUiPermission('charge.list'),
+    showBills: hasUiPermission('charge.list'),
     onOpen: (u) => router.push(`/portfolio/${u.propertyId}/units/${u.id}`),
     onEdit: (u) => router.push(`/portfolio/${u.propertyId}/units/${u.id}/edit`),
-    onAddTenant: hasUiPermission('lease.create')
-      ? (u) => router.push(`/leasing/leases/new?propertyId=${u.propertyId}&unitId=${u.id}`)
-      : undefined,
+    onAddTenant: hasUiPermission('lease.create') ? (u) => setAddTenantUnit(u) : undefined,
   })
 
   return (
@@ -142,6 +144,14 @@ export default function GlobalUnitsPage() {
               ? 'No units match these filters.'
               : 'Units appear here once properties have unit records.',
         }}
+      />
+
+      <AddTenantDialog
+        open={Boolean(addTenantUnit)}
+        unitId={addTenantUnit?.id ?? ''}
+        unitLabel={addTenantUnit ? addTenantUnit.label || addTenantUnit.unitRef : null}
+        onClose={() => setAddTenantUnit(null)}
+        onSaved={load}
       />
     </div>
   )

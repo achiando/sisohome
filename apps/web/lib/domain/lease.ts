@@ -23,7 +23,7 @@ import {
   requirePropertyInScope,
   type ScopeActor,
 } from './property-scope';
-import { tenantScopeWhere } from './tenant';
+import { createTenant as createTenantRecord, tenantScopeWhere } from './tenant';
 import { recomputeUnitStatus } from './unit';
 import {
   LEASE_PARTY_RELATIONSHIP_VALUES,
@@ -447,6 +447,86 @@ export async function createLease(actor: ScopeActor, raw: Raw) {
     }
     throw err;
   }
+}
+
+// ── quick tenancy (one-dialog path from a vacant unit) ───────────────────────
+
+/**
+ * Quick tenancy — the short path behind "Add tenant" on a vacant unit row.
+ * Picks an existing tenant OR captures a minimal new one (name + phone/email),
+ * then drafts a PENDING_APPROVAL lease for that single unit. Rent/deposit/
+ * currency default from the unit template, so the dialog is a handful of
+ * fields rather than the 4-step wizard (which stays for multi-unit and
+ * joint-tenancy setups at /leasing/leases/new).
+ *
+ * Order matters: the unit + property are validated BEFORE a tenant row is
+ * created, so a bad unit never leaves an orphan party behind.
+ */
+export async function createQuickTenancy(actor: ScopeActor, raw: Raw) {
+  const propertyId = str(raw.propertyId);
+  const unitId = str(raw.unitId);
+  if (!propertyId || !unitId) throw new RouteError(400, 'propertyId and unitId are required');
+  // Scope assert (404 out-of-org) before any write.
+  await requirePropertyInScope(actor, propertyId);
+
+  const unit = await db.unit.findFirst({
+    where: { id: unitId, propertyId, property: propertyScopeWhere(actor) },
+    select: { id: true, defaultRent: true, depositDefault: true, currency: true },
+  });
+  if (!unit) throw new RouteError(404, 'Unit not found');
+
+  const startsAt = dateOrNull(raw.startsAt, 'startsAt');
+  if (!startsAt) throw new RouteError(400, 'startsAt is required');
+  const endsAt = dateOrNull(raw.endsAt, 'endsAt') ?? null;
+  assertDates(startsAt, endsAt);
+
+  // Tenant: either an existing party (scope-checked by parseParties) or a
+  // minimal new record captured right here.
+  let tenantId = str(raw.tenantId);
+  if (!tenantId) {
+    const nt = (raw.newTenant ?? {}) as Raw;
+    const displayName = str(nt.displayName);
+    if (!displayName) {
+      throw new RouteError(400, 'Pick an existing tenant or provide newTenant.displayName');
+    }
+    const created = await createTenantRecord(actor, {
+      displayName,
+      phone: str(nt.phone),
+      email: str(nt.email),
+      partyType: pick(nt.partyType, ['PERSON', 'COMPANY'], 'newTenant.partyType') ?? 'PERSON',
+    });
+    tenantId = created.id;
+  }
+
+  const monthlyRent = decOrNull(raw.monthlyRent, 'monthlyRent') ?? unit.defaultRent;
+  if (monthlyRent === undefined || monthlyRent === null) {
+    throw new RouteError(400, 'monthlyRent is required — this unit has no default rent');
+  }
+  const depositMonths = decOrNull(raw.depositMonths, 'depositMonths');
+  const depositAmount =
+    depositMonths !== undefined && depositMonths !== null
+      ? new Prisma.Decimal(monthlyRent).mul(depositMonths)
+      : null;
+
+  const lease = await createLease(actor, {
+    propertyId,
+    status: 'PENDING_APPROVAL',
+    startsAt: startsAt.toISOString(),
+    endsAt: endsAt ? endsAt.toISOString() : null,
+    units: [
+      {
+        unitId,
+        monthlyRent: monthlyRent.toString(),
+        currency: str(raw.currency) ?? unit.currency ?? undefined,
+        depositAmount: depositAmount ? depositAmount.toFixed(2) : undefined,
+      },
+    ],
+    parties: [{ tenantId, relationship: 'PRIMARY' }],
+  });
+
+  // createLease already writes the LEASE audit row (this path is just a
+  // narrower input to the same mutation).
+  return { lease, tenantId };
 }
 
 // ── update (amendment) ───────────────────────────────────────────────────────
