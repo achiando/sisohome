@@ -63,6 +63,8 @@ import {
   type MemberOption,
 } from '../_components/management-tab'
 import { MediaTab, type DocRow } from '../_components/media-tab'
+import { PropertyAccountsCard, type LedgerAccountRow } from '../_components/property-accounts-card'
+import { PropertyReportTab } from '../_components/property-report-tab'
 
 type PropertyDetail = Property & {
   _count: { units: number; buildings: number; ownerships: number; documents: number }
@@ -203,6 +205,7 @@ function UnitsTab({
     showTenant: hasUiPermission('tenant.read'),
     showRent: hasUiPermission('charge.list'),
     showBills: hasUiPermission('charge.list'),
+    showBalance: hasUiPermission('charge.list'),
     onOpen: hasUiPermission('unit.read')
       ? (u) => router.push(`/portfolio/${propertyId}/units/${u.id}`)
       : undefined,
@@ -455,6 +458,7 @@ export default function PropertyDetailPage() {
   const [members, setMembers] = useState<MemberOption[]>([])
   const [documents, setDocuments] = useState<DocRow[]>([])
   const [activity, setActivity] = useState<ActivityEntry[]>([])
+  const [accounts, setAccounts] = useState<LedgerAccountRow[]>([])
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -506,8 +510,9 @@ export default function PropertyDetailPage() {
       list<MemberOption>('/api/members', 'members', 'members', hasUiPermission('property.update')),
       list<DocRow>(`/api/documents?entityType=PROPERTY&entityId=${propertyId}`, 'documents', 'documents', hasUiPermission('document.read')),
       list<ActivityEntry>(`/api/properties/${propertyId}/activity`, 'entries', 'activity'),
+      list<LedgerAccountRow>(`/api/properties/${propertyId}/accounts`, 'accounts', 'accounts', hasUiPermission('payment.list')),
     ])
-      .then(([propRes, u, b, t, o, op, a, s, m, d, act]) => {
+      .then(([propRes, u, b, t, o, op, a, s, m, d, act, acct]) => {
         if (cancelled) return
         if (!propRes.ok) {
           setNotFound(true)
@@ -525,6 +530,7 @@ export default function PropertyDetailPage() {
         setMembers(m.filter((row) => row.userId))
         setDocuments(d)
         setActivity(act)
+        setAccounts(acct)
       })
       .finally(() => {
         if (!cancelled) setLoading(false)
@@ -795,6 +801,8 @@ export default function PropertyDetailPage() {
               </CardContent>
             </Card>
           )}
+
+          <PropertyAccountsCard accounts={accounts} />
         </div>
       </div>
     </div>
@@ -873,6 +881,15 @@ export default function PropertyDetailPage() {
                 onRefresh={load}
               />
             ),
+          },
+        ]
+      : []),
+    ...(hasUiPermission('charge.list')
+      ? [
+          {
+            id: 'report',
+            label: 'Report',
+            content: <PropertyReportTab propertyId={propertyId} currency={property.currency} />,
           },
         ]
       : []),

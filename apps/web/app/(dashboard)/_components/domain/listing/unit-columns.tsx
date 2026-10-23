@@ -34,6 +34,8 @@ export interface UnitColumnOptions {
   showRent: boolean
   /** charge.list — the "Bills" column (non-rent recurring charges). */
   showBills: boolean
+  /** charge.list — the "Balance" column (per-unit pending vs paid). */
+  showBalance: boolean
   onOpen?: (row: UnitListRow) => void
   onEdit?: (row: UnitListRow) => void
   onDelete?: (row: UnitListRow) => void
@@ -46,6 +48,7 @@ export function buildUnitColumns({
   showTenant,
   showRent,
   showBills,
+  showBalance,
   onOpen,
   onEdit,
   onDelete,
@@ -164,6 +167,36 @@ export function buildUnitColumns({
           },
         ] as ColumnDef<UnitListRow>[])
       : []),
+    ...(showBalance
+      ? ([
+          {
+            header: 'Balance',
+            cell: (u) => {
+              const bal = u.balance
+              if (!bal) return <span className="text-sm text-muted-foreground">—</span>
+              const pending = Number(bal.pending)
+              const paid = Number(bal.paid)
+              if (pending <= 0.009 && paid <= 0.009) {
+                return <span className="text-sm text-muted-foreground">—</span>
+              }
+              return (
+                <div className="flex flex-col gap-0.5 text-xs">
+                  {pending > 0.009 ? (
+                    <span className="font-medium text-amber-700 dark:text-amber-300">
+                      {bal.currency} {pending.toLocaleString()} due
+                    </span>
+                  ) : null}
+                  {paid > 0.009 ? (
+                    <span className="text-muted-foreground">
+                      {bal.currency} {paid.toLocaleString()} paid
+                    </span>
+                  ) : null}
+                </div>
+              )
+            },
+          },
+        ] as ColumnDef<UnitListRow>[])
+      : []),
     ...(hasActions
       ? ([
           {
@@ -254,6 +287,12 @@ export function buildUnitColumns({
           value: (u.bills ?? [])
             .map((b) => `${chargeTypeLabel(b.chargeType)} (${frequencyLabel(b.frequency).toLowerCase()})`)
             .join(', '),
+        })
+      }
+      if (showBalance && u.balance && Number(u.balance.pending) > 0.009) {
+        fields.push({
+          label: 'Balance due',
+          value: `${u.balance.currency} ${Number(u.balance.pending).toLocaleString()}`,
         })
       }
       return fields

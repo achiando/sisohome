@@ -27,6 +27,7 @@ import {
 } from './property-scope';
 import { AREA_UNITS, RENT_FREQUENCIES } from './property-constants';
 import { BULK_MAX_RANGE, BULK_MIN_RANGE, IMPORT_MAX_ROWS, UNIT_KINDS, UNIT_MANUAL_STATUSES, UNIT_STATUS_VALUES } from './unit-constants';
+import { unitChargeSummary } from './monthly';
 
 type Raw = Record<string, unknown>;
 
@@ -467,7 +468,7 @@ export async function deleteUnitType(actor: ScopeActor, id: string) {
 export async function listUnits(
   actor: ScopeActor,
   propertyId: string,
-  opts: { status?: string; buildingId?: string; q?: string; includeTenantContact?: boolean } = {},
+  opts: { status?: string; buildingId?: string; q?: string; includeTenantContact?: boolean; showBalance?: boolean } = {},
 ): Promise<UnitRow[]> {
   await requirePropertyInScope(actor, propertyId);
   const and: Prisma.UnitWhereInput[] = [{ propertyId, property: propertyScopeWhere(actor) }];
@@ -492,10 +493,14 @@ export async function listUnits(
   const shaped = await shapeUnits(rows);
   const occupants = await occupantMap(rows.map((r) => r.id), opts.includeTenantContact ?? false);
   const bills = await billMap(rows.map((r) => r.id));
+  const balances = opts.showBalance
+    ? await unitChargeSummary(actor, rows.map((r) => r.id))
+    : new Map<string, { pending: string; paid: string; currency: string }>();
   return shaped.map((r) => ({
     ...r,
     occupant: occupants.get(r.id) ?? null,
     bills: bills.get(r.id) ?? [],
+    balance: balances.get(r.id) ?? null,
   }));
 }
 
@@ -505,6 +510,7 @@ export interface UnitListFilters {
   buildingId?: string;
   q?: string;
   includeTenantContact?: boolean;
+  showBalance?: boolean;
 }
 
 /**
@@ -556,11 +562,15 @@ export async function listAllUnits(actor: ScopeActor, opts: UnitListFilters = {}
   const shaped = await shapeUnits(rows);
   const occupants = await occupantMap(rows.map((r) => r.id), opts.includeTenantContact ?? false);
   const bills = await billMap(rows.map((r) => r.id));
+  const balances = opts.showBalance
+    ? await unitChargeSummary(actor, rows.map((r) => r.id))
+    : new Map<string, { pending: string; paid: string; currency: string }>();
   return shaped.map((r) => ({
     ...r,
     coverPhoto: r.property.documents[0]?.storageKey ?? null,
     occupant: occupants.get(r.id) ?? null,
     bills: bills.get(r.id) ?? [],
+    balance: balances.get(r.id) ?? null,
   }));
 }
 

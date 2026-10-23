@@ -23,6 +23,7 @@ import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
 import { PortalInviteDialog } from '@/app/(dashboard)/leasing/_components/portal-invite-dialog'
 import { TenantDocumentsTab } from '@/app/(dashboard)/leasing/_components/tenant-documents-tab'
+import { TenantPaymentsTab } from '@/app/(dashboard)/leasing/_components/tenant-payments-tab'
 import { TenantPortalBadge, TenantStatusBadge } from '@/app/(dashboard)/leasing/_components/tenant-status'
 
 type LeasePartyRow = {
@@ -239,6 +240,22 @@ export default function TenantProfilePage() {
     content: <TenantDocumentsTab tenantId={tenant.id} />,
   }
 
+  const payments: DetailTab = {
+    id: 'payments',
+    label: 'Payments',
+    content: (
+      <TenantPaymentsTab
+        tenantId={tenant.id}
+        leases={tenant.leases.map((row) => ({
+          id: row.lease.id,
+          status: row.lease.status,
+          property: row.lease.property,
+          units: row.lease.units,
+        }))}
+      />
+    ),
+  }
+
   const notes: DetailTab = {
     id: 'notes',
     label: 'Notes',
@@ -271,7 +288,7 @@ export default function TenantProfilePage() {
         }
       />
 
-      <DetailTabs tabs={[overview, leases, applications, documents, notes]} defaultTab="overview" />
+      <DetailTabs tabs={[overview, leases, applications, documents, payments, notes]} defaultTab="overview" />
 
       <PortalInviteDialog
         open={inviteOpen}

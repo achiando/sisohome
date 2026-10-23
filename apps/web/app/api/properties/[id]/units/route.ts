@@ -19,6 +19,7 @@ export const GET = apiRoute<{ id: string }>({
       buildingId: query.get('buildingId') ?? undefined,
       q: query.get('q') ?? undefined,
       includeTenantContact: granted.includes('tenant.read' as never),
+      showBalance: granted.includes('charge.list' as never),
     });
     return { units: list };
   },

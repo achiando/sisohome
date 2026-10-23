@@ -32,6 +32,7 @@ import { toast } from '@workspace/ui/components/toast'
 import { DetailTabs, type DetailTab } from '@/app/(dashboard)/_components/domain/detail-tabs'
 import { AddTenantDialog } from '@/app/(dashboard)/_components/domain/add-tenant-dialog'
 import { UnitBillsCard } from '@/app/(dashboard)/portfolio/_components/unit-bills-card'
+import { UnitBalanceCard } from '@/app/(dashboard)/portfolio/_components/unit-balance-card'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { formatDate, formatMoney, formatRelativeDay } from '@/app/(dashboard)/_components/domain/format'
@@ -557,6 +558,13 @@ export default function UnitDetailPage() {
         ) : null}
 
         <UnitBillsCard unitId={unitId} currency={currency} />
+
+        <UnitBalanceCard
+          propertyId={propertyId}
+          unitId={unitId}
+          tenantId={unit.occupant?.tenantId ?? null}
+          leaseId={unit.occupant?.leaseId ?? null}
+        />
       </div>
     ),
   }
