@@ -13,7 +13,7 @@
 
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { LayoutGrid, Users } from 'lucide-react'
+import { LayoutGrid, Link2, Users } from 'lucide-react'
 import type { Property } from '@workspace/database'
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@workspace/ui/components/alert-dialog'
@@ -65,6 +65,7 @@ import {
 import { MediaTab, type DocRow } from '../_components/media-tab'
 import { PropertyAccountsCard, type LedgerAccountRow } from '../_components/property-accounts-card'
 import { PropertyReportTab } from '../_components/property-report-tab'
+import { IntakeLinkDialog } from '../_components/intake-link-dialog'
 
 type PropertyDetail = Property & {
   _count: { units: number; buildings: number; ownerships: number; documents: number }
@@ -346,6 +347,7 @@ function TenantsTab({
   const { hasUiPermission } = useUiPermission()
   const [search, setSearch] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
+  const [intakeOpen, setIntakeOpen] = useState(false)
 
   const filtered = useMemo(() => {
     let list = tenants
@@ -436,6 +438,23 @@ function TenantsTab({
               }
             : undefined
         }
+        secondaryActions={
+          hasUiPermission('application.create')
+            ? [
+                {
+                  label: 'Share intake link',
+                  icon: Link2,
+                  onClick: () => setIntakeOpen(true),
+                },
+              ]
+            : undefined
+        }
+      />
+
+      <IntakeLinkDialog
+        open={intakeOpen}
+        onOpenChange={setIntakeOpen}
+        propertyId={propertyId}
       />
     </div>
   )

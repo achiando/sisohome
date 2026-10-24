@@ -22,8 +22,10 @@ const PUBLIC_PATHS = [
   // readable before a session exists.
   '/terms',
   '/privacy',
+  // Public applicant intake (/i/<token>) — capability lives in the token.
+  '/i',
 ];
-const PUBLIC_API_PATHS = ['/api/auth'];
+const PUBLIC_API_PATHS = ['/api/auth', '/api/intake'];
 
 function isPublicPage(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

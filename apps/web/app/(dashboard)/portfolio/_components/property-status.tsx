@@ -35,6 +35,8 @@ export function humanizeAction(action: string): string {
     'property.archive': 'Property archived',
     'property.unarchive': 'Property unarchived',
     'property.delete': 'Property deleted',
+    'property.intake_link': 'Intake link issued',
+    'application.intake_submit': 'Application submitted via intake link',
   }
   if (labels[action]) return labels[action]
   return action
