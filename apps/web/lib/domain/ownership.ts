@@ -18,12 +18,14 @@
 import type { OwnerPartyType, Prisma } from '@workspace/database';
 import { db } from '@/lib/auth';
 import { RouteError } from '@/lib/api-route';
+import { decryptFieldOutput, encryptFieldInput } from '@/lib/crypto-field';
 import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
 
 type Raw = Record<string, unknown>;
 
 const PARTY_TYPES: OwnerPartyType[] = ['PERSON', 'COMPANY', 'ASSOCIATION', 'ORGANIZATION'];
+const OWNER_ID_TYPES = ['NATIONAL_ID', 'PASSPORT', 'ALIEN_ID', 'REG_NO'] as const;
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -86,7 +88,13 @@ export async function listOwnerParties(actor: ScopeActor, opts: { q?: string; pr
     where: { AND: and },
     include: { _count: { select: { ownerships: true, managedAgreements: true } } },
     orderBy: { name: 'asc' },
-  });
+  }).then((rows) =>
+    rows.map((p) => ({
+      ...p,
+      idNumber: decryptFieldOutput(p.idNumber),
+      homeAddress: decryptFieldOutput(p.homeAddress),
+    }))
+  );
 }
 
 export async function getOwnerParty(actor: ScopeActor, id: string) {
@@ -104,7 +112,11 @@ export async function getOwnerParty(actor: ScopeActor, id: string) {
     },
   });
   if (!party) throw new RouteError(404, 'Owner party not found');
-  return party;
+  return {
+    ...party,
+    idNumber: decryptFieldOutput(party.idNumber),
+    homeAddress: decryptFieldOutput(party.homeAddress),
+  };
 }
 
 /** Exported for the property-create tx (inline owner on non-landlord create). */
@@ -134,6 +146,17 @@ export async function parsePartyInput(raw: Raw, opts: { requireName: boolean }) 
   }
   if ('phone' in raw) data.phone = str(raw.phone) ?? null;
   if ('kraPin' in raw) data.kraPin = str(raw.kraPin) ?? null;
+  if ('idType' in raw) {
+    const idType = str(raw.idType);
+    if (idType !== undefined) {
+      if (!(OWNER_ID_TYPES as readonly string[]).includes(idType)) throw new RouteError(400, 'Invalid idType');
+      data.idType = idType;
+    } else {
+      data.idType = null;
+    }
+  }
+  if ('idNumber' in raw) data.idNumber = encryptFieldInput(str(raw.idNumber) ?? null);
+  if ('homeAddress' in raw) data.homeAddress = encryptFieldInput(str(raw.homeAddress) ?? null);
   if ('addressLine1' in raw) data.addressLine1 = str(raw.addressLine1) ?? null;
   if ('city' in raw) data.city = str(raw.city) ?? null;
   if ('region' in raw) data.region = str(raw.region) ?? null;
@@ -173,7 +196,11 @@ export async function createOwnerParty(actor: ScopeActor, input: Raw) {
       data: { ...data, organizationId: actor.organizationId } as Prisma.PropertyOwnerPartyUncheckedCreateInput,
     });
     await auditLog(actor, 'OWNER_PARTY', 'owner_party.create', party.id, { name: party.name });
-    return party;
+    return {
+      ...party,
+      idNumber: decryptFieldOutput(party.idNumber),
+      homeAddress: decryptFieldOutput(party.homeAddress),
+    };
   } catch (err) {
     if (isFkViolation(err)) throw new RouteError(400, 'Linked organization or user does not exist');
     throw err;

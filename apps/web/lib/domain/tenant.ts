@@ -20,6 +20,7 @@ import type { Prisma } from '@workspace/database';
 import { db } from '@/lib/auth';
 import { RouteError } from '@/lib/api-route';
 import { appUrl } from '@/lib/base-url';
+import { decryptFieldOutput, encryptFieldInput } from '@/lib/crypto-field';
 import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
 import {
@@ -173,7 +174,7 @@ export async function getTenant(actor: ScopeActor, id: string) {
     },
   });
   if (!tenant) throw new RouteError(404, 'Tenant not found');
-  return tenant;
+  return { ...tenant, idNumber: decryptFieldOutput(tenant.idNumber) };
 }
 
 // ── writes ───────────────────────────────────────────────────────────────────
@@ -192,7 +193,7 @@ function parseTenantInput(raw: Raw, partial = false): Record<string, unknown> {
   const altPhone = strOrNull(raw.altPhone);
   if (altPhone !== undefined) data.altPhone = altPhone;
   const idNumber = strOrNull(raw.idNumber);
-  if (idNumber !== undefined) data.idNumber = idNumber;
+  if (idNumber !== undefined) data.idNumber = encryptFieldInput(idNumber);
   const nationality = strOrNull(raw.nationality);
   if (nationality !== undefined) data.nationality = nationality;
   const kraPin = strOrNull(raw.kraPin);
@@ -266,7 +267,7 @@ export async function createTenant(actor: ScopeActor, raw: Raw) {
     await auditLog(actor, 'TENANT', 'tenant.create', tenant.id, {
       displayName: tenant.displayName,
     });
-    return tenant;
+    return { ...tenant, idNumber: decryptFieldOutput(tenant.idNumber) };
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw new RouteError(409, 'A tenant with this email or tenantRef already exists');
@@ -290,7 +291,8 @@ export async function updateTenant(actor: ScopeActor, id: string, raw: Raw) {
     });
     if (result.count === 0) throw new RouteError(404, 'Tenant not found');
     await auditLog(actor, 'TENANT', 'tenant.update', id, { fields: Object.keys(data) });
-    return db.tenant.findUniqueOrThrow({ where: { id } });
+    const updated = await db.tenant.findUniqueOrThrow({ where: { id } });
+    return { ...updated, idNumber: decryptFieldOutput(updated.idNumber) };
   } catch (err) {
     if (isUniqueViolation(err)) {
       throw new RouteError(409, 'A tenant with this email or tenantRef already exists');

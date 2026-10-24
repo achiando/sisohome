@@ -186,6 +186,11 @@ export default function OwnerPartyDetailPage() {
             <CardContent>
               <InfoRow label="Email" value={party.email} />
               <InfoRow label="Phone" value={party.phone} />
+              <InfoRow
+                label="ID"
+                value={[party.idType?.replace(/_/g, ' ').toLowerCase(), party.idNumber].filter(Boolean).join(' · ')}
+              />
+              <InfoRow label="Home address" value={party.homeAddress} />
               <InfoRow label="Address" value={[party.addressLine1, party.city, party.region].filter(Boolean).join(', ')} />
               <InfoRow label="Country" value={party.country} />
               {party.notes ? <p className="pt-2 text-sm text-muted-foreground">{party.notes}</p> : null}

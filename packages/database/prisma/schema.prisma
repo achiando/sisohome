@@ -1024,6 +1024,13 @@ model PropertyOwnerParty {
   email          String?
   phone          String?
   kraPin         String?         @map("kra_pin")
+  // National-ID style columns. Reuses the TenantIdType enum (generic
+  // ID kinds). idNumber + homeAddress are AES-256-GCM encrypted at the
+  // app layer (apps/web/lib/crypto-field.ts) — same column, ciphertext
+  // at rest; decrypt-on-read in the ownership domain.
+  idType         TenantIdType?   @map("id_type")
+  idNumber       String?         @map("id_number")
+  homeAddress    String?         @map("home_address")
   addressLine1   String?         @map("address_line1")
   city           String?
   region         String?

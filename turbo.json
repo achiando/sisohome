@@ -4,6 +4,7 @@
   "globalEnv": [
     "SESSION_SECRET",
     "TWO_FACTOR_ENCRYPTION_KEY",
+    "FIELD_ENCRYPTION_KEY",
     "NODE_ENV",
     "DATABASE_URL",
     "APP_URL",

@@ -30,6 +30,13 @@ const PARTY_TYPE_OPTIONS: SelectOption[] = [
   { value: 'ORGANIZATION', label: 'Platform organization' },
 ]
 
+const OWNER_ID_TYPE_OPTIONS: SelectOption[] = [
+  { value: 'NATIONAL_ID', label: 'National ID' },
+  { value: 'PASSPORT', label: 'Passport' },
+  { value: 'ALIEN_ID', label: 'Alien ID' },
+  { value: 'REG_NO', label: 'Registration no.' },
+]
+
 function str(v: unknown): string {
   if (v === null || v === undefined) return ''
   if (typeof v === 'string') return v
@@ -43,6 +50,9 @@ export function seedOwnerPartyValues(p?: Partial<PropertyOwnerParty> | null): Ow
     email: p?.email ?? '',
     phone: p?.phone ?? '',
     kraPin: p?.kraPin ?? '',
+    idType: p?.idType ?? '',
+    idNumber: p?.idNumber ?? '',
+    homeAddress: p?.homeAddress ?? '',
     addressLine1: p?.addressLine1 ?? '',
     city: p?.city ?? '',
     region: p?.region ?? '',
@@ -106,6 +116,8 @@ export function OwnerPartyForm({
         { name: 'partyType', label: 'Party type', type: 'select', required: true, colSpan: 2, options: PARTY_TYPE_OPTIONS },
         { name: 'name', label: 'Name', type: 'text', required: true, colSpan: 2, placeholder: 'Jane Wanjiku / Acacia Homes Ltd' },
         { name: 'kraPin', label: 'KRA PIN', type: 'text', colSpan: 2, placeholder: 'P000000000X' },
+        { name: 'idType', label: 'ID type', type: 'select', options: OWNER_ID_TYPE_OPTIONS, colSpan: 1 },
+        { name: 'idNumber', label: 'ID number', type: 'text', colSpan: 1 },
         { name: 'email', label: 'Email', type: 'email', colSpan: 2 },
         { name: 'phone', label: 'Phone', type: 'phone', colSpan: 2, placeholder: '+254 7…' },
       ],
@@ -115,7 +127,8 @@ export function OwnerPartyForm({
       title: 'Address',
       columns: 4,
       fields: [
-        { name: 'addressLine1', label: 'Address', type: 'text', colSpan: 2 },
+        { name: 'homeAddress', label: 'Home address', type: 'text', colSpan: 2, placeholder: 'Residential address' },
+        { name: 'addressLine1', label: 'Postal address', type: 'text', colSpan: 2 },
         { name: 'city', label: 'City', type: 'text', colSpan: 1 },
         { name: 'region', label: 'Region / county', type: 'text', colSpan: 1 },
         { name: 'country', label: 'Country', type: 'text', colSpan: 2 },
