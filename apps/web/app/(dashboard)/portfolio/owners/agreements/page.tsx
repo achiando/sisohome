@@ -25,6 +25,7 @@ import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { AgreementStatusBadge } from '../../_components/agreement-status'
+import { ApproveAgreementDialog } from '../../_components/approve-agreement-dialog'
 
 type AgreementRow = {
   id: string
@@ -33,7 +34,7 @@ type AgreementRow = {
   endsAt: string | null
   actorIsPortfolioSide: boolean
   property: { id: string; name: string; code?: string | null } | null
-  managementOrganization: { id: string; name: string } | null
+  managementOrganization: { id: string; name: string; kind?: string | null } | null
   ownerParty: { id: string; name: string } | null
 }
 
@@ -56,6 +57,7 @@ export default function AgreementsPage() {
   const [statusFilter, setStatusFilter] = useState('')
   const [sideFilter, setSideFilter] = useState('')
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [approving, setApproving] = useState<AgreementRow | null>(null)
 
   const load = useCallback(() => {
     let cancelled = false
@@ -98,7 +100,7 @@ export default function AgreementsPage() {
     return list
   }, [agreements, search, statusFilter, sideFilter])
 
-  const runAction = async (id: string, action: 'approve' | 'end') => {
+  const runAction = async (id: string, action: 'end') => {
     setBusyId(id)
     try {
       const res = await fetch(`/api/agreements/${id}/${action}`, { method: 'POST', credentials: 'include' })
@@ -107,7 +109,7 @@ export default function AgreementsPage() {
         toast.error(data.error ?? `Failed to ${action} agreement`)
         return
       }
-      toast.success(action === 'approve' ? 'Agreement approved — manager access is live' : 'Agreement ended')
+      toast.success('Agreement ended')
       load()
     } catch {
       toast.error('Network error')
@@ -175,7 +177,7 @@ export default function AgreementsPage() {
               size="sm"
               leftIcon={CheckCircle2}
               disabled={busyId === a.id}
-              onClick={() => runAction(a.id, 'approve')}
+              onClick={() => setApproving(a)}
             >
               Approve
             </Button>
@@ -211,7 +213,7 @@ export default function AgreementsPage() {
     actions: (a) => {
       const acts: { label: string; variant?: 'outline' | 'destructive'; onClick: () => void }[] = []
       if (a.status === 'DRAFT' && a.actorIsPortfolioSide && hasUiPermission('agreement.approve')) {
-        acts.push({ label: 'Approve', variant: 'outline', onClick: () => runAction(a.id, 'approve') })
+        acts.push({ label: 'Approve', variant: 'outline', onClick: () => setApproving(a) })
       }
       acts.push({
         label: 'Open',
@@ -303,6 +305,20 @@ export default function AgreementsPage() {
             : undefined
         }
       />
+
+      {approving ? (
+        <ApproveAgreementDialog
+          key={approving.id}
+          agreementId={approving.id}
+          managementOrgKind={approving.managementOrganization?.kind ?? null}
+          open
+          onOpenChange={(o) => !o && setApproving(null)}
+          onApproved={() => {
+            setApproving(null)
+            load()
+          }}
+        />
+      ) : null}
     </div>
   )
 }

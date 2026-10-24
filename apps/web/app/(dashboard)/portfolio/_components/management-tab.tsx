@@ -24,6 +24,7 @@ import { toast } from '@workspace/ui/components/toast'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { AgreementStatusBadge } from './agreement-status'
+import { ApproveAgreementDialog } from './approve-agreement-dialog'
 import { StaffDialog } from './staff-dialog'
 
 export type AgreementRow = {
@@ -75,6 +76,7 @@ export function ManagementTab({
 
   const [staffOpen, setStaffOpen] = useState(false)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [approving, setApproving] = useState<AgreementRow | null>(null)
 
   const memberOptions: SelectOption[] = useMemo(
     () =>
@@ -85,7 +87,7 @@ export function ManagementTab({
     [members],
   )
 
-  const runAgreementAction = async (id: string, action: 'approve' | 'end') => {
+  const runAgreementAction = async (id: string, action: 'end') => {
     setBusyId(id)
     try {
       const res = await fetch(`/api/agreements/${id}/${action}`, {
@@ -97,7 +99,7 @@ export function ManagementTab({
         toast.error(data.error ?? `Failed to ${action} agreement`)
         return
       }
-      toast.success(action === 'approve' ? 'Agreement approved — manager access is live' : 'Agreement ended')
+      toast.success('Agreement ended')
       onRefresh()
     } catch {
       toast.error('Network error')
@@ -186,7 +188,7 @@ export function ManagementTab({
                         size="sm"
                         leftIcon={CheckCircle2}
                         disabled={busyId === a.id}
-                        onClick={() => runAgreementAction(a.id, 'approve')}
+                        onClick={() => setApproving(a)}
                       >
                         Approve
                       </Button>
@@ -279,6 +281,20 @@ export function ManagementTab({
         onClose={() => setStaffOpen(false)}
         onSaved={onRefresh}
       />
+
+      {approving ? (
+        <ApproveAgreementDialog
+          key={approving.id}
+          agreementId={approving.id}
+          managementOrgKind={approving.managementOrganization?.kind ?? null}
+          open
+          onOpenChange={(o) => !o && setApproving(null)}
+          onApproved={() => {
+            setApproving(null)
+            onRefresh()
+          }}
+        />
+      ) : null}
 
       {agreements.length === 0 && !canPropose ? (
         <Text variant="bodyMuted">Only owners and managers with agreement permissions can propose contracts.</Text>

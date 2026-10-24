@@ -6,7 +6,7 @@
  * fires the matching lifecycle endpoint and calls `onChanged` to refetch.
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@workspace/ui/components/button'
 import {
@@ -19,9 +19,17 @@ import {
 } from '@workspace/ui/components/dialog'
 import { Input } from '@workspace/ui/components/input'
 import { Label } from '@workspace/ui/components/label'
-import { Select, SelectContent, SelectItem, SelectTrigger } from '@workspace/ui/components/select'
+import { Loader } from '@workspace/ui/components/loader'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@workspace/ui/components/select'
 import { Switch } from '@workspace/ui/components/switch'
 import { toast } from '@workspace/ui/components/toast'
+import type { AgreementPreviewResponse } from '@/lib/domain/agreement-constants'
 import {
   LEASE_TRANSITIONS,
   type LeaseStatusValue,
@@ -43,11 +51,11 @@ const ACTION_LABEL: Record<ActionKey, string> = {
   close: 'Close',
   renew: 'Renew',
 }
-
 const CONFIRM_COPY: Record<Exclude<ActionKey, 'renew' | 'terminate'>, string> = {
   approve:
-    'Approving locks the lease in and marks its units occupied from the start date (scheduled if the start is in the future).',
-  cancel: 'Cancelling releases the units and archives the draft. This cannot be undone.',
+    'Type your full name to sign the agreement below, then approve — this locks the lease in and marks its units occupied from the start date (scheduled if the start is in the future).',
+  cancel:
+    'Cancelling releases the units and archives the draft. This cannot be undone.',
   close: 'Closing ends the lease record. Charges and payments ride the charge domain.',
 }
 
@@ -66,6 +74,37 @@ export function LeaseLifecycleActions({
   const status = lease.status as LeaseStatusValue
   const [dialog, setDialog] = useState<ActionKey | null>(null)
   const [busy, setBusy] = useState(false)
+
+  // Type-name e-sign (People plan Slice 6): template preview + typed name.
+  const [preview, setPreview] = useState<AgreementPreviewResponse | null>(null)
+  const [previewError, setPreviewError] = useState<string | null>(null)
+  const [signTemplate, setSignTemplate] = useState<string | null>(null)
+  const [typedName, setTypedName] = useState('')
+
+  useEffect(() => {
+    if (dialog !== 'approve') return
+    let cancelled = false
+    const qs = signTemplate ? `?template=${encodeURIComponent(signTemplate)}` : ''
+    fetch(`/api/leases/${lease.id}/agreement-preview${qs}`, { credentials: 'include' })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error ?? 'Failed to load agreement preview')
+        if (!cancelled) {
+          setPreview(data as AgreementPreviewResponse)
+          setPreviewError(null)
+        }
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setPreviewError(err instanceof Error ? err.message : 'Failed to load agreement preview')
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [dialog, lease.id, signTemplate])
+
+  const activePreview =
+    preview && (!signTemplate || preview.templateId === signTemplate) ? preview : null
+  const previewBusy = dialog === 'approve' && !previewError && !activePreview
 
   // Terminate extras
   const [noticeDate, setNoticeDate] = useState('')
@@ -90,6 +129,12 @@ export function LeaseLifecycleActions({
       setNoticeDate('')
       setEndsToday(true)
     }
+    if (key === 'approve') {
+      setPreview(null)
+      setPreviewError(null)
+      setSignTemplate(null)
+      setTypedName('')
+    }
     if (key === 'renew') {
       const old = lease.endsAt ? new Date(lease.endsAt) : new Date()
       const next = new Date(old)
@@ -106,7 +151,12 @@ export function LeaseLifecycleActions({
     setBusy(true)
     try {
       let body: Record<string, unknown> = {}
-      if (key === 'approve') body = { signedAt: todayISO() }
+      if (key === 'approve') {
+        if (!activePreview || !typedName.trim()) {
+          throw new Error('Type your full name to sign the agreement')
+        }
+        body = { signedAt: todayISO(), template: activePreview.templateId, typedName: typedName.trim() }
+      }
       if (key === 'terminate') {
         body = { endsToday }
         if (noticeDate) body.noticeDate = noticeDate
@@ -166,13 +216,62 @@ export function LeaseLifecycleActions({
       </div>
 
       <Dialog open={dialog !== null && dialog !== 'renew' && dialog !== 'terminate'} onOpenChange={(o) => !o && setDialog(null)}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className={dialog === 'approve' ? 'sm:max-w-3xl' : 'sm:max-w-md'}>
           {dialog && dialog !== 'renew' && dialog !== 'terminate' ? (
             <>
               <DialogHeader>
                 <DialogTitle>{ACTION_LABEL[dialog]}</DialogTitle>
                 <DialogDescription>{CONFIRM_COPY[dialog]}</DialogDescription>
               </DialogHeader>
+              {dialog === 'approve' ? (
+                <div className="space-y-4">
+                  <div className="space-y-1.5">
+                    <Label>Agreement template</Label>
+                    <Select
+                      value={signTemplate || preview?.templateId || ''}
+                      onValueChange={setSignTemplate}
+                      disabled={!preview?.templates.length}
+                    >
+                      <SelectTrigger className="h-11 w-full">
+                        <SelectValue placeholder="Template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(preview?.templates ?? []).map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label>Preview</Label>
+                    {previewError ? (
+                      <p className="text-sm text-destructive">{previewError}</p>
+                    ) : activePreview ? (
+                      <div
+                        className="max-h-72 overflow-auto rounded-xl border border-border bg-background p-4"
+                        dangerouslySetInnerHTML={{ __html: activePreview.html }}
+                      />
+                    ) : previewBusy ? (
+                      <div className="flex h-32 items-center justify-center rounded-xl border border-dashed border-border">
+                        <Loader size="sm" />
+                      </div>
+                    ) : null}
+                  </div>
+                  <Input
+                    label="Type your full name to sign"
+                    value={typedName}
+                    onChange={(e) => setTypedName(e.target.value)}
+                    placeholder={activePreview?.signerLabel ?? 'Full name'}
+                    description={
+                      activePreview
+                        ? `Must match your account name: ${activePreview.signerLabel}`
+                        : 'The signature records your name, timestamp and document fingerprint.'
+                    }
+                  />
+                </div>
+              ) : null}
               <DialogFooter>
                 <Button variant="ghost" onClick={() => setDialog(null)} disabled={busy}>
                   Keep as is
@@ -180,10 +279,12 @@ export function LeaseLifecycleActions({
                 <Button
                   variant={dialog === 'approve' ? 'primary' : 'destructive'}
                   loading={busy}
-                  disabled={busy}
+                  disabled={
+                    busy || (dialog === 'approve' && (!activePreview || !typedName.trim()))
+                  }
                   onClick={() => run(dialog)}
                 >
-                  {ACTION_LABEL[dialog]}
+                  {dialog === 'approve' ? 'Sign & approve' : ACTION_LABEL[dialog]}
                 </Button>
               </DialogFooter>
             </>

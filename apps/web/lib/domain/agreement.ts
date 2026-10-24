@@ -27,6 +27,7 @@ import { db } from '@/lib/auth';
 import { RouteError } from '@/lib/api-route';
 import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
+import { createSignDocument, prepareAgreementSign, signAuditMeta } from './agreement-sign';
 
 type Raw = Record<string, unknown>;
 
@@ -223,7 +224,7 @@ export async function updateAgreement(actor: ScopeActor, id: string, input: Raw)
   return getAgreement(actor, id);
 }
 
-export async function approveAgreement(actor: ScopeActor, id: string) {
+export async function approveAgreement(actor: ScopeActor, id: string, raw?: Raw) {
   // Either-side fetch first so outsiders get 404 (no existence leak), then
   // the portfolio-only half → 403 (row already visible to this actor).
   const row = await requireScopedAgreement(actor, id);
@@ -233,12 +234,30 @@ export async function approveAgreement(actor: ScopeActor, id: string) {
   if (row.status !== 'DRAFT') throw new RouteError(409, `Only draft agreements can be approved (status: ${row.status})`);
   if (row.endsAt && row.endsAt <= row.startsAt) throw new RouteError(400, 'endsAt must be after startsAt');
 
-  const result = await db.propertyManagementAgreement.updateMany({
-    where: { id: row.id, organizationId: row.organizationId, status: 'DRAFT' },
-    data: { status: 'ACTIVE' },
+  // Type-name e-sign (People plan Slice 6): template + typedName arrive
+  // together from the Approve dialog; legacy callers send neither.
+  const wantsSign = Boolean(raw && (raw.template || raw.typedName));
+  const sign = wantsSign ? await prepareAgreementSign(actor, id, raw) : null;
+
+  const doc = await db.$transaction(async (tx) => {
+    const result = await tx.propertyManagementAgreement.updateMany({
+      where: { id: row.id, organizationId: row.organizationId, status: 'DRAFT' },
+      data: { status: 'ACTIVE' },
+    });
+    if (result.count === 0) throw new RouteError(409, 'Agreement changed status — reload and retry');
+    return sign ? createSignDocument(tx, sign, actor.userId) : null;
   });
-  if (result.count === 0) throw new RouteError(409, 'Agreement changed status — reload and retry');
-  await auditLog(actor, 'AGREEMENT', 'agreement.approve', row.id, {}, row.organizationId);
+  await auditLog(
+    actor,
+    'AGREEMENT',
+    'agreement.approve',
+    row.id,
+    {
+      status: 'ACTIVE',
+      ...(sign && doc ? { sign: signAuditMeta(sign, doc.id) } : {}),
+    },
+    row.organizationId,
+  );
   return getAgreement(actor, id);
 }
 

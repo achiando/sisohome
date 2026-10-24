@@ -19,6 +19,7 @@ import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { AgreementStatusBadge } from '../../../../_components/agreement-status'
+import { ApproveAgreementDialog } from '../../../../_components/approve-agreement-dialog'
 import {
   AgreementForm,
   scopeToText,
@@ -35,7 +36,7 @@ type AgreementDetail = {
   actorIsPortfolioSide: boolean
   propertyId: string
   property: { id: string; name: string; code?: string | null } | null
-  managementOrganization: { id: string; name: string } | null
+  managementOrganization: { id: string; name: string; kind?: string | null } | null
   ownerParty: { id: string; name: string } | null
 }
 
@@ -49,6 +50,7 @@ export default function EditAgreementPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [approveOpen, setApproveOpen] = useState(false)
 
   const load = useCallback(() => {
     let cancelled = false
@@ -74,7 +76,7 @@ export default function EditAgreementPage() {
 
   useEffect(() => load(), [load])
 
-  const runWorkflow = async (action: 'approve' | 'end') => {
+  const runWorkflow = async (action: 'end') => {
     setBusy(true)
     try {
       const res = await fetch(`/api/agreements/${agreementId}/${action}`, {
@@ -86,7 +88,7 @@ export default function EditAgreementPage() {
         toast.error(data.error ?? `Failed to ${action} agreement`)
         return
       }
-      toast.success(action === 'approve' ? 'Agreement approved — manager access is live' : 'Agreement ended')
+      toast.success('Agreement ended')
       load()
     } catch {
       toast.error('Network error')
@@ -171,7 +173,7 @@ export default function EditAgreementPage() {
           <>
             <AgreementStatusBadge status={agreement.status} />
             {canApprove ? (
-              <Button variant="primary" leftIcon={CheckCircle2} disabled={busy} onClick={() => runWorkflow('approve')}>
+              <Button variant="primary" leftIcon={CheckCircle2} disabled={busy} onClick={() => setApproveOpen(true)}>
                 Approve
               </Button>
             ) : null}
@@ -209,6 +211,17 @@ export default function EditAgreementPage() {
           </p>
         )}
       </div>
+
+      <ApproveAgreementDialog
+        agreementId={agreementId}
+        managementOrgKind={agreement.managementOrganization?.kind ?? null}
+        open={approveOpen}
+        onOpenChange={setApproveOpen}
+        onApproved={() => {
+          setApproveOpen(false)
+          load()
+        }}
+      />
     </div>
   )
 }

@@ -25,6 +25,7 @@ import {
 } from './property-scope';
 import { createTenant as createTenantRecord, tenantScopeWhere } from './tenant';
 import { recomputeUnitStatus } from './unit';
+import { createSignDocument, prepareLeaseSign, signAuditMeta } from './agreement-sign';
 import {
   LEASE_PARTY_RELATIONSHIP_VALUES,
   LEASE_STATUS_VALUES,
@@ -674,14 +675,34 @@ export async function approveLease(actor: ScopeActor, id: string, raw?: Raw) {
   const next: LeaseStatusValue = lease.startsAt.getTime() <= today.getTime() ? 'ACTIVE' : 'SCHEDULED';
   const signedAt = raw ? dateOrNull(raw.signedAt, 'signedAt') : undefined;
 
-  const updated = await db.lease.update({
-    where: { id },
-    data: { status: next, ...(signedAt ? { signedAt } : {}) },
-    include: LEASE_INCLUDE,
+  // Type-name e-sign (People plan Slice 6): template + typedName arrive
+  // together from the Approve dialog; legacy callers send neither.
+  const wantsSign = Boolean(raw && (raw.template || raw.typedName));
+  const sign = wantsSign ? await prepareLeaseSign(actor, id, raw, signedAt ?? new Date()) : null;
+  const effectiveSignedAt = signedAt ?? sign?.signedAt;
+
+  const updated = await db.$transaction(async (tx) => {
+    const row = await tx.lease.update({
+      where: { id },
+      data: { status: next, ...(effectiveSignedAt ? { signedAt: effectiveSignedAt } : {}) },
+      include: LEASE_INCLUDE,
+    });
+    const doc = sign ? await createSignDocument(tx, sign, actor.userId) : null;
+    return { row, doc };
   });
   await recomputeUnitStatus(await leaseUnitIds(id));
-  await auditLog(actor, 'LEASE', 'lease.approve', id, { status: next }, lease.organizationId);
-  return updated;
+  await auditLog(
+    actor,
+    'LEASE',
+    'lease.approve',
+    id,
+    {
+      status: next,
+      ...(sign && updated.doc ? { sign: signAuditMeta(sign, updated.doc.id) } : {}),
+    },
+    lease.organizationId,
+  );
+  return updated.row;
 }
 
 export async function cancelLease(actor: ScopeActor, id: string) {
