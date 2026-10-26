@@ -360,6 +360,8 @@ export async function recordMultiMonthPayment(
     method: string;
     reference?: string | null;
     notes?: string | null;
+    /** When the money actually arrived (payment-claim confirm keeps the tenant's paidAt). */
+    receivedAt?: Date;
   },
 ): Promise<MultiMonthResult> {
   const { propertyId } = input;
@@ -476,7 +478,7 @@ export async function recordMultiMonthPayment(
         currency: account.currency,
         method: method as PaymentMethod,
         reference: input.reference ?? null,
-        receivedAt: new Date(),
+        receivedAt: input.receivedAt ?? new Date(),
         receivedByUserId: actor.userId,
         notes: input.notes ?? null,
       },

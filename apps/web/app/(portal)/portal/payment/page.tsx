@@ -1,10 +1,10 @@
 'use client'
 
 /**
- * How to pay (plan-slice-7 §3/§1.4): static pay-instructions only — the
+ * How to pay (plan-slice-7 §3/§1.4): static pay-instructions — the
  * display-only reference on the property's ledger accounts plus a generic
- * fallback note. Real M-Pesa initiation is out of wave for v1; nothing here
- * moves money.
+ * fallback note, then the payment-message panel (post "I paid" for the PM
+ * to confirm). Real M-Pesa initiation is out of wave for v1.
  */
 
 import { Info, Landmark } from 'lucide-react'
@@ -13,6 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@work
 import { PageLoader } from '@workspace/ui/components/loader'
 
 import { usePortalApi, type PortalPaymentInstructions } from '../../_components/portal-data'
+import { PaymentClaimPanel } from './claim-panel'
 
 interface PaymentMethodsRes extends PortalPaymentInstructions {
   success: boolean
@@ -93,6 +94,8 @@ export default function PortalPaymentPage() {
           </p>
         </CardContent>
       </Card>
+
+      <PaymentClaimPanel />
     </div>
   )
 }

@@ -30,6 +30,7 @@ import { useAuth } from '@workspace/auth-ui'
 import { SidebarNav } from './sidebar-nav'
 import { MobileTabBar } from './mobile-tab-bar'
 import { MoreSheet } from './more-sheet'
+import { NotificationBell } from './notification-bell'
 import { navTitleForPath } from './nav-config'
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -91,6 +92,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               <span className="min-w-0 flex-1 truncate text-[17px] font-semibold tracking-tight text-foreground">
                 {title}
               </span>
+              <NotificationBell />
               <button
                 type="button"
                 onClick={() => setMoreOpen(true)}

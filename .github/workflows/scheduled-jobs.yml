@@ -1,0 +1,74 @@
+# Scheduled jobs — calls POST $APP_URL/api/cron/run with a CRON_SECRET
+# bearer token (the route does a timing-safe compare; no session exists).
+#
+# Repo secrets/vars required:
+#   APP_URL       e.g. https://app.example.com (or http://localhost:3000 for a tunnel)
+#   CRON_SECRET   must match apps/web/.env CRON_SECRET on the target host
+#
+# Both schedules pass an explicit `job` (workflow_dispatch picks from `all`).
+name: scheduled-jobs
+
+on:
+  schedule:
+    # 1st of the month, 03:15 UTC (06:15 EAT) — monthly charge generation
+    - cron: '15 3 1 * *'
+    # Mondays 05:15 UTC (08:15 EAT) — lease-expiry alerts
+    - cron: '15 5 * * 1'
+  workflow_dispatch:
+    inputs:
+      job:
+        description: Job to run
+        type: choice
+        required: true
+        default: all
+        options:
+          - all
+          - generate-charges
+          - lease-expiry
+      organization_id:
+        description: Optional org UUID to scope the run to
+        required: false
+        type: string
+      property_id:
+        description: Optional property UUID to scope the run to
+        required: false
+        type: string
+      month:
+        description: "Optional YYYY-MM (generate-charges only)"
+        required: false
+        type: string
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Trigger cron route
+        env:
+          APP_URL: ${{ vars.APP_URL || secrets.APP_URL }}
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+          # schedule → job mapping (workflow_dispatch passes its input)
+          JOB: ${{ inputs.job || (github.event.schedule == '15 3 1 * *' && 'generate-charges' || 'lease-expiry') }}
+          ORG_ID: ${{ inputs.organization_id }}
+          PROPERTY_ID: ${{ inputs.property_id }}
+          MONTH: ${{ inputs.month }}
+        run: |
+          set -euo pipefail
+          if [ -z "${APP_URL:-}" ]; then echo "APP_URL secret/vars is not set" >&2; exit 1; fi
+          if [ -z "${CRON_SECRET:-}" ]; then echo "CRON_SECRET secret is not set" >&2; exit 1; fi
+          payload=$(jq -n \
+            --arg job "$JOB" \
+            --arg organizationId "${ORG_ID:-}" \
+            --arg propertyId "${PROPERTY_ID:-}" \
+            --arg month "${MONTH:-}" \
+            '{job: $job}
+             + (if $organizationId != "" then {organizationId: $organizationId} else {} end)
+             + (if $propertyId != "" then {propertyId: $propertyId} else {} end)
+             + (if $month != "" then {month: $month} else {} end)')
+          echo "POST ${APP_URL}/api/cron/run (job=${JOB})"
+          curl --fail-with-body --silent --show-error --retry 3 --retry-delay 10 \
+            -X POST "${APP_URL}/api/cron/run" \
+            -H "Authorization: Bearer ${CRON_SECRET}" \
+            -H 'Content-Type: application/json' \
+            -d "$payload"
+          echo

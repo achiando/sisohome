@@ -47,6 +47,9 @@ export function humanizeAction(action: string): string {
     'payment.create_multi_month': 'Payment recorded',
     'tenant.remind': 'Overdue reminder logged',
     'tenant.billing-notice': 'Billing notice sent',
+    'payment_claim.create': 'Payment claim posted (portal)',
+    'payment_claim.confirm': 'Payment claim confirmed',
+    'payment_claim.reject': 'Payment claim rejected',
   }
   if (labels[action]) return labels[action]
   return action

@@ -28,7 +28,9 @@ const PUBLIC_PATHS = [
   // the rest of /portal requires a session (checked below).
   '/portal/accept',
 ];
-const PUBLIC_API_PATHS = ['/api/auth', '/api/intake', '/api/portal/accept'];
+// Scheduled jobs (GitHub Actions) authenticate with CRON_SECRET, not a
+// session — real auth lives in the route (timing-safe bearer compare).
+const PUBLIC_API_PATHS = ['/api/auth', '/api/intake', '/api/portal/accept', '/api/cron'];
 
 function isPublicPage(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));

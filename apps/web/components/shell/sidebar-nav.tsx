@@ -43,6 +43,7 @@ import {
 import { useAuth } from "@workspace/auth-ui"
 
 import { isActive, navSections, type NavEntry } from "./nav-config"
+import { NotificationBell } from "./notification-bell"
 import { useUiPermission } from "./use-ui-permission"
 
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
@@ -105,6 +106,7 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
               SisoHome
             </span>
           </Link>
+          <NotificationBell />
         </div>
 
         {/* Workspace chip — active org + role */}

@@ -29,6 +29,7 @@ import { RecordPaymentDialog } from '@/app/(dashboard)/leasing/_components/recor
 import type { CsvColumn } from '@/lib/csv'
 import { usePropertyOptions, type Option } from './doc-dialogs'
 import { ExportCsvButton } from './export-csv-button'
+import { PaymentClaimsCard } from './payment-claims-card'
 
 type PaymentRow = {
   id: string
@@ -268,6 +269,11 @@ export function PaymentsTab() {
           </Card>
         ))}
       </div>
+
+      <PaymentClaimsCard
+        canDecide={hasUiPermission('payment.create')}
+        onDecided={() => load()}
+      />
 
       <div className="flex justify-end">
         <ExportCsvButton filename="payments" columns={csvColumns} rows={payments} />
