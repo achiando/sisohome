@@ -181,7 +181,7 @@ export interface UnitOccupant {
  * PRIMARY tenant leads; joints are counted. Contact fields are included only
  * when the caller holds `tenant.read` (PII mask, plan §3).
  */
-async function occupantMap(
+export async function occupantMap(
   unitIds: string[],
   includeContact: boolean,
 ): Promise<Map<string, UnitOccupant>> {

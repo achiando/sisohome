@@ -13,6 +13,8 @@ import { Badge } from '@workspace/ui/components/badge'
 import { Card, CardContent } from '@workspace/ui/components/card'
 import { PageLoader } from '@workspace/ui/components/loader'
 import { toast } from '@workspace/ui/components/toast'
+import type { CsvColumn } from '@/lib/csv'
+import { ExportCsvButton } from '@/app/(dashboard)/finances/_components/export-csv-button'
 
 type RentRollRow = {
   unitId: string
@@ -77,6 +79,7 @@ function money(amount: string, currency: string) {
   return `${currency} ${n.toLocaleString()}`
 }
 
+
 function Tile({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
     <Card variant="outlined" size="sm">
@@ -121,6 +124,19 @@ export function RentRollTab({ propertyId, currency }: { propertyId: string; curr
 
   const cur = currency ?? 'KES'
   const { totals, buildings, rows } = data
+  const csvColumns: CsvColumn<RentRollRow>[] = [
+    { header: 'Building', value: (r) => r.buildingName ?? 'No building' },
+    { header: 'Unit', value: (r) => r.unitRef },
+    { header: 'Label', value: (r) => r.label },
+    { header: 'Occupancy', value: (r) => r.occupancy },
+    { header: 'Tenant', value: (r) => r.tenantName },
+    { header: 'Lease ends', value: (r) => r.leaseEndsAt },
+    { header: 'Rent / month', value: (r) => r.monthlyRent },
+    { header: 'Open balance', value: (r) => r.openBalance },
+    { header: 'Overdue', value: (r) => r.overdueBalance },
+    { header: 'State', value: (r) => r.state },
+    { header: 'Currency', value: () => cur },
+  ]
   const rowsByBuilding = new Map<string, RentRollRow[]>()
   for (const r of rows) {
     const key = r.buildingId ?? '__none__'
@@ -136,6 +152,10 @@ export function RentRollTab({ propertyId, currency }: { propertyId: string; curr
         <Tile label="Rent roll / month" value={money(totals.monthlyRent, cur)} sub="Contracted rent on occupied units" />
         <Tile label="Open balance" value={money(totals.openBalance, cur)} sub="Unsettled charges across the property" />
         <Tile label="Overdue" value={money(totals.overdueBalance, cur)} sub="Past-due portion of the open balance" />
+      </div>
+
+      <div className="flex justify-end">
+        <ExportCsvButton filename="rent-roll" columns={csvColumns} rows={rows} />
       </div>
 
       <div className="overflow-x-auto rounded-2xl border border-border bg-card shadow-xs">

@@ -23,7 +23,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@workspace/ui/componen
 import { PageLoader } from '@workspace/ui/components/loader'
 import { Text } from '@workspace/ui/components/text'
 import { toast } from '@workspace/ui/components/toast'
-import { LayoutGrid, Plus, Boxes, FileSpreadsheet, Pencil, Trash2, Zap } from 'lucide-react'
+import { LayoutGrid, Plus, Boxes, FileSpreadsheet, Mail, Pencil, Trash2, Zap } from 'lucide-react'
 
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
@@ -61,6 +61,7 @@ export default function UnitManagerPage() {
   const [deleteTarget, setDeleteTarget] = useState<UnitRow | null>(null)
   const [deleteBuilding, setDeleteBuilding] = useState<BuildingRow | null>(null)
   const [busy, setBusy] = useState(false)
+  const [sending, setSending] = useState(false)
   const [propertyAmenities, setPropertyAmenities] = useState<string[]>([])
   const [propertyCurrency, setPropertyCurrency] = useState<string | undefined>(undefined)
 
@@ -124,6 +125,47 @@ export default function UnitManagerPage() {
     const vacant = units.filter((u) => u.occupancy === 'VACANT').length
     return { occupied, vacant, other: units.length - occupied - vacant }
   }, [units])
+
+  const sendNotices = async () => {
+    const target = filtered.filter((u) => u.occupancy === 'OCCUPIED')
+    if (target.length === 0) {
+      toast.error('No occupied units match these filters')
+      return
+    }
+    setSending(true)
+    try {
+      const ids = target.map((u) => u.id)
+      let emailed = 0
+      let filed = 0
+      let skipped = 0
+      for (let i = 0; i < ids.length; i += 50) {
+        const res = await fetch('/api/units/billing-notices', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unitIds: ids.slice(i, i + 50) }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          toast.error(data.error ?? 'Could not send billing notices')
+          return
+        }
+        const r = (data.result ?? {}) as { emailed?: number; filed?: number; skipped?: unknown[] }
+        emailed += r.emailed ?? 0
+        filed += r.filed ?? 0
+        skipped += r.skipped?.length ?? 0
+      }
+      toast.success(
+        `Billing notices sent — ${emailed} emailed, ${filed} filed${
+          skipped ? `, ${skipped} skipped (vacant or no email)` : ''
+        }`,
+      )
+    } catch {
+      toast.error('Network error — notices may not have been sent')
+    } finally {
+      setSending(false)
+    }
+  }
 
   const confirmDeleteUnit = async () => {
     if (!deleteTarget) return
@@ -363,6 +405,17 @@ export default function UnitManagerPage() {
             ]}
             inlineFilters
             rowKey={(u) => u.id}
+            secondaryActions={
+              hasUiPermission('charge.manage')
+                ? [
+                    {
+                      label: sending ? 'Sending…' : 'Send bills to tenants',
+                      icon: Mail,
+                      onClick: sendNotices,
+                    },
+                  ]
+                : []
+            }
             emptyState={{
               icon: LayoutGrid,
               title: units.length > 0 ? 'No units match' : 'No units yet',

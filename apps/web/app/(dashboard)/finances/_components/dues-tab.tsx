@@ -7,15 +7,19 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, CalendarClock, HandCoins, Hourglass } from 'lucide-react'
+import { AlertTriangle, Bell, CalendarClock, HandCoins, Hourglass } from 'lucide-react'
 
 import { Badge } from '@workspace/ui/components/badge'
+import { Button } from '@workspace/ui/components/button'
 import { Card, CardContent } from '@workspace/ui/components/card'
 import { PageLoader } from '@workspace/ui/components/loader'
 import { ResponsiveDataListing } from '@workspace/ui/components/shared'
 import { toast } from '@workspace/ui/components/toast'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
+import { useUiPermission } from '@/components/shell/use-ui-permission'
+import type { CsvColumn } from '@/lib/csv'
 import { usePropertyOptions } from './doc-dialogs'
+import { ExportCsvButton } from './export-csv-button'
 
 type DuesRow = {
   tenantId: string
@@ -30,6 +34,7 @@ type DuesRow = {
   oldestDueDate: string | null
   ageDays: number
   bucket: string
+  lastRemindedAt: string | null
 }
 
 type DuesTotals = {
@@ -55,13 +60,30 @@ function money(amount: string, currency: string) {
   return `${currency} ${n.toLocaleString()}`
 }
 
+const CSV_COLUMNS: CsvColumn<DuesRow>[] = [
+  { header: 'Tenant', value: (r) => r.tenantName },
+  { header: 'Property', value: (r) => r.propertyName },
+  { header: 'Currency', value: (r) => r.currency },
+  { header: 'Open', value: (r) => r.open },
+  { header: 'Overdue', value: (r) => r.overdue },
+  { header: 'Overdue charges', value: (r) => r.overdueCount },
+  { header: 'Total charges', value: (r) => r.chargeCount },
+  { header: 'Oldest due', value: (r) => r.oldestDueDate },
+  { header: 'Age (days)', value: (r) => r.ageDays },
+  { header: 'Aging bucket', value: (r) => r.bucket },
+  { header: 'Last reminded', value: (r) => r.lastRemindedAt ? r.lastRemindedAt.slice(0, 10) : '' },
+]
+
 export function DuesTab() {
   const router = useRouter()
+  const { hasUiPermission } = useUiPermission()
+  const canRemind = hasUiPermission('charge.manage')
   const propertyOptions = usePropertyOptions()
   const [rows, setRows] = useState<DuesRow[] | null>(null)
   const [totals, setTotals] = useState<DuesTotals | null>(null)
   const [propertyId, setPropertyId] = useState('')
   const [view, setView] = useState('')
+  const [reminding, setReminding] = useState<string | null>(null)
 
   const load = useCallback(() => {
     let cancelled = false
@@ -106,6 +128,33 @@ export function DuesTab() {
     [totals],
   )
 
+  const remind = async (r: DuesRow) => {
+    const key = `${r.tenantId}:${r.propertyId}`
+    setReminding(key)
+    try {
+      const res = await fetch('/api/dues/remind', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenantId: r.tenantId }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not log reminder')
+        return
+      }
+      const rem = data.reminder ?? {}
+      toast.success(
+        `Reminder logged for ${rem.tenantName ?? r.tenantName} — ${money(rem.overdue ?? '0', rem.currency ?? r.currency)} overdue`,
+      )
+      load()
+    } catch {
+      toast.error('Network error — nothing was logged')
+    } finally {
+      setReminding(null)
+    }
+  }
+
   if (rows === null) return <PageLoader title="Loading dues…" description="" />
 
   return (
@@ -125,6 +174,10 @@ export function DuesTab() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="flex justify-end">
+        <ExportCsvButton filename="dues" columns={CSV_COLUMNS} rows={rows} />
       </div>
 
       <ResponsiveDataListing<DuesRow>
@@ -174,6 +227,42 @@ export function DuesTab() {
             ),
           },
           { header: 'Charges', cell: (r) => <span className="text-sm tabular-nums">{r.chargeCount}</span> },
+          {
+            header: 'Last reminded',
+            cell: (r) => (
+              <span className="text-xs text-muted-foreground">
+                {r.lastRemindedAt ? formatDate(r.lastRemindedAt) : '—'}
+              </span>
+            ),
+          },
+          {
+            header: '',
+            className: 'w-36',
+            cell: (r) => (
+              <div className="flex items-center justify-end gap-1.5">
+                <Button
+                  variant="text"
+                  size="sm"
+                  onClick={() => router.push(`/people/tenants/${r.tenantId}`)}
+                  aria-label={`Open ${r.tenantName}`}
+                >
+                  Open
+                </Button>
+                {canRemind && Number(r.overdue) > 0.009 ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={reminding === `${r.tenantId}:${r.propertyId}`}
+                    onClick={() => remind(r)}
+                    aria-label={`Log an overdue reminder for ${r.tenantName}`}
+                  >
+                    <Bell className="h-4 w-4" aria-hidden="true" />
+                    Remind
+                  </Button>
+                ) : null}
+              </div>
+            ),
+          },
         ]}
         cardMapper={{
           id: (r) => `${r.tenantId}:${r.propertyId}:${r.currency}`,
@@ -189,9 +278,19 @@ export function DuesTab() {
             { label: 'Overdue', value: Number(r.overdue) > 0.009 ? money(r.overdue, r.currency) : '—' },
             { label: 'Oldest due', value: r.oldestDueDate ? formatDate(r.oldestDueDate) : '—' },
             { label: 'Charges', value: String(r.chargeCount) },
+            { label: 'Last reminded', value: r.lastRemindedAt ? formatDate(r.lastRemindedAt) : '—' },
           ],
           actions: (r) => [
             { label: 'Open tenant', variant: 'outline' as const, onClick: () => router.push(`/people/tenants/${r.tenantId}`) },
+            ...(canRemind && Number(r.overdue) > 0.009
+              ? [
+                  {
+                    label: reminding === `${r.tenantId}:${r.propertyId}` ? 'Logging…' : 'Remind',
+                    variant: 'outline' as const,
+                    onClick: () => remind(r),
+                  },
+                ]
+              : []),
           ],
         }}
         filters={[

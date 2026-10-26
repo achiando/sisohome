@@ -117,6 +117,8 @@ export interface PortalCharge {
   title: string
   amount: string
   paid: string
+  /** Approved adjustments (credits/waivers/write-offs) applied to this charge. */
+  adjusted: string
   outstanding: string
   currency: string
   dueDate: string
@@ -135,7 +137,7 @@ export interface PortalPayment {
 export interface PortalStatement {
   charges: PortalCharge[]
   payments: PortalPayment[]
-  totals: { charges: string; paid: string; payments: string; balance: string }
+  totals: { charges: string; paid: string; adjusted: string; payments: string; balance: string }
 }
 
 export interface PortalDocument {

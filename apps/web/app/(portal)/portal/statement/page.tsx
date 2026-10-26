@@ -8,7 +8,7 @@
 
 import Link from 'next/link'
 import type { ReactNode } from 'react'
-import { Banknote, Receipt, Wallet } from 'lucide-react'
+import { Banknote, Receipt, Scale, Wallet } from 'lucide-react'
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@workspace/ui/components/card'
 import { PageLoader } from '@workspace/ui/components/loader'
@@ -97,7 +97,7 @@ export default function PortalStatementPage() {
         </Link>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Total charged"
           value={totals ? formatMoney(totals.charges, currency) : '—'}
@@ -107,6 +107,11 @@ export default function PortalStatementPage() {
           label="Paid"
           value={totals ? formatMoney(totals.payments, currency) : '—'}
           icon={<Wallet className="size-5" aria-hidden="true" />}
+        />
+        <StatCard
+          label="Adjustments"
+          value={totals ? formatMoney(totals.adjusted, currency) : '—'}
+          icon={<Scale className="size-5" aria-hidden="true" />}
         />
         <StatCard
           label={balance > 0.004 ? 'Balance due' : 'Balance'}
@@ -141,6 +146,7 @@ export default function PortalStatementPage() {
                         <th className="py-2 pr-3 font-medium">Description</th>
                         <th className="py-2 pr-3 text-right font-medium">Amount</th>
                         <th className="py-2 pr-3 text-right font-medium">Paid</th>
+                        <th className="py-2 pr-3 text-right font-medium">Adjusted</th>
                         <th className="py-2 text-right font-medium">Outstanding</th>
                       </tr>
                     </thead>
@@ -162,6 +168,9 @@ export default function PortalStatementPage() {
                           </td>
                           <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-muted-foreground">
                             {formatMoney(c.paid, c.currency)}
+                          </td>
+                          <td className="whitespace-nowrap py-2.5 pr-3 text-right tabular-nums text-muted-foreground">
+                            {Number(c.adjusted) > 0.004 ? formatMoney(c.adjusted, c.currency) : '—'}
                           </td>
                           <td
                             className={`whitespace-nowrap py-2.5 text-right tabular-nums ${

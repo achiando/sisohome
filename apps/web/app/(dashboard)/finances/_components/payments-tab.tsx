@@ -26,7 +26,9 @@ import { toast } from '@workspace/ui/components/toast'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { RecordPaymentDialog } from '@/app/(dashboard)/leasing/_components/record-payment-dialog'
+import type { CsvColumn } from '@/lib/csv'
 import { usePropertyOptions, type Option } from './doc-dialogs'
+import { ExportCsvButton } from './export-csv-button'
 
 type PaymentRow = {
   id: string
@@ -228,6 +230,20 @@ export function PaymentsTab() {
   if (payments === null) return <PageLoader title="Loading payments…" description="" />
 
   const currency = payments[0]?.currency ?? 'KES'
+  const propertyName = (id: string) => propertyOptions.find((o) => o.value === id)?.label ?? id
+  const csvColumns: CsvColumn<PaymentRow>[] = [
+    { header: 'Received', value: (p) => p.receivedAt.slice(0, 10) },
+    { header: 'Method', value: (p) => METHOD_LABEL[p.method] ?? p.method },
+    { header: 'Reference', value: (p) => p.reference },
+    { header: 'Account', value: (p) => p.account?.accountType },
+    { header: 'Currency', value: (p) => p.currency },
+    { header: 'Amount', value: (p) => p.amount },
+    { header: 'Allocated', value: (p) => p.allocatedTotal },
+    { header: 'Tenant', value: (p) => p.tenant?.displayName },
+    { header: 'Unit', value: (p) => p.unit?.unitRef },
+    { header: 'Property', value: (p) => propertyName(p.propertyId) },
+    { header: 'Reconciled', value: (p) => p.reconciledAt ? p.reconciledAt.slice(0, 10) : '' },
+  ]
   const tiles = [
     { label: 'Rent collected', value: breakdown?.rent.total ?? '0', icon: Banknote, sub: breakdown ? `${breakdown.rent.count} payments` : '' },
     { label: 'Utilities collected', value: breakdown?.utilities.total ?? '0', icon: Zap, sub: breakdown ? `${breakdown.utilities.count} payments` : '' },
@@ -251,6 +267,10 @@ export function PaymentsTab() {
             </CardContent>
           </Card>
         ))}
+      </div>
+
+      <div className="flex justify-end">
+        <ExportCsvButton filename="payments" columns={csvColumns} rows={payments} />
       </div>
 
       <ResponsiveDataListing<PaymentRow>

@@ -9,6 +9,8 @@
 
 import type { Prisma } from '@workspace/database';
 import { db } from '@/lib/auth';
+import { RouteError } from '@/lib/api-route';
+import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
 
 export type AgeBucket = 'CURRENT' | '0-30' | '31-60' | '61-90' | '90+';
@@ -30,6 +32,8 @@ export interface DuesRow {
   /** Days past `oldestDueDate` (0 when nothing is past due). */
   ageDays: number;
   bucket: AgeBucket;
+  /** Latest in-app overdue reminder logged for this tenant (audit-backed). */
+  lastRemindedAt: string | null;
 }
 
 export interface DuesTotals {
@@ -69,6 +73,25 @@ function bucketFor(ageDays: number): AgeBucket {
 }
 
 const MAX_CHARGES = 1000;
+
+/** Audit action for in-app overdue reminders (resourceType `tenant`). */
+const REMIND_ACTION = 'tenant.remind';
+
+/** Latest reminder timestamp per tenant, from the audit trail (one query). */
+async function latestReminders(organizationId: string, tenantIds: string[]): Promise<Map<string, Date>> {
+  const out = new Map<string, Date>();
+  if (tenantIds.length === 0) return out;
+  const logs = await db.auditLog.findMany({
+    where: { action: REMIND_ACTION, organizationId, resourceId: { in: tenantIds } },
+    select: { resourceId: true, createdAt: true },
+    orderBy: { createdAt: 'desc' },
+    take: 500,
+  });
+  for (const l of logs) {
+    if (l.resourceId && !out.has(l.resourceId)) out.set(l.resourceId, l.createdAt);
+  }
+  return out;
+}
 
 /**
  * Dues register: totals KPIs + one row per tenant × property with open
@@ -204,6 +227,7 @@ export async function tenantDues(actor: ScopeActor, filters: DuesFilters = {}): 
         oldestDueDate: basis ? basis.toISOString().slice(0, 10) : null,
         ageDays,
         bucket: bucketFor(ageDays),
+        lastRemindedAt: null,
       };
     })
     .sort((a, b) => Number(b.overdue) - Number(a.overdue) || Number(b.open) - Number(a.open));
@@ -219,6 +243,13 @@ export async function tenantDues(actor: ScopeActor, filters: DuesFilters = {}): 
     }
   }
 
+  const tenantIds = [...new Set(rows.map((r) => r.tenantId))];
+  const reminders = await latestReminders(actor.organizationId, tenantIds);
+  for (const r of rows) {
+    const at = reminders.get(r.tenantId);
+    r.lastRemindedAt = at ? at.toISOString() : null;
+  }
+
   return {
     totals: {
       outstanding: outstanding.toFixed(2),
@@ -230,5 +261,61 @@ export async function tenantDues(actor: ScopeActor, filters: DuesFilters = {}): 
       currency,
     },
     rows,
+  };
+}
+
+// ── in-app overdue reminder (Slice 9 gap pass) ───────────────────────────────
+
+export interface ReminderResult {
+  tenantId: string;
+  tenantName: string;
+  overdue: string;
+  currency: string;
+  properties: number;
+  overdueCount: number;
+  lastRemindedAt: string;
+}
+
+/**
+ * Log an in-app overdue reminder for a tenant (no email — the audit trail is
+ * the record). Overdue totals are recomputed server-side; nothing is trusted
+ * from the client. The Dues register surfaces `lastRemindedAt` per row.
+ */
+export async function remindTenant(actor: ScopeActor, raw: unknown): Promise<ReminderResult> {
+  const body = (raw ?? {}) as Record<string, unknown>;
+  const tenantId = typeof body.tenantId === 'string' ? body.tenantId.trim() : '';
+  if (!tenantId) throw new RouteError(400, 'tenantId is required');
+
+  const tenant = await db.tenant.findFirst({
+    where: { id: tenantId, organizationId: actor.organizationId },
+    select: { id: true, displayName: true },
+  });
+  if (!tenant) throw new RouteError(404, 'Tenant not found');
+
+  const result = await tenantDues(actor, { tenantId });
+  const overdueRows = result.rows.filter((r) => Number(r.overdue) > 0.009);
+  const primary = overdueRows.reduce<DuesRow | undefined>(
+    (max, r) => (!max || Number(r.overdue) > Number(max.overdue) ? r : max),
+    undefined,
+  );
+  if (!primary) throw new RouteError(400, 'No overdue balance to remind about');
+  const overdueCount = overdueRows.reduce((s, r) => s + r.overdueCount, 0);
+
+  await auditLog(actor, 'tenant', REMIND_ACTION, tenantId, {
+    displayName: tenant.displayName,
+    currency: primary.currency,
+    overdue: primary.overdue,
+    overdueCount,
+    properties: overdueRows.length,
+  });
+
+  return {
+    tenantId,
+    tenantName: tenant.displayName,
+    overdue: primary.overdue,
+    currency: primary.currency,
+    properties: overdueRows.length,
+    overdueCount,
+    lastRemindedAt: new Date().toISOString(),
   };
 }

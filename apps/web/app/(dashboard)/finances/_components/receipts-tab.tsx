@@ -14,7 +14,9 @@ import { ResponsiveDataListing } from '@workspace/ui/components/shared'
 import { toast } from '@workspace/ui/components/toast'
 import { Button } from '@workspace/ui/components/button'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
+import type { CsvColumn } from '@/lib/csv'
 import { ReceiptDialog, usePropertyOptions } from './doc-dialogs'
+import { ExportCsvButton } from './export-csv-button'
 
 type ReceiptRow = {
   id: string
@@ -49,6 +51,19 @@ function money(amount: string, currency: string) {
   const n = Number(amount)
   return `${currency} ${n.toLocaleString()}`
 }
+
+const CSV_COLUMNS: CsvColumn<ReceiptRow>[] = [
+  { header: 'Receipt', value: (r) => r.receiptNumber },
+  { header: 'Issued', value: (r) => r.issuedAt.slice(0, 10) },
+  { header: 'Currency', value: (r) => r.currency },
+  { header: 'Amount', value: (r) => r.amount },
+  { header: 'Payment method', value: (r) => METHOD_LABEL[r.payment.method] ?? r.payment.method },
+  { header: 'Payment reference', value: (r) => r.payment.reference },
+  { header: 'Received', value: (r) => r.payment.receivedAt.slice(0, 10) },
+  { header: 'Property', value: (r) => r.payment.property.name },
+  { header: 'Unit', value: (r) => r.payment.unit?.unitRef },
+  { header: 'Tenant', value: (r) => r.payment.tenant?.displayName },
+]
 
 export function ReceiptsTab() {
   const propertyOptions = usePropertyOptions()
@@ -85,6 +100,10 @@ export function ReceiptsTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <ExportCsvButton filename="receipts" columns={CSV_COLUMNS} rows={rows} />
+      </div>
+
       <ResponsiveDataListing<ReceiptRow>
         title="Receipts"
         hideHeaderOnMobile

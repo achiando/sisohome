@@ -9,6 +9,9 @@
  * Prints one line per case; exits 1 on any failure.
  */
 
+import fs from 'node:fs';
+import path from 'node:path';
+
 import { prisma } from '@/lib/auth';
 import { RouteError } from '@/lib/api-route';
 import * as charges from '@/lib/domain/charge';
@@ -19,6 +22,8 @@ import * as receipts from '@/lib/domain/receipt';
 import * as payments from '@/lib/domain/payment';
 import * as leases from '@/lib/domain/lease';
 import * as units from '@/lib/domain/unit';
+import * as portal from '@/lib/domain/portal';
+import * as billing from '@/lib/domain/billing-notice';
 import * as ledgerAccounts from '@/lib/domain/ledger-account';
 import { unitChargeSummary } from '@/lib/domain/monthly';
 
@@ -456,6 +461,88 @@ try {
     await expectStatus('stranger dues → 404', 404, () => dues.tenantDues(stranger, { propertyId: pid }));
   }
 
+  console.log('— in-app overdue reminder (audit-backed, no email)');
+  const remind1 = await expectOk('remindTenant (overdue tenant 1)', () =>
+    dues.remindTenant(actor, { tenantId: tenant1 }),
+  );
+  if (remind1) {
+    check('reminder snapshot has overdue > 0', Number(remind1.overdue) > 0.009, remind1.overdue);
+    check('reminder covers >= 1 charge', remind1.overdueCount >= 1, String(remind1.overdueCount));
+    const afterRemind = await expectOk('tenantDues after remind', () => dues.tenantDues(actor, { tenantId: tenant1 }));
+    const r1 = afterRemind?.rows.find((r) => r.tenantId === tenant1);
+    check('lastRemindedAt populated on dues row', Boolean(r1?.lastRemindedAt), r1?.lastRemindedAt ?? 'null');
+  }
+  await expectStatus('remind tenant 2 (not overdue) → 400', 400, () =>
+    dues.remindTenant(actor, { tenantId: tenant2 }),
+  );
+  await expectStatus('remind without tenantId → 400', 400, () => dues.remindTenant(actor, {}));
+  if (stranger) {
+    await expectStatus('stranger remind → 404', 404, () => dues.remindTenant(stranger, { tenantId: tenant1 }));
+  }
+
+  console.log('— portal statement subtracts approved adjustments');
+  const portalActor = { userId: 'smoke-portal-statement', tenantId: tenant1, organizationId: org.id };
+  const stmt = await expectOk('getPortalStatement (tenant 1)', () => portal.getPortalStatement(portalActor));
+  if (stmt) {
+    check('statement includes approved adjustment (2000)', stmt.totals.adjusted.toString() === '2000', stmt.totals.adjusted.toString());
+    const balance = stmt.totals.charges.minus(stmt.totals.paid).minus(stmt.totals.adjusted);
+    check('statement balance = charges − paid − adjusted', stmt.totals.balance.equals(balance), stmt.totals.balance.toString());
+    const stmtChargeA = stmt.charges.find((c) => c.id === chargeA.id);
+    const orgList = await expectOk('org listCharges for cross-check', () => charges.listCharges(actor, { propertyId: pid }));
+    const orgChargeA = orgList?.find((c) => c.id === chargeA.id);
+    check(
+      'portal outstanding = org balance (charge A)',
+      Boolean(stmtChargeA) && Boolean(orgChargeA) && stmtChargeA!.outstanding.equals(Number(orgChargeA!.balance)),
+      `portal=${stmtChargeA?.outstanding.toString()} org=${orgChargeA?.balance}`,
+    );
+    check('charge A outstanding reflects 2000 waiver', stmtChargeA ? Number(stmtChargeA.outstanding) === 10000 : false, stmtChargeA?.outstanding.toString() ?? 'missing');
+  }
+
+  console.log('— billing notice: email + portal NOTICE document (zero schema change)');
+  const outboxDir = path.join(process.cwd(), '.email-outbox');
+  const outboxCount = () => (fs.existsSync(outboxDir) ? fs.readdirSync(outboxDir).length : 0);
+
+  const noEmail = await expectOk('sendBillingNotice (tenant has no email yet)', () =>
+    billing.sendBillingNotice(actor, { unitIds: [unitA] }),
+  );
+  if (noEmail) {
+    check('no-email unit skipped, nothing sent', noEmail.emailed === 0 && noEmail.skipped.some((s) => s.reason === 'no-email'), JSON.stringify(noEmail));
+  }
+
+  await prisma.tenant.update({ where: { id: tenant1 }, data: { email: `smoke-billing-${Date.now()}@example.test` } });
+  const mailBefore = outboxCount();
+  const notice1 = await expectOk('sendBillingNotice (unit A → email + portal doc)', () =>
+    billing.sendBillingNotice(actor, { unitIds: [unitA] }),
+  );
+  if (notice1) {
+    check('emailed 1, filed 1, no skips', notice1.emailed === 1 && notice1.filed === 1 && notice1.skipped.length === 0, JSON.stringify(notice1));
+    check('outbox received the email', outboxCount() === mailBefore + 1, `${mailBefore} → ${outboxCount()}`);
+    const doc = await prisma.propertyDocument.findFirst({
+      where: { entityType: 'TENANT', entityId: tenant1, kind: 'NOTICE' },
+      select: { id: true, caption: true, storageKey: true },
+    });
+    check('NOTICE document filed (TENANT + generated storageKey)', Boolean(doc) && doc!.storageKey.startsWith('generated/billing/'), doc ? `${doc.storageKey} · ${doc.caption}` : 'missing');
+    const portalDocs = await expectOk('getPortalDocuments', () => portal.getPortalDocuments(portalActor));
+    check('notice appears in tenant portal documents', Boolean(doc) && Boolean(portalDocs?.some((d) => d.id === doc!.id)), String(portalDocs?.length));
+    const auditRow = await prisma.auditLog.findFirst({ where: { action: 'tenant.billing-notice', resourceId: tenant1 } });
+    check('billing-notice audit row', Boolean(auditRow));
+  }
+
+  const bulk = await expectOk('sendBillingNotice bulk (A + vacant B + unknown id)', () =>
+    billing.sendBillingNotice(actor, { unitIds: [unitA, unitB, 'smoke-missing-unit'] }),
+  );
+  if (bulk) {
+    check('bulk: 1 emailed, 2 skipped', bulk.emailed === 1 && bulk.skipped.length === 2, JSON.stringify(bulk));
+    const reasons = bulk.skipped.map((s) => s.reason).sort().join(',');
+    check('skip reasons = not-found,vacant', reasons === 'not-found,vacant', reasons);
+  }
+  await expectStatus('sendBillingNotice all-unknown → 404', 404, () =>
+    billing.sendBillingNotice(actor, { unitIds: ['smoke-missing-unit'] }),
+  );
+  if (stranger) {
+    await expectStatus('stranger sendBillingNotice → 404', 404, () => billing.sendBillingNotice(stranger, { unitIds: [unitA] }));
+  }
+
   console.log('— rent roll: occupancy, overdue state, building subtotals');
   const rr = await expectOk('rentRoll', () => rentRoll.rentRoll(actor, pid));
   if (rr) {
@@ -540,6 +627,15 @@ try {
   for (const id of cleanupAdjustments) {
     await prisma.financialAdjustment.deleteMany({ where: { id } });
   }
+  await prisma.propertyDocument.deleteMany({
+    where: { entityType: 'TENANT', entityId: tenant1, kind: 'NOTICE' },
+  });
+  await prisma.auditLog.deleteMany({
+    where: {
+      action: { in: ['tenant.remind', 'tenant.billing-notice'] },
+      resourceId: { in: [tenant1, tenant2].filter(Boolean) },
+    },
+  });
   await prisma.receipt.deleteMany({ where: { paymentId: { in: cleanupPayments } } });
   await prisma.paymentAllocation.deleteMany({
     where: { OR: [{ paymentId: { in: cleanupPayments } }, { chargeId: { in: cleanupCharges } }] },

@@ -10,7 +10,7 @@
 
 import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { Building2, Camera, Car, FileText, Hash, Home, Ruler, StickyNote, User } from 'lucide-react'
+import { Building2, Camera, Car, FileText, Hash, Home, Mail, Ruler, StickyNote, User } from 'lucide-react'
 import type { UnitStatus } from '@workspace/database'
 
 import {
@@ -344,6 +344,7 @@ export default function UnitDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [sendingNotice, setSendingNotice] = useState(false)
   const [addTenantOpen, setAddTenantOpen] = useState(false)
 
   const load = useCallback(() => {
@@ -389,6 +390,36 @@ export default function UnitDetailPage() {
       toast.error('Network error')
     } finally {
       setBusy(false)
+    }
+  }
+
+  const sendBill = async () => {
+    setSendingNotice(true)
+    try {
+      const res = await fetch('/api/units/billing-notices', {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ unitIds: [unitId] }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        toast.error(data.error ?? 'Could not send billing notice')
+        return
+      }
+      const r = (data.result ?? {}) as { emailed?: number; skipped?: { reason?: string }[] }
+      if (r.emailed) {
+        toast.success('Billing notice emailed and filed in the tenant portal')
+        return
+      }
+      const reason = r.skipped?.[0]?.reason
+      if (reason === 'no-email') toast.error('Tenant has no email address — add one on the tenant page')
+      else if (reason === 'vacant') toast.error('This unit is vacant — nothing to send')
+      else toast.error('Nothing was sent')
+    } catch {
+      toast.error('Network error — nothing was sent')
+    } finally {
+      setSendingNotice(false)
     }
   }
 
@@ -534,14 +565,27 @@ export default function UnitDetailPage() {
                 <div className="text-right">
                   <p className="font-medium">{formatMoney(unit.occupant.monthlyRent, currency)}</p>
                   <p className="text-xs text-muted-foreground">per month</p>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2"
-                    onClick={() => router.push(`/leasing/leases/${unit.occupant!.leaseId}`)}
-                  >
-                    View lease
-                  </Button>
+                  <div className="mt-2 flex flex-col items-end gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => router.push(`/leasing/leases/${unit.occupant!.leaseId}`)}
+                    >
+                      View lease
+                    </Button>
+                    {hasUiPermission('charge.manage') ? (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={sendingNotice}
+                        onClick={sendBill}
+                        aria-label={`Send billing notice to ${unit.occupant.displayName}`}
+                      >
+                        <Mail size={14} aria-hidden />
+                        {sendingNotice ? 'Sending…' : 'Send bill'}
+                      </Button>
+                    ) : null}
+                  </div>
                 </div>
               </div>
             </CardContent>

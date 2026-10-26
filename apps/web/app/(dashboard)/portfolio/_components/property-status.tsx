@@ -45,6 +45,8 @@ export function humanizeAction(action: string): string {
     'charges.generate_monthly': 'Monthly charges generated',
     'payment.create': 'Payment recorded',
     'payment.create_multi_month': 'Payment recorded',
+    'tenant.remind': 'Overdue reminder logged',
+    'tenant.billing-notice': 'Billing notice sent',
   }
   if (labels[action]) return labels[action]
   return action

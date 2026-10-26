@@ -119,6 +119,7 @@ export async function getPortalStatement(actor: PortalTenantActor) {
       where: scope,
       include: {
         allocations: { select: { amount: true } },
+        adjustments: { where: { status: 'APPROVED' }, select: { amount: true } },
         unit: { select: { id: true, label: true } },
       },
       orderBy: { dueDate: 'desc' },
@@ -131,17 +132,22 @@ export async function getPortalStatement(actor: PortalTenantActor) {
 
   let chargesTotal = new Prisma.Decimal(0);
   let paidTotal = new Prisma.Decimal(0);
+  let adjustedTotal = new Prisma.Decimal(0);
   const mappedCharges = charges.map((c) => {
     const paid = c.allocations.reduce((acc, a) => acc.plus(a.amount), new Prisma.Decimal(0));
+    const adjusted = c.adjustments.reduce((acc, a) => acc.plus(a.amount), new Prisma.Decimal(0));
     chargesTotal = chargesTotal.plus(c.amount);
     paidTotal = paidTotal.plus(paid);
+    adjustedTotal = adjustedTotal.plus(adjusted);
     return {
       id: c.id,
       chargeType: c.chargeType,
       title: c.title,
       amount: c.amount,
       paid,
-      outstanding: c.amount.minus(paid),
+      /** Approved credits/waivers/write-offs that reduced this charge. */
+      adjusted,
+      outstanding: c.amount.minus(paid).minus(adjusted),
       currency: c.currency,
       dueDate: c.dueDate,
       unitLabel: c.unit?.label ?? null,
@@ -167,9 +173,10 @@ export async function getPortalStatement(actor: PortalTenantActor) {
     totals: {
       charges: chargesTotal,
       paid: paidTotal,
+      adjusted: adjustedTotal,
       payments: paymentsTotal,
-      /** outstanding charges − payments received (derived, org owns the truth). */
-      balance: chargesTotal.minus(paymentsTotal),
+      /** Same rule as the org side: charges − allocations − approved adjustments. */
+      balance: chargesTotal.minus(paidTotal).minus(adjustedTotal),
     },
   };
 }

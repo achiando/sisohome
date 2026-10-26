@@ -25,7 +25,9 @@ import { formatDate } from '@/app/(dashboard)/_components/domain/format'
 import { chargeTypeLabel } from '@/lib/domain/charge-constants'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { RecordPaymentDialog } from '@/app/(dashboard)/leasing/_components/record-payment-dialog'
+import type { CsvColumn } from '@/lib/csv'
 import { ChargeDialog } from './charge-dialog'
+import { ExportCsvButton } from './export-csv-button'
 import { AdjustmentDialog } from './adjustment-dialog'
 import { InvoiceDialog, usePropertyOptions } from './doc-dialogs'
 
@@ -49,6 +51,26 @@ type ChargeRow = {
   leaseId: string | null
   propertyId: string
 }
+
+const chargeStatus = (c: ChargeRow): string =>
+  Number(c.balance) <= 0.009 ? 'PAID' : c.overdue ? 'OVERDUE' : 'OPEN'
+
+const CSV_COLUMNS: CsvColumn<ChargeRow>[] = [
+  { header: 'Invoice', value: (c) => c.invoiceNumber },
+  { header: 'Type', value: (c) => c.chargeType },
+  { header: 'Title', value: (c) => c.title },
+  { header: 'Property', value: (c) => c.property.name },
+  { header: 'Unit', value: (c) => c.unit?.unitRef },
+  { header: 'Tenant', value: (c) => c.tenant?.displayName },
+  { header: 'Currency', value: (c) => c.currency },
+  { header: 'Amount', value: (c) => c.amount },
+  { header: 'Paid (allocated)', value: (c) => c.allocatedTotal },
+  { header: 'Adjusted (approved)', value: (c) => c.adjustedTotal },
+  { header: 'Balance', value: (c) => c.balance },
+  { header: 'Due date', value: (c) => c.dueDate },
+  { header: 'Posted', value: (c) => c.postedAt ? c.postedAt.slice(0, 10) : '' },
+  { header: 'Status', value: chargeStatus },
+]
 
 const STATUS_OPTIONS = [
   { value: '', label: 'All' },
@@ -111,6 +133,10 @@ export function ChargesTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <ExportCsvButton filename="charges" columns={CSV_COLUMNS} rows={rows} />
+      </div>
+
       <ResponsiveDataListing<ChargeRow>
         title="Charge register"
         hideHeaderOnMobile

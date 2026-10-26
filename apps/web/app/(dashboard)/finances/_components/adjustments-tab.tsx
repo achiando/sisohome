@@ -17,8 +17,10 @@ import { toast } from '@workspace/ui/components/toast'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
 import { chargeTypeLabel } from '@/lib/domain/charge-constants'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
+import type { CsvColumn } from '@/lib/csv'
 import { AdjustmentDialog } from './adjustment-dialog'
 import { usePropertyOptions } from './doc-dialogs'
+import { ExportCsvButton } from './export-csv-button'
 
 type AdjustmentRow = {
   id: string
@@ -51,6 +53,23 @@ const STATUS_TONE: Record<string, 'warning' | 'success' | 'error'> = {
   APPROVED: 'success',
   REJECTED: 'error',
 }
+
+const CSV_COLUMNS: CsvColumn<AdjustmentRow>[] = [
+  { header: 'Type', value: (a) => a.type },
+  { header: 'Status', value: (a) => a.status },
+  { header: 'Currency', value: (a) => a.charge.currency },
+  { header: 'Amount', value: (a) => a.amount },
+  { header: 'Reason', value: (a) => a.reason },
+  { header: 'Property', value: (a) => a.charge.property.name },
+  { header: 'Unit', value: (a) => a.charge.unit?.unitRef },
+  { header: 'Tenant', value: (a) => a.charge.tenant?.displayName },
+  { header: 'Charge', value: (a) => a.charge.title ?? a.charge.chargeType },
+  { header: 'Charge balance', value: (a) => a.charge.balance },
+  { header: 'Submitted by', value: (a) => a.submittedBy?.displayName ?? a.submittedBy?.email },
+  { header: 'Decided by', value: (a) => a.approvedBy?.displayName ?? a.approvedBy?.email },
+  { header: 'Created', value: (a) => a.createdAt.slice(0, 10) },
+  { header: 'Decided', value: (a) => a.decidedAt ? a.decidedAt.slice(0, 10) : '' },
+]
 
 const TYPE_LABEL: Record<string, string> = {
   CREDIT: 'Credit',
@@ -121,6 +140,10 @@ export function AdjustmentsTab() {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <ExportCsvButton filename="adjustments" columns={CSV_COLUMNS} rows={rows} />
+      </div>
+
       <ResponsiveDataListing<AdjustmentRow>
         title="Adjustments"
         hideHeaderOnMobile

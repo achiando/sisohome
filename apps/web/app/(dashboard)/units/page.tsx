@@ -11,7 +11,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Boxes } from 'lucide-react'
+import { Boxes, Mail } from 'lucide-react'
 
 import { ResponsiveDataListing } from '@workspace/ui/components/shared'
 import { toast } from '@workspace/ui/components/toast'
@@ -35,6 +35,7 @@ export default function GlobalUnitsPage() {
   const [propertyFilter, setPropertyFilter] = useState('')
   const [statusFilter, setStatusFilter] = useState('')
   const [addTenantUnit, setAddTenantUnit] = useState<UnitListRow | null>(null)
+  const [sending, setSending] = useState(false)
 
   const load = useCallback(() => {
     let cancelled = false
@@ -82,6 +83,51 @@ export default function GlobalUnitsPage() {
     }
     return list
   }, [units, search, propertyFilter, statusFilter])
+
+  const sendNotices = async () => {
+    const target = filtered.filter((u) => u.occupancy === 'OCCUPIED')
+    if (target.length === 0) {
+      toast.error('No occupied units match these filters')
+      return
+    }
+    setSending(true)
+    try {
+      const ids = target.map((u) => u.id)
+      let emailed = 0
+      let filed = 0
+      let skipped = 0
+      for (let i = 0; i < ids.length; i += 50) {
+        const res = await fetch('/api/units/billing-notices', {
+          method: 'POST',
+          credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ unitIds: ids.slice(i, i + 50) }),
+        })
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) {
+          toast.error(data.error ?? 'Could not send billing notices')
+          return
+        }
+        const r = (data.result ?? {}) as {
+          emailed?: number
+          filed?: number
+          skipped?: unknown[]
+        }
+        emailed += r.emailed ?? 0
+        filed += r.filed ?? 0
+        skipped += r.skipped?.length ?? 0
+      }
+      toast.success(
+        `Billing notices sent — ${emailed} emailed, ${filed} filed${
+          skipped ? `, ${skipped} skipped (vacant or no email)` : ''
+        }`,
+      )
+    } catch {
+      toast.error('Network error — notices may not have been sent')
+    } finally {
+      setSending(false)
+    }
+  }
 
   if (!hasUiPermission('unit.list')) {
     return (
@@ -137,6 +183,17 @@ export default function GlobalUnitsPage() {
         ]}
         inlineFilters
         rowKey={(u) => u.id}
+        secondaryActions={
+          hasUiPermission('charge.manage')
+            ? [
+                {
+                  label: sending ? 'Sending…' : 'Send bills to tenants',
+                  icon: Mail,
+                  onClick: sendNotices,
+                },
+              ]
+            : []
+        }
         emptyState={{
           icon: Boxes,
           title: 'No units yet',
