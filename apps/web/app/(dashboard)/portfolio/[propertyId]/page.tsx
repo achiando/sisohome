@@ -65,6 +65,7 @@ import {
 import { MediaTab, type DocRow } from '../_components/media-tab'
 import { PropertyAccountsCard, type LedgerAccountRow } from '../_components/property-accounts-card'
 import { PropertyReportTab } from '../_components/property-report-tab'
+import { RentRollTab } from '../_components/rent-roll-tab'
 import { IntakeLinkDialog } from '../_components/intake-link-dialog'
 
 type PropertyDetail = Property & {
@@ -905,6 +906,11 @@ export default function PropertyDetailPage() {
       : []),
     ...(hasUiPermission('charge.list')
       ? [
+          {
+            id: 'rent-roll',
+            label: 'Rent roll',
+            content: <RentRollTab propertyId={propertyId} currency={property.currency} />,
+          },
           {
             id: 'report',
             label: 'Report',

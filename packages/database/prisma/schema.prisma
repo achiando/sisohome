@@ -1688,6 +1688,9 @@ model Charge {
   billingPeriodStart DateTime? @map("billing_period_start")
   billingPeriodEnd   DateTime? @map("billing_period_end")
   postedAt   DateTime?  @map("posted_at")
+  /// Human invoice sequence (INV-YYYY-NNNN, per org) — minted at creation;
+  /// NULL on pre-Slice-8 rows until first invoice render.
+  invoiceNumber String? @map("invoice_number")
   notes      String?
 
   createdAt DateTime @default(now()) @map("created_at")
@@ -1704,6 +1707,7 @@ model Charge {
   adjustments     FinancialAdjustment[]
 
   @@map("charges")
+  @@unique([organizationId, invoiceNumber])
   @@index([organizationId, dueDate])
   @@index([propertyId])
   @@index([tenantId])

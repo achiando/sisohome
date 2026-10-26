@@ -26,6 +26,7 @@ import { RouteError } from '@/lib/api-route';
 import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
 import { resolveAccount } from './ledger-account';
+import { createChargeWithInvoice } from './charge';
 
 // ── month helpers ────────────────────────────────────────────────────────────
 
@@ -145,22 +146,20 @@ export async function generateMonthlyCharges(
       result.rentSkipped += 1;
       continue;
     }
-    await db.charge.create({
-      data: {
-        organizationId: actor.organizationId,
-        propertyId,
-        unitId: lu.unitId,
-        leaseId: lu.lease.id,
-        tenantId: lu.lease.parties[0]?.tenantId ?? null,
-        chargeType: 'RENT',
-        title: `Rent ${month}`,
-        amount: lu.monthlyRent,
-        currency: 'KES',
-        dueDate: start,
-        billingPeriodStart: start,
-        billingPeriodEnd: end,
-        postedAt: new Date(),
-      },
+    await createChargeWithInvoice({
+      organizationId: actor.organizationId,
+      propertyId,
+      unitId: lu.unitId,
+      leaseId: lu.lease.id,
+      tenantId: lu.lease.parties[0]?.tenantId ?? null,
+      chargeType: 'RENT',
+      title: `Rent ${month}`,
+      amount: lu.monthlyRent,
+      currency: 'KES',
+      dueDate: start,
+      billingPeriodStart: start,
+      billingPeriodEnd: end,
+      postedAt: new Date(),
     });
     result.rentCreated += 1;
   }
@@ -210,21 +209,19 @@ export async function generateMonthlyCharges(
       result.utilitiesSkipped += 1;
       continue;
     }
-    await db.charge.create({
-      data: {
-        organizationId: actor.organizationId,
-        propertyId,
-        unitId: sch.unitId,
-        scheduleId: sch.id,
-        chargeType: sch.chargeType,
-        title: `${sch.name} ${month}`,
-        amount: sch.amount,
-        currency: sch.currency,
-        dueDate: start,
-        billingPeriodStart: start,
-        billingPeriodEnd: end,
-        postedAt: new Date(),
-      },
+    await createChargeWithInvoice({
+      organizationId: actor.organizationId,
+      propertyId,
+      unitId: sch.unitId,
+      scheduleId: sch.id,
+      chargeType: sch.chargeType,
+      title: `${sch.name} ${month}`,
+      amount: sch.amount,
+      currency: sch.currency,
+      dueDate: start,
+      billingPeriodStart: start,
+      billingPeriodEnd: end,
+      postedAt: new Date(),
     });
     if (sch.frequency !== 'MONTHLY') {
       await db.chargeSchedule.update({
@@ -523,11 +520,17 @@ export async function recordMultiMonthPayment(
 export interface UnitChargeSummary {
   pending: string;
   paid: string;
+  /** Open balance on charges past their due date (Slice 8). */
+  overdue: string;
+  /** Max days past due across open charges; 0 when nothing is overdue. */
+  overdueDays: number;
   currency: string;
 }
 
 /**
- * Per-unit open (pending) vs settled (paid) totals from posted charges.
+ * Per-unit open (pending) vs settled (paid) totals from posted charges,
+ * with the overdue slice split out (same balance math as listCharges:
+ * amount − allocations − approved adjustments).
  */
 export async function unitChargeSummary(
   actor: ScopeActor,
@@ -546,18 +549,31 @@ export async function unitChargeSummary(
       unitId: true,
       amount: true,
       currency: true,
+      dueDate: true,
       allocations: { select: { amount: true } },
+      adjustments: { select: { amount: true, status: true } },
     },
   });
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   for (const c of charges) {
     if (!c.unitId) continue;
-    const row = out.get(c.unitId) ?? { pending: '0', paid: '0', currency: c.currency };
+    const row =
+      out.get(c.unitId) ?? { pending: '0', paid: '0', overdue: '0', overdueDays: 0, currency: c.currency };
     const allocated = c.allocations.reduce((s, a) => s + Number(a.amount), 0);
-    const prevPending = Number(row.pending);
-    const prevPaid = Number(row.paid);
+    const adjusted = c.adjustments
+      .filter((a) => a.status === 'APPROVED')
+      .reduce((s, a) => s + Number(a.amount), 0);
+    const balance = Number(c.amount) - allocated - adjusted;
+    const due = new Date(c.dueDate);
+    due.setHours(0, 0, 0, 0);
+    const isOverdue = due < today && balance > 0.009;
+    const days = isOverdue ? Math.floor((today.getTime() - due.getTime()) / 86_400_000) : 0;
     out.set(c.unitId, {
-      pending: (prevPending + (Number(c.amount) - allocated)).toFixed(2),
-      paid: (prevPaid + allocated).toFixed(2),
+      pending: (Number(row.pending) + balance).toFixed(2),
+      paid: (Number(row.paid) + allocated).toFixed(2),
+      overdue: (Number(row.overdue) + (isOverdue ? balance : 0)).toFixed(2),
+      overdueDays: Math.max(row.overdueDays, days),
       currency: c.currency,
     });
   }

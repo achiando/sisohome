@@ -1,10 +1,13 @@
 import { authorizationService } from '@/lib/auth';
 import { apiRoute, ok, RouteError } from '@/lib/api-route';
 import * as lease from '@/lib/domain/lease';
+import * as charges from '@/lib/domain/charge';
 
 /**
  * GET /api/leases — lease register (scope + filters). Party contact PII is
  * stripped unless the caller also holds `tenant.read` (plan-slice-2 §2.3).
+ * `showBalance=1` adds a derived `balance {open, overdue, currency}` per row
+ * — gated on `charge.list` inside the route (Slice 8).
  */
 export const GET = apiRoute({
   permissions: 'lease.list',
@@ -19,15 +22,23 @@ export const GET = apiRoute({
       unitId: query.get('unitId') ?? undefined,
       expiringInDays: query.get('expiringInDays') ?? undefined,
     });
-    const leases = includeTenantPii
-      ? rows
-      : rows.map((l) => ({
-          ...l,
-          parties: l.parties.map((p) => ({
+    const wantsBalance = query.get('showBalance') === '1' || query.get('showBalance') === 'true';
+    const balances =
+      wantsBalance && granted.includes('charge.list' as never)
+        ? await charges.leaseBalances(actor, rows.map((l) => l.id))
+        : null;
+    const leases = rows.map((l) => ({
+      ...l,
+      ...(balances
+        ? { balance: balances.get(l.id) ?? { open: '0', overdue: '0', currency: 'KES' } }
+        : {}),
+      parties: includeTenantPii
+        ? l.parties
+        : l.parties.map((p) => ({
             ...p,
             tenant: { id: p.tenant.id, displayName: p.tenant.displayName, status: p.tenant.status, portalStatus: p.tenant.portalStatus },
           })),
-        }));
+    }));
     return { leases };
   },
 });

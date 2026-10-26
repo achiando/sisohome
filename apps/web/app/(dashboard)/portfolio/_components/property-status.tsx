@@ -37,6 +37,14 @@ export function humanizeAction(action: string): string {
     'property.delete': 'Property deleted',
     'property.intake_link': 'Intake link issued',
     'application.intake_submit': 'Application submitted via intake link',
+    'charge.create': 'Charge posted',
+    'adjustment.create': 'Adjustment submitted',
+    'adjustment.approve': 'Adjustment approved',
+    'adjustment.reject': 'Adjustment rejected',
+    'receipt.issue': 'Receipt issued',
+    'charges.generate_monthly': 'Monthly charges generated',
+    'payment.create': 'Payment recorded',
+    'payment.create_multi_month': 'Payment recorded',
   }
   if (labels[action]) return labels[action]
   return action

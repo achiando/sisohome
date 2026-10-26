@@ -23,6 +23,7 @@ import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { EntityDocumentsTab } from '../../_components/entity-documents-tab'
 import { LeaseLifecycleActions } from '../../_components/lease-lifecycle-actions'
 import { LeaseStatusBadge } from '../../_components/lease-status'
+import { LeaseChargesTab } from '../../_components/lease-charges-tab'
 
 type LeaseDetail = {
   id: string
@@ -268,6 +269,22 @@ export default function LeaseDetailPage() {
     ),
   }
 
+  const chargesTab: DetailTab | null = hasUiPermission('charge.list')
+    ? {
+        id: 'charges',
+        label: 'Charges',
+        content: (
+          <LeaseChargesTab
+            leaseId={lease.id}
+            propertyId={lease.property.id}
+            unitId={lease.units[0]?.unit.id ?? null}
+            tenantId={(lease.parties.find((p) => p.relationship === 'PRIMARY') ?? lease.parties[0])?.tenant.id ?? null}
+            currency={lease.currency}
+          />
+        ),
+      }
+    : null
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-2">
@@ -296,7 +313,16 @@ export default function LeaseDetailPage() {
         }
       />
 
-      <DetailTabs tabs={[overview, unitsTab, partiesTab, documentsTab, termsTab]} />
+      <DetailTabs
+        tabs={[
+          overview,
+          unitsTab,
+          partiesTab,
+          ...(chargesTab ? [chargesTab] : []),
+          documentsTab,
+          termsTab,
+        ]}
+      />
     </div>
   )
 }

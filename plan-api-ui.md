@@ -14,6 +14,7 @@ Living implementation plan for the property-domain **API routes and pages**, bui
 | 5 | `plan-slice-5-sales.md` | Listings, leads, viewings, offers, deals, cross-org handoffs | `/sales` (new nav) |
 | 6 | `plan-slice-6-cross-cutting.md` | Calendar, documents library, Overview KPIs, thin reports | `/calendar`, `/documents`, `/`, `/reports` |
 | 7 | `plan-slice-7-portal.md` | Tenant portal: invite-accept, portal guard, tenant-scoped views | `/portal/*` (separate shell) |
+| 8 | `plan-slice-8-finances.md` | Finances completion: dues/arrears + aging, per-unit rent roll, invoices/receipts, adjustments write path, overdue flags, `/finances` hub | `/finances` |
 
 Each slice ends **green**: `npx tsc -p packages/database` (if touched) · `pnpm typecheck` 9/9 · `pnpm lint` 9/9 (0 errors) · live API smoke on the dev server · matrix test still passing.
 

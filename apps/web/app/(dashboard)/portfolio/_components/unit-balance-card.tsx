@@ -28,6 +28,8 @@ type ChargeRow = {
   dueDate: string | null
   billingPeriodStart: string | null
   postedAt: string | null
+  overdue: boolean
+  overdueDays: number
 }
 
 function money(amount: string, currency: string) {
@@ -80,6 +82,9 @@ export function UnitBalanceCard({
 
   const open = (charges ?? []).filter((c) => Number(c.balance) > 0.009)
   const pending = open.reduce((s, c) => s + Number(c.balance), 0)
+  const overdueRows = open.filter((c) => c.overdue)
+  const overdue = overdueRows.reduce((s, c) => s + Number(c.balance), 0)
+  const overdueDays = overdueRows.reduce((m, c) => Math.max(m, c.overdueDays ?? 0), 0)
   const currency = charges?.[0]?.currency ?? 'KES'
 
   return (
@@ -98,6 +103,11 @@ export function UnitBalanceCard({
                 ? 'No open charges — this unit is settled'
                 : `${open.length} open charge${open.length === 1 ? '' : 's'}`}
             </p>
+            {overdue > 0.009 ? (
+              <p className="mt-1 text-xs font-medium text-red-700 dark:text-red-300">
+                {money(overdue.toFixed(2), currency)} overdue · {overdueDays}d
+              </p>
+            ) : null}
           </div>
           {hasUiPermission('payment.create') ? (
             <Button variant="outline" size="sm" onClick={() => setRecordOpen(true)}>
@@ -117,7 +127,7 @@ export function UnitBalanceCard({
                     {c.dueDate ? ` · due ${formatDate(c.dueDate)}` : ''}
                   </p>
                 </div>
-                <Badge variant="warning" size="sm">
+                <Badge variant={c.overdue ? 'error' : 'warning'} size="sm">
                   {money(c.balance, c.currency)}
                 </Badge>
               </li>

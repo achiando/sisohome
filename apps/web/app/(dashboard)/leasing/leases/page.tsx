@@ -33,6 +33,8 @@ type LeaseRow = {
   property: { id: string; name: string }
   units: { unit: { id: string; unitRef: string; label: string | null } }[]
   parties: { relationship: string; tenant: { id: string; displayName: string } }[]
+  /** Present only with showBalance=1 (charge.list) — open vs overdue per lease. */
+  balance?: { open: string; overdue: string; currency: string } | null
 }
 
 function primaryTenant(l: LeaseRow): string {
@@ -51,6 +53,7 @@ export default function LeasesPage() {
   const router = useRouter()
   const { hasUiPermission } = useUiPermission()
 
+  const showBalance = hasUiPermission('charge.list')
   const [leases, setLeases] = useState<LeaseRow[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
@@ -58,7 +61,7 @@ export default function LeasesPage() {
 
   useEffect(() => {
     let cancelled = false
-    fetch('/api/leases', { credentials: 'include' })
+    fetch(showBalance ? '/api/leases?showBalance=1' : '/api/leases', { credentials: 'include' })
       .then(async (res) => {
         if (!res.ok) throw new Error((await res.json().catch(() => ({}))).error ?? 'Failed to load leases')
         const data = await res.json()
@@ -76,7 +79,7 @@ export default function LeasesPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [showBalance])
 
   const filtered = useMemo(() => {
     let list = leases
@@ -127,6 +130,32 @@ export default function LeasesPage() {
         </span>
       ),
     },
+    ...(showBalance
+      ? [
+          {
+            header: 'Balance',
+            cell: (l: LeaseRow) => {
+              const bal = l.balance
+              if (!bal) return <span className="text-sm text-muted-foreground">—</span>
+              const open = Number(bal.open)
+              const overdue = Number(bal.overdue)
+              if (open <= 0.009) return <span className="text-sm text-muted-foreground">—</span>
+              return (
+                <div className="flex flex-col gap-0.5 text-xs">
+                  {overdue > 0.009 ? (
+                    <span className="font-medium text-red-700 dark:text-red-300">
+                      {bal.currency} {overdue.toLocaleString()} overdue
+                    </span>
+                  ) : null}
+                  <span className="font-medium text-amber-700 dark:text-amber-300">
+                    {bal.currency} {open.toLocaleString()} open
+                  </span>
+                </div>
+              )
+            },
+          },
+        ]
+      : []),
     {
       header: '',
       className: 'w-24',
@@ -147,6 +176,16 @@ export default function LeasesPage() {
       { label: 'Tenant', value: primaryTenant(l) },
       { label: 'Units', value: unitSummary(l) },
       { label: 'Term', value: `${formatDate(l.startsAt)} → ${l.endsAt ? formatDate(l.endsAt) : 'open'}` },
+      ...(showBalance && l.balance && Number(l.balance.open) > 0.009
+        ? [
+            {
+              label: 'Balance',
+              value: Number(l.balance.overdue) > 0.009
+                ? `${l.balance.currency} ${Number(l.balance.overdue).toLocaleString()} overdue · ${l.balance.currency} ${Number(l.balance.open).toLocaleString()} open`
+                : `${l.balance.currency} ${Number(l.balance.open).toLocaleString()} open`,
+            },
+          ]
+        : []),
     ],
     actions: (l) => [
       { label: 'Open', variant: 'outline', onClick: () => router.push(`/leasing/leases/${l.id}`) },

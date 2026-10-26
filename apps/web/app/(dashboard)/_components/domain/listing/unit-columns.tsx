@@ -176,11 +176,18 @@ export function buildUnitColumns({
               if (!bal) return <span className="text-sm text-muted-foreground">—</span>
               const pending = Number(bal.pending)
               const paid = Number(bal.paid)
+              const overdue = Number(bal.overdue ?? 0)
               if (pending <= 0.009 && paid <= 0.009) {
                 return <span className="text-sm text-muted-foreground">—</span>
               }
               return (
                 <div className="flex flex-col gap-0.5 text-xs">
+                  {overdue > 0.009 ? (
+                    <span className="font-medium text-red-700 dark:text-red-300">
+                      {bal.currency} {overdue.toLocaleString()} overdue
+                      {bal.overdueDays ? ` · ${bal.overdueDays}d` : ''}
+                    </span>
+                  ) : null}
                   {pending > 0.009 ? (
                     <span className="font-medium text-amber-700 dark:text-amber-300">
                       {bal.currency} {pending.toLocaleString()} due
@@ -290,9 +297,13 @@ export function buildUnitColumns({
         })
       }
       if (showBalance && u.balance && Number(u.balance.pending) > 0.009) {
+        const overdue = Number(u.balance.overdue ?? 0)
         fields.push({
-          label: 'Balance due',
-          value: `${u.balance.currency} ${Number(u.balance.pending).toLocaleString()}`,
+          label: overdue > 0.009 ? `Overdue (${u.balance.overdueDays ?? 0}d)` : 'Balance due',
+          value:
+            overdue > 0.009
+              ? `${u.balance.currency} ${overdue.toLocaleString()} overdue · ${u.balance.currency} ${Number(u.balance.pending).toLocaleString()} open`
+              : `${u.balance.currency} ${Number(u.balance.pending).toLocaleString()}`,
         })
       }
       return fields

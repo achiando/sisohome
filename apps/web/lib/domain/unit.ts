@@ -27,7 +27,7 @@ import {
 } from './property-scope';
 import { AREA_UNITS, RENT_FREQUENCIES } from './property-constants';
 import { BULK_MAX_RANGE, BULK_MIN_RANGE, IMPORT_MAX_ROWS, UNIT_KINDS, UNIT_MANUAL_STATUSES, UNIT_STATUS_VALUES } from './unit-constants';
-import { unitChargeSummary } from './monthly';
+import { unitChargeSummary, type UnitChargeSummary } from './monthly';
 
 type Raw = Record<string, unknown>;
 
@@ -495,7 +495,7 @@ export async function listUnits(
   const bills = await billMap(rows.map((r) => r.id));
   const balances = opts.showBalance
     ? await unitChargeSummary(actor, rows.map((r) => r.id))
-    : new Map<string, { pending: string; paid: string; currency: string }>();
+    : new Map<string, UnitChargeSummary>();
   return shaped.map((r) => ({
     ...r,
     occupant: occupants.get(r.id) ?? null,
@@ -564,7 +564,7 @@ export async function listAllUnits(actor: ScopeActor, opts: UnitListFilters = {}
   const bills = await billMap(rows.map((r) => r.id));
   const balances = opts.showBalance
     ? await unitChargeSummary(actor, rows.map((r) => r.id))
-    : new Map<string, { pending: string; paid: string; currency: string }>();
+    : new Map<string, UnitChargeSummary>();
   return shaped.map((r) => ({
     ...r,
     coverPhoto: r.property.documents[0]?.storageKey ?? null,

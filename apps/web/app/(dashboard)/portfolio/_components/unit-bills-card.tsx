@@ -9,7 +9,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { Plus, Trash2, Receipt } from 'lucide-react'
+import { Pencil, Plus, Trash2, Receipt } from 'lucide-react'
 
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@workspace/ui/components/alert-dialog'
 import { Badge } from '@workspace/ui/components/badge'
@@ -44,11 +44,13 @@ function today(): string {
 export function UnitBillsCard({ unitId, currency }: { unitId: string; currency?: string | null }) {
   const { hasUiPermission } = useUiPermission()
   const canCreate = hasUiPermission('charge.create')
+  const canUpdate = hasUiPermission('charge.update')
   const canManage = hasUiPermission('charge.manage')
 
   const [rows, setRows] = useState<UnitBillRow[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [addOpen, setAddOpen] = useState(false)
+  const [editTarget, setEditTarget] = useState<UnitBillRow | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<UnitBillRow | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -140,6 +142,16 @@ export function UnitBillsCard({ unitId, currency }: { unitId: string; currency?:
                   <span className="text-sm tabular-nums">
                     {b.currency} {Number(b.amount).toLocaleString()}
                   </span>
+                  {canUpdate ? (
+                    <Button
+                      variant="text"
+                      size="sm"
+                      aria-label={`Edit ${b.name}`}
+                      onClick={() => setEditTarget(b)}
+                    >
+                      <Pencil className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  ) : null}
                   {canManage ? (
                     <Button
                       variant="text"
@@ -159,10 +171,14 @@ export function UnitBillsCard({ unitId, currency }: { unitId: string; currency?:
       </CardContent>
 
       <AddBillDialog
-        open={addOpen}
+        open={addOpen || editTarget !== null}
         unitId={unitId}
         currency={currency ?? null}
-        onClose={() => setAddOpen(false)}
+        initial={editTarget}
+        onClose={() => {
+          setAddOpen(false)
+          setEditTarget(null)
+        }}
         onSaved={load}
       />
 
@@ -190,26 +206,37 @@ function AddBillDialog({
   open,
   unitId,
   currency,
+  initial,
   onClose,
   onSaved,
 }: {
   open: boolean
   unitId: string
   currency: string | null
+  initial?: UnitBillRow | null
   onClose: () => void
   onSaved: () => void
 }) {
+  const editing = Boolean(initial)
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Add recurring bill</DialogTitle>
+          <DialogTitle>{editing ? 'Edit recurring bill' : 'Add recurring bill'}</DialogTitle>
           <DialogDescription>
-            A non-rent charge billed on a cycle (waste, water, service charge…). Rent lives on the lease.
+            {editing
+              ? 'Update the recurring rule — charges already posted to the ledger are not changed.'
+              : 'A non-rent charge billed on a cycle (waste, water, service charge…). Rent lives on the lease.'}
           </DialogDescription>
         </DialogHeader>
         {open ? (
-          <AddBillInner unitId={unitId} currency={currency} onClose={onClose} onSaved={onSaved} />
+          <AddBillInner
+            unitId={unitId}
+            currency={currency}
+            initial={initial ?? null}
+            onClose={onClose}
+            onSaved={onSaved}
+          />
         ) : null}
       </DialogContent>
     </Dialog>
@@ -219,22 +246,35 @@ function AddBillDialog({
 function AddBillInner({
   unitId,
   currency,
+  initial,
   onClose,
   onSaved,
 }: {
   unitId: string
   currency: string | null
+  initial: UnitBillRow | null
   onClose: () => void
   onSaved: () => void
 }) {
-  const [values, setValues] = useState<Values>(() => ({
-    name: '',
-    chargeType: '',
-    amount: '',
-    frequency: 'MONTHLY',
-    startDate: today(),
-    endDate: '',
-  }))
+  const [values, setValues] = useState<Values>(() =>
+    initial
+      ? {
+          name: initial.name,
+          chargeType: initial.chargeType,
+          amount: initial.amount,
+          frequency: initial.frequency,
+          startDate: initial.startDate.slice(0, 10),
+          endDate: initial.endDate ? initial.endDate.slice(0, 10) : '',
+        }
+      : {
+          name: '',
+          chargeType: '',
+          amount: '',
+          frequency: 'MONTHLY',
+          startDate: today(),
+          endDate: '',
+        },
+  )
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
 
@@ -269,8 +309,11 @@ function AddBillInner({
 
     setSaving(true)
     try {
-      const res = await fetch(`/api/units/${unitId}/charge-schedules`, {
-        method: 'POST',
+      const url = initial
+        ? `/api/charge-schedules/${initial.id}`
+        : `/api/units/${unitId}/charge-schedules`
+      const res = await fetch(url, {
+        method: initial ? 'PATCH' : 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -280,16 +323,16 @@ function AddBillInner({
           frequency: v.frequency,
           startDate: v.startDate,
           endDate: v.endDate ? v.endDate : null,
-          currency: currency ?? undefined,
+          ...(initial ? {} : { currency: currency ?? undefined }),
         }),
       })
       const data = await res.json().catch(() => ({}))
       if (!res.ok) {
-        toast.error(data.error ?? 'Could not add bill')
+        toast.error(data.error ?? (initial ? 'Could not save bill' : 'Could not add bill'))
         setSaving(false)
         return
       }
-      toast.success('Recurring bill added')
+      toast.success(initial ? 'Recurring bill updated' : 'Recurring bill added')
       onSaved()
       onClose()
     } catch {
@@ -300,8 +343,8 @@ function AddBillInner({
 
   return (
     <UniversalForm
-      title="Add recurring bill"
-      mode="create"
+      title={initial ? 'Edit recurring bill' : 'Add recurring bill'}
+      mode={initial ? 'edit' : 'create'}
       variant="standard"
       sections={sections}
       values={values}
@@ -318,7 +361,7 @@ function AddBillInner({
       onSubmit={handleSubmit}
       onCancel={onClose}
       isLoading={saving}
-      primaryLabel="Add bill"
+      primaryLabel={initial ? 'Save changes' : 'Add bill'}
       bare
       formClassName="w-full"
     />

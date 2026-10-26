@@ -54,6 +54,7 @@ export type UnitListRow = Unit & {
   coverPhoto?: string | null
   /** Active non-rent recurring bills attached to the unit (charge.list). */
   bills?: { id: string; name: string; chargeType: string; amount: string; currency: string; frequency: string }[]
-  /** Per-unit open vs settled totals (charge.list) — units register Balance column. */
-  balance?: { pending: string; paid: string; currency: string } | null
+  /** Per-unit open vs settled totals (charge.list) — units register Balance column.
+   *  `overdue` is the past-due slice of `pending`; `overdueDays` ages it. */
+  balance?: { pending: string; paid: string; currency: string; overdue?: string; overdueDays?: number } | null
 }
