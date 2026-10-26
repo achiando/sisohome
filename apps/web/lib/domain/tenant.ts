@@ -12,15 +12,18 @@
  *
  * Every read requires `tenant.read` (route layer) — PII is permission-gated,
  * never filtered client-side. Portal invite = hashed one-shot token
- * (SHA-256 at rest, 7-day expiry) + portalStatus flip; acceptance is slice 7.
+ * (SHA-256 at rest, 7-day expiry) + portalStatus flip; acceptance + revoke
+ * + invite mail live in slice 7.
  */
 
 import { createHash, randomBytes } from 'node:crypto';
 import type { Prisma } from '@workspace/database';
+import { sendEmail } from '@workspace/email';
 import { db } from '@/lib/auth';
 import { RouteError } from '@/lib/api-route';
 import { appUrl } from '@/lib/base-url';
 import { decryptFieldOutput, encryptFieldInput } from '@/lib/crypto-field';
+import { portalInviteEmail } from '@/lib/email/portal-invite';
 import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
 import {
@@ -73,7 +76,7 @@ function dateOrNull(v: unknown, field: string): Date | null | undefined {
 const isUniqueViolation = (err: unknown): boolean =>
   typeof err === 'object' && err !== null && 'code' in err && (err as { code?: string }).code === 'P2002';
 
-function hashInviteToken(token: string): string {
+export function hashInviteToken(token: string): string {
   return createHash('sha256').update(token).digest('hex');
 }
 
@@ -326,7 +329,14 @@ export async function removeTenant(actor: ScopeActor, id: string) {
 export async function inviteTenantToPortal(actor: ScopeActor, id: string, raw?: Raw) {
   const tenant = await db.tenant.findFirst({
     where: { id, ...tenantScopeWhere(actor) },
-    select: { id: true, organizationId: true, displayName: true, email: true, portalStatus: true },
+    select: {
+      id: true,
+      organizationId: true,
+      displayName: true,
+      email: true,
+      portalStatus: true,
+      organization: { select: { name: true } },
+    },
   });
   if (!tenant) throw new RouteError(404, 'Tenant not found');
   const email = str((raw as Raw | undefined)?.email) ?? str(tenant.email);
@@ -359,7 +369,48 @@ export async function inviteTenantToPortal(actor: ScopeActor, id: string, raw?: 
 
   const inviteUrl = `${appUrl()}/portal/accept?token=${token}`;
   await auditLog(actor, 'TENANT', 'tenant.portal_invite', id, { email });
+  // Mail is convenience (the raw link is also shown once in the dialog) —
+  // a dead mailer must not roll back a successful invite.
+  try {
+    await sendEmail(
+      portalInviteEmail({
+        to: email,
+        acceptUrl: inviteUrl,
+        tenantName: tenant.displayName,
+        organizationName: tenant.organization.name,
+        expiresInDays: TENANT_INVITE_TTL_DAYS,
+      }),
+    );
+  } catch (err) {
+    console.error('Portal invite email failed:', err);
+  }
   return { inviteUrl, expiresAt, email };
 }
 
-/** Invite-state values for the UI badge (revoke is slice 7). */
+/**
+ * Revoke an outstanding invite (slice 7 org-side polish): outstanding
+ * tokens die and the tenant drops back to NOT_INVITED. An ACTIVE portal
+ * account is not covered here — suspension is a separate lifecycle.
+ */
+export async function revokeTenantInvite(actor: ScopeActor, id: string) {
+  const tenant = await db.tenant.findFirst({
+    where: { id, ...tenantScopeWhere(actor) },
+    select: { id: true, organizationId: true, portalStatus: true },
+  });
+  if (!tenant) throw new RouteError(404, 'Tenant not found');
+  if (tenant.portalStatus === 'ACTIVE') {
+    throw new RouteError(409, 'The portal account is already active and cannot be revoked here');
+  }
+  const result = await db.$transaction([
+    db.tenantPortalInvite.deleteMany({ where: { tenantId: id, usedAt: null } }),
+    db.tenant.updateMany({
+      where: { id, organizationId: tenant.organizationId, portalStatus: 'INVITED' },
+      data: { portalStatus: 'NOT_INVITED', portalInvitedAt: null },
+    }),
+  ]);
+  if (result[1].count === 0 && tenant.portalStatus !== 'INVITED') {
+    throw new RouteError(409, 'No outstanding invite to revoke');
+  }
+  await auditLog(actor, 'TENANT', 'tenant.portal_revoke', id, {});
+  return { revoked: true as const };
+}

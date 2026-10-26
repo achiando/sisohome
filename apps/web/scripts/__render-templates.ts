@@ -10,6 +10,7 @@ import { writeFileSync } from 'node:fs'
 import { loginAlertEmail } from '../lib/email/login-alert'
 import { memberAddedEmail } from '../lib/email/member-added'
 import { passwordResetEmail } from '../lib/email/password-reset'
+import { portalInviteEmail } from '../lib/email/portal-invite'
 import { twoFactorCodeEmail } from '../lib/email/two-factor-code'
 import { verifyEmailTemplate } from '../lib/email/verify-email'
 
@@ -50,6 +51,13 @@ const messages = {
     code: '481920',
     expiresInMinutes: 10,
     purpose: 'sign-in',
+  }),
+  'email-portal-invite': portalInviteEmail({
+    to: 'ada@example.test',
+    acceptUrl: 'http://localhost:3000/portal/accept?token=VyBJ4cquyaMyO0N5thM49Ao_PtQ2l3dkghSRKXwdAq',
+    tenantName: 'Ada Lovelace',
+    organizationName: 'Seaside Property Group',
+    expiresInDays: 7,
   }),
 }
 

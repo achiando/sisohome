@@ -3,7 +3,8 @@
 /**
  * PortalInviteDialog — issues a portal invite and shows the raw link ONCE
  * (plan-slice-2 §3). The server returns the URL only on create; copy it
- * before closing. Acceptance flow is slice 7.
+ * before closing. The tenant redeems it at /portal/accept (slice 7); an
+ * unused invite can be revoked from the tenant profile.
  */
 
 import { useState } from 'react'

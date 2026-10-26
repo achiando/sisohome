@@ -24,8 +24,11 @@ const PUBLIC_PATHS = [
   '/privacy',
   // Public applicant intake (/i/<token>) — capability lives in the token.
   '/i',
+  // Tenant portal invite redemption — capability lives in the invite token;
+  // the rest of /portal requires a session (checked below).
+  '/portal/accept',
 ];
-const PUBLIC_API_PATHS = ['/api/auth', '/api/intake'];
+const PUBLIC_API_PATHS = ['/api/auth', '/api/intake', '/api/portal/accept'];
 
 function isPublicPage(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
@@ -87,6 +90,12 @@ export function proxy(request: NextRequest) {
     if (onAuthPage || onPasswordChange || onCreateOrg) {
       // Auth pages / forced password change / shared create page are
       // reachable before an active org exists.
+      return NextResponse.next();
+    }
+    // Portal users are org-less BY DESIGN (plan-slice-7 §1.1): /portal is
+    // their home, not onboarding. Dual-role sessions may hold an org cookie
+    // and never reach this branch.
+    if (pathname === '/portal' || pathname.startsWith('/portal/')) {
       return NextResponse.next();
     }
     return NextResponse.redirect(new URL('/onboarding', request.url));

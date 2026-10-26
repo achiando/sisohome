@@ -2017,12 +2017,32 @@ model MaintenanceTicket {
   reportedByTenant Tenant?  @relation(fields: [reportedByTenantId], references: [id], onDelete: SetNull)
 
   workOrders WorkOrder[]
+  notes      MaintenanceTicketNote[]
 
   @@map("maintenance_tickets")
   @@index([organizationId, status])
   @@index([propertyId])
   @@index([priority])
   @@index([reportedByTenantId])
+}
+
+// Conversation thread on a ticket — portal replies + org staff comments
+// (slice 7). Like DocumentVersion, notes carry no organizationId of their
+// own: they are only ever read through their authorized parent ticket, and
+// the tenant author is the portal relationship (reportedByTenantId path).
+model MaintenanceTicketNote {
+  id             String  @id @default(uuid()) @db.Uuid
+  ticketId       String  @map("ticket_id") @db.Uuid
+  authorUserId   String? @map("author_user_id") @db.Uuid
+  authorTenantId String? @map("author_tenant_id") @db.Uuid
+  body           String
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  ticket MaintenanceTicket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("maintenance_ticket_notes")
 }
 
 model WorkOrder {

@@ -14,6 +14,16 @@ import type { Tenant } from '@workspace/database'
 
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@workspace/ui/components/alert-dialog'
 import { PageLoader } from '@workspace/ui/components/loader'
 import { toast } from '@workspace/ui/components/toast'
 import { DetailTabs, type DetailTab } from '@/app/(dashboard)/_components/domain/detail-tabs'
@@ -73,6 +83,8 @@ export default function TenantProfilePage() {
   const [tenant, setTenant] = useState<TenantDetail | null>(null)
   const [loading, setLoading] = useState(true)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [revokeOpen, setRevokeOpen] = useState(false)
+  const [revoking, setRevoking] = useState(false)
 
   const load = useCallback(() => {
     let cancelled = false
@@ -113,6 +125,26 @@ export default function TenantProfilePage() {
         backLabel="Back to tenants"
       />
     )
+  }
+
+  const revokeInvite = () => {
+    if (!tenant) return
+    setRevoking(true)
+    fetch(`/api/tenants/${tenant.id}/portal-invite`, {
+      method: 'DELETE',
+      credentials: 'include',
+    })
+      .then(async (res) => {
+        const data = await res.json().catch(() => ({}))
+        if (!res.ok) throw new Error(data.error ?? 'Failed to revoke invite')
+        toast.success('Portal invite revoked')
+        setRevokeOpen(false)
+        load()
+      })
+      .catch((err: unknown) => {
+        toast.error(err instanceof Error ? err.message : 'Failed to revoke invite')
+      })
+      .finally(() => setRevoking(false))
   }
 
   const infoRow = (icon: ReactNode, label: string, value: string | null | undefined) =>
@@ -279,6 +311,11 @@ export default function TenantProfilePage() {
                 Invite to portal
               </Button>
             ) : null}
+            {hasUiPermission('tenant.manage') && tenant.portalStatus === 'INVITED' ? (
+              <Button variant="ghost" onClick={() => setRevokeOpen(true)}>
+                Revoke invite
+              </Button>
+            ) : null}
             {hasUiPermission('tenant.update') ? (
               <Button variant="primary" onClick={() => router.push(`/people/tenants/${tenant.id}/edit`)}>
                 Edit
@@ -298,6 +335,30 @@ export default function TenantProfilePage() {
         defaultEmail={tenant.email}
         onInvited={load}
       />
+
+      <AlertDialog open={revokeOpen} onOpenChange={setRevokeOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke portal invite?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The unused invite link for {tenant.displayName} stops working immediately. Their
+              tenancy is unaffected — you can send a fresh invite any time.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={revoking}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={revoking}
+              onClick={(e) => {
+                e.preventDefault()
+                revokeInvite()
+              }}
+            >
+              {revoking ? 'Revoking…' : 'Revoke invite'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
