@@ -34,7 +34,7 @@ export const DOCUMENT_KINDS: Option<DocumentKind>[] = [
   { value: 'OTHER', label: 'Other' },
 ];
 
-/** Entity types resolved so far (slice 5 adds LISTING/DEAL). */
+/** Entity types resolved so far. */
 export const DOCUMENT_ENTITY_TYPES: DocumentEntityType[] = [
   'PROPERTY',
   'UNIT',
@@ -46,6 +46,8 @@ export const DOCUMENT_ENTITY_TYPES: DocumentEntityType[] = [
   'APPLICATION',
   'WORK_ORDER',
   'INSPECTION',
+  'LISTING',
+  'DEAL',
 ];
 
 export const DOCUMENT_KIND_VALUES: DocumentKind[] = DOCUMENT_KINDS.map((k) => k.value);

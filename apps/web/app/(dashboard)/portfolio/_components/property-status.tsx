@@ -50,6 +50,23 @@ export function humanizeAction(action: string): string {
     'payment_claim.create': 'Payment claim posted (portal)',
     'payment_claim.confirm': 'Payment claim confirmed',
     'payment_claim.reject': 'Payment claim rejected',
+    'listing.create': 'Listing drafted',
+    'listing.update': 'Listing updated',
+    'listing.publish': 'Listing published',
+    'listing.close': 'Listing closed',
+    'lead.create': 'Lead captured',
+    'lead.update': 'Lead updated',
+    'lead.status': 'Lead status changed',
+    'viewing.create': 'Viewing booked',
+    'viewing.update': 'Viewing updated',
+    'offer.create': 'Offer recorded',
+    'offer.counter': 'Offer countered',
+    'offer.accept': 'Offer accepted',
+    'offer.reject': 'Offer rejected',
+    'deal.update': 'Deal updated',
+    'deal.complete': 'Deal completed',
+    'handoff.create': 'Handoff offered',
+    'handoff.respond': 'Handoff responded',
   }
   if (labels[action]) return labels[action]
   return action
