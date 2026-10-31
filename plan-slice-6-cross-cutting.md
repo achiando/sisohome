@@ -1,5 +1,11 @@
 # Slice 6 — Cross-cutting (Overview KPIs, Calendar, Documents library, thin Reports)
 
+> **SUPERSEDED 2026-10-27 by `plan-roadmap.md` Phases 3–5** — the calendar
+> scope is now the landlord-attention calendar (viewings + vacant units +
+> lease ends + scheduled WOs/inspections + recurring dues, user decision),
+> the Documents library and thin Reports follow it, and the Overview-KPI
+> piece folds into Phase 5. Kept for reference; do not build from this file.
+
 Thin glue over APIs from slices 1–5. **No new schema, no new permission keys** (calendar = `property.read`-style reuse per decision 7; reports = `audit.read` gate for now).
 
 ## 1. Overview `/` (upgrade existing placeholder page)
