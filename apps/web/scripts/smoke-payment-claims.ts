@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { prisma } from '@/lib/auth';
+import { ensureOtherOrg } from './lib/ensure-other-org';
 import { RouteError } from '@/lib/api-route';
 import * as claims from '@/lib/domain/payment-claim';
 import * as scheduler from '@/lib/domain/scheduler';
@@ -81,7 +82,7 @@ const BASE_URL = process.env.APP_URL ?? 'http://localhost:3000';
 const month = new Date().toISOString().slice(0, 7);
 
 const org = await prisma.organization.findFirstOrThrow();
-const otherOrg = await prisma.organization.findFirst({ where: { id: { not: org.id } } });
+const otherOrg = await ensureOtherOrg(org.id);
 const user = await prisma.user.findFirstOrThrow();
 
 const actor = { userId: user.id, organizationId: org.id };

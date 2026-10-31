@@ -41,7 +41,7 @@ import { RouteError } from '@/lib/api-route';
 
 import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
-import { LEAD_TRANSITIONS, LEAD_TERMINAL, LISTING_CLOSEABLE, LISTING_PUBLISHABLE, VIEWING_TRANSITIONS } from './sales-constants';
+import { LEAD_STAGE_ORDER, LEAD_TRANSITIONS, LEAD_TERMINAL, LISTING_CLOSEABLE, LISTING_PUBLISHABLE, VIEWING_TRANSITIONS } from './sales-constants';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
@@ -1194,7 +1194,13 @@ async function bumpLeadAfterViewing(
   to: LeadStatus,
 ) {
   if (lead.organizationId !== actor.organizationId) return;
-  if (!LEAD_TRANSITIONS[lead.status].includes(to)) return;
+  // Guidance bumps may jump ahead on the happy path (NEW/QUALIFIED/MATCHED →
+  // VIEWING), but never sideways/backwards and never from a terminal status
+  // (terminals are absent from LEAD_STAGE_ORDER). The explicit stepper keeps
+  // the strict LEAD_TRANSITIONS rules via setLeadStatus.
+  const fromIdx = LEAD_STAGE_ORDER.indexOf(lead.status);
+  const toIdx = LEAD_STAGE_ORDER.indexOf(to);
+  if (fromIdx < 0 || toIdx < 0 || fromIdx >= toIdx) return;
   try {
     await db.lead.updateMany({
       where: { id: lead.id, organizationId: actor.organizationId, status: lead.status },

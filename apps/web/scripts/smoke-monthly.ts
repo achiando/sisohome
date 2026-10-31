@@ -79,9 +79,7 @@ const cleanupReceipts: string[] = [];
 
 const now = new Date();
 const thisMonth = now.toISOString().slice(0, 7);
-const prevMonthDate = new Date(now);
-prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-const prevMonth = prevMonthDate.toISOString().slice(0, 7);
+const prevMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - 1, 1)).toISOString().slice(0, 7);
 
 try {
   console.log('— setup: property + unit + tenant + ACTIVE lease');
@@ -340,9 +338,7 @@ try {
   }
 
   // next-month generation: utilities MONTHLY schedule should produce again
-  const nextMonthDate = new Date(now);
-  nextMonthDate.setMonth(nextMonthDate.getMonth() + 1);
-  const nextMonth = nextMonthDate.toISOString().slice(0, 7);
+  const nextMonth = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1)).toISOString().slice(0, 7);
   const genNext = await expectOk('generate next month (fresh period)', () =>
     monthly.generateMonthlyCharges(actor, { propertyId: pid, month: nextMonth }),
   );

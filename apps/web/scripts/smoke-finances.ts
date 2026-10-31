@@ -13,6 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { prisma } from '@/lib/auth';
+import { ensureOtherOrg } from './lib/ensure-other-org';
 import { RouteError } from '@/lib/api-route';
 import * as charges from '@/lib/domain/charge';
 import * as dues from '@/lib/domain/dues';
@@ -80,7 +81,7 @@ const INV_RE = /^INV-\d{4}-\d{4}$/;
 const RE_RE = /^RE-\d{4}-\d{4}$/;
 
 const org = await prisma.organization.findFirstOrThrow();
-const otherOrg = await prisma.organization.findFirst({ where: { id: { not: org.id } } });
+const otherOrg = await ensureOtherOrg(org.id);
 const user = await prisma.user.findFirstOrThrow();
 
 const actor = { userId: user.id, organizationId: org.id };

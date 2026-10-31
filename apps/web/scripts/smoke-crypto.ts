@@ -13,6 +13,7 @@
  */
 
 import { prisma } from '@/lib/auth';
+import { ensureOtherOrg } from './lib/ensure-other-org';
 import { RouteError } from '@/lib/api-route';
 import {
   decryptField,
@@ -68,7 +69,7 @@ async function expectStatus(label: string, status: number, fn: () => Promise<unk
 }
 
 const org = await prisma.organization.findFirstOrThrow();
-const otherOrg = await prisma.organization.findFirst({ where: { id: { not: org.id } } });
+const otherOrg = await ensureOtherOrg(org.id);
 const user = await prisma.user.findFirstOrThrow();
 
 const actor = { userId: user.id, organizationId: org.id };

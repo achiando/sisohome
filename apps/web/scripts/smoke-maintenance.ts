@@ -8,6 +8,7 @@
  */
 
 import { prisma } from '@/lib/auth';
+import { ensureOtherOrg } from './lib/ensure-other-org';
 import { RouteError } from '@/lib/api-route';
 import { propertyScopeWhere } from '@/lib/domain/property-scope';
 import * as maintenance from '@/lib/domain/maintenance';
@@ -65,7 +66,7 @@ function must<T>(v: T | null, what: string): T {
 
 // ── actors ───────────────────────────────────────────────────────────────────
 const org = await prisma.organization.findFirstOrThrow();
-const otherOrg = await prisma.organization.findFirst({ where: { id: { not: org.id } } });
+const otherOrg = await ensureOtherOrg(org.id);
 const user = await prisma.user.findFirstOrThrow();
 
 const actor = { userId: user.id, organizationId: org.id };

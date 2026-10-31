@@ -8,6 +8,7 @@
  */
 
 import { prisma } from '@/lib/auth';
+import { ensureOtherOrg } from './lib/ensure-other-org';
 import { RouteError } from '@/lib/api-route';
 import * as tenants from '@/lib/domain/tenant';
 import * as units from '@/lib/domain/unit';
@@ -58,7 +59,7 @@ async function expectOk<T>(label: string, fn: () => Promise<T>): Promise<T | nul
 }
 
 const org = await prisma.organization.findFirstOrThrow();
-const otherOrg = await prisma.organization.findFirst({ where: { id: { not: org.id } } });
+const otherOrg = await ensureOtherOrg(org.id);
 const user = await prisma.user.findFirstOrThrow();
 
 const actor = { userId: user.id, organizationId: org.id };

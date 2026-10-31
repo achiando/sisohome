@@ -13,6 +13,7 @@ import { OrganizationService } from '@workspace/database'
 
 import { RouteError } from '@/lib/api-route'
 import { prisma } from '@/lib/auth'
+import { ensureOtherOrg } from './lib/ensure-other-org';
 import * as sales from '@/lib/domain/sales'
 import * as offers from '@/lib/domain/offer'
 import * as handoffs from '@/lib/domain/handoff'
@@ -68,7 +69,7 @@ function futureIso(days: number): string {
 }
 
 const org = await prisma.organization.findFirstOrThrow()
-const otherOrg = await prisma.organization.findFirst({ where: { id: { not: org.id }, status: 'ACTIVE' } })
+const otherOrg = await ensureOtherOrg(org.id)
 const user = await prisma.user.findFirstOrThrow()
 
 const actor = { userId: user.id, organizationId: org.id }
@@ -352,7 +353,7 @@ try {
   await expectStatus('re-respond → 409', 409, () => handoffs.respondHandoff(mkActor, handoffId, { to: 'DECLINED' }))
 
   const mkLead = await expectOk('MK reads handed lead', () => sales.getLead(mkActor, leadId))
-  check('lead row NOT re-pointed (still main org)', (mkLead as { lead?: { organizationId?: string } } | null)?.lead?.organizationId === org.id)
+  check('lead row NOT re-pointed (still main org)', (mkLead as unknown as { organizationId?: string } | null)?.organizationId === org.id)
   const mkLeads = await sales.listLeads(mkActor)
   check('MK lead inbox includes handed lead', mkLeads.some((l) => l.id === leadId))
 

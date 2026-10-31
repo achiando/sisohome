@@ -20,23 +20,6 @@ import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { HandoffDialog } from '../../_components/handoff-dialog'
 import { LeadStatusBadge, StatusBadge, labelize } from '../../_components/status-badge'
 
-interface LeadDetail {
-  id: string
-  displayName: string
-  phone: string | null
-  email: string | null
-  preferredChannel: string
-  source: string
-  status: string
-  budgetMin: number | null
-  budgetMax: number | null
-  nextActionAt: string | null
-  notes: string | null
-  listing: { id: string; title: string } | null
-  property: { id: string; name: string } | null
-  assignedToUser: { id: string; name: string } | null
-}
-
 interface ViewingHit {
   id: string
   scheduledAt: string
@@ -64,11 +47,27 @@ interface HandoffHit {
   toOrganization?: { id: string; name: string } | null
 }
 
-interface LeadResponse {
-  lead: LeadDetail
+interface LeadDetail {
+  id: string
+  displayName: string
+  phone: string | null
+  email: string | null
+  preferredChannel: string
+  source: string
+  status: string
+  budgetMin: number | null
+  budgetMax: number | null
+  nextActionAt: string | null
+  notes: string | null
+  listing: { id: string; title: string } | null
+  property: { id: string; name: string } | null
   viewings: ViewingHit[]
   offers: OfferHit[]
   handoffs: HandoffHit[]
+}
+
+interface LeadResponse {
+  lead: LeadDetail
 }
 
 export default function LeadDetailPage() {
@@ -124,7 +123,8 @@ export default function LeadDetailPage() {
     )
   }
 
-  const { lead, viewings, offers, handoffs } = data
+  const { lead } = data
+  const { viewings, offers, handoffs } = lead
 
   return (
     <div className="space-y-6">
