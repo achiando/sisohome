@@ -8,7 +8,7 @@
  */
 
 import { useCallback, useEffect, useState } from 'react'
-import { Banknote, Plus, Receipt, Zap } from 'lucide-react'
+import { Banknote, Plus, Receipt, Upload, Zap } from 'lucide-react'
 
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
@@ -29,6 +29,7 @@ import { RecordPaymentDialog } from '@/app/(dashboard)/leasing/_components/recor
 import type { CsvColumn } from '@/lib/csv'
 import { usePropertyOptions, type Option } from './doc-dialogs'
 import { ExportCsvButton } from './export-csv-button'
+import { ImportMpesaDialog } from './import-mpesa-dialog'
 import { PaymentClaimsCard } from './payment-claims-card'
 
 type PaymentRow = {
@@ -181,6 +182,7 @@ export function PaymentsTab() {
   const [breakdown, setBreakdown] = useState<Breakdown | null>(null)
   const [propertyId, setPropertyId] = useState('')
   const [pickerOpen, setPickerOpen] = useState(false)
+  const [importOpen, setImportOpen] = useState(false)
   const [target, setTarget] = useState<{ propertyId: string; unitId: string } | null>(null)
 
   const load = useCallback(() => {
@@ -275,7 +277,13 @@ export function PaymentsTab() {
         onDecided={() => load()}
       />
 
-      <div className="flex justify-end">
+      <div className="flex justify-end gap-2">
+        {hasUiPermission('payment.create') ? (
+          <Button variant="outline" size="sm" onClick={() => setImportOpen(true)}>
+            <Upload className="size-4" aria-hidden="true" />
+            Import M-Pesa
+          </Button>
+        ) : null}
         <ExportCsvButton filename="payments" columns={csvColumns} rows={payments} />
       </div>
 
@@ -411,6 +419,11 @@ export function PaymentsTab() {
           onRecorded={load}
         />
       ) : null}
+      <ImportMpesaDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={() => load()}
+      />
     </div>
   )
 }

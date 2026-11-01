@@ -439,7 +439,14 @@ try {
     check('dues outstanding 13500', duesResult.totals.outstanding === '13500.00', duesResult.totals.outstanding);
     check('dues overdue 10000', duesResult.totals.overdue === '10000.00', duesResult.totals.overdue);
     check('dues overdueCount 1', duesResult.totals.overdueCount === 1, String(duesResult.totals.overdueCount));
-    check('dues dueThisMonth 0', duesResult.totals.dueThisMonth === '0.00', duesResult.totals.dueThisMonth);
+    // legacy (3000) + tenant-2 (500) are both due isoDays(10) — they land in
+    // dueThisMonth only when +10d is still inside the current calendar month.
+    const _now = new Date();
+    const _ms = new Date(_now.getFullYear(), _now.getMonth(), 1);
+    const _me = new Date(_now.getFullYear(), _now.getMonth() + 1, 0);
+    const _plus10 = new Date(`${isoDays(10)}T00:00:00.000Z`);
+    const expDueThisMonth = (_plus10 >= _ms && _plus10 <= _me ? 3500 : 0).toFixed(2);
+    check('dues dueThisMonth', duesResult.totals.dueThisMonth === expDueThisMonth, duesResult.totals.dueThisMonth);
     check('dues pendingAdjustments ≥ 1', duesResult.totals.pendingAdjustments >= 1, String(duesResult.totals.pendingAdjustments));
     check('dues has 2 tenant rows', duesResult.rows.length === 2, String(duesResult.rows.length));
     const row1 = duesResult.rows.find((r) => r.tenantId === tenant1);

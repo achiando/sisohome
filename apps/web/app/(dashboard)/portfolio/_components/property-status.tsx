@@ -45,6 +45,7 @@ export function humanizeAction(action: string): string {
     'charges.generate_monthly': 'Monthly charges generated',
     'payment.create': 'Payment recorded',
     'payment.create_multi_month': 'Payment recorded',
+    'payment.import': 'M-Pesa batch imported',
     'tenant.remind': 'Overdue reminder logged',
     'tenant.billing-notice': 'Billing notice sent',
     'payment_claim.create': 'Payment claim posted (portal)',

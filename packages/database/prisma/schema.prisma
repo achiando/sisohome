@@ -341,6 +341,7 @@ model Organization {
   propertyExpenses      PropertyExpense[]
   receipts              Receipt[]
   paymentClaims         PaymentClaim[]
+  paymentImportBatches  PaymentImportBatch[]
   notifications         Notification[]
 
   // Operations (batch 4)
@@ -1796,6 +1797,10 @@ model Payment {
   currency  String        @default("KES") @db.VarChar(3)
   method    PaymentMethod
   reference String? // M-Pesa code, cheque no., bank ref
+  /// Per-org-unique receipt code for import/gateway dedupe (M-Pesa tip-off).
+  externalId String? @map("external_id")
+  /// Ingestion origin: MANUAL | IMPORT | GATEWAY (payment-source adapter).
+  source     String  @default("MANUAL") @map("source") @db.VarChar(16)
   receivedAt DateTime     @map("received_at")
   // Plain uuids — audit actors, not auth relationships.
   receivedByUserId   String? @map("received_by_user_id") @db.Uuid
@@ -1818,6 +1823,7 @@ model Payment {
   claims      PaymentClaim[]
 
   @@map("payments")
+  @@unique([organizationId, externalId])
   @@index([organizationId, receivedAt])
   @@index([propertyId])
   @@index([tenantId])
@@ -1848,6 +1854,68 @@ model PaymentAllocation {
   @@index([paymentId])
   @@index([chargeId])
   @@index([organizationId])
+}
+
+// ── payment-source imports (roadmap Phase 1 — M-Pesa message paste) ─────────
+// A batch = one paste; rows = one parsed message each. Preview never writes —
+// only commit persists a batch/rows and applies the checked ones.
+enum PaymentImportRowStatus {
+  PARSED
+  MATCHED
+  AMBIGUOUS
+  UNMATCHED
+  DUPLICATE
+  APPLIED
+}
+
+model PaymentImportBatch {
+  id               String   @id @default(uuid()) @db.Uuid
+  organizationId   String   @map("organization_id") @db.Uuid
+  /// PaymentSourceAdapter id: mpesa-sms | daraja | bank-csv …
+  source           String   @default("mpesa-sms") @db.VarChar(32)
+  rawText          String   @map("raw_text") @db.Text
+  /// Plain uuid — the importing user, not an auth relationship.
+  importedByUserId String?  @map("imported_by_user_id") @db.Uuid
+  appliedAt        DateTime? @map("applied_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  organization Organization     @relation(fields: [organizationId], references: [id], onDelete: Restrict)
+  rows         PaymentImportRow[]
+
+  @@map("payment_import_batches")
+  @@index([organizationId, createdAt])
+}
+
+model PaymentImportRow {
+  id             String                @id @default(uuid()) @db.Uuid
+  batchId        String                @map("batch_id") @db.Uuid
+  organizationId String                @map("organization_id") @db.Uuid
+  rawLine        String                @map("raw_line") @db.Text
+  amount         Decimal?              @db.Decimal(12, 2)
+  currency       String                @default("KES") @db.VarChar(3)
+  reference      String?
+  externalId     String?               @map("external_id")
+  senderPhone    String?               @map("sender_phone") @db.VarChar(32)
+  paidAt         DateTime?             @map("paid_at")
+  status         PaymentImportRowStatus @default(PARSED)
+  /// Allocation bucket used at commit: RENT | UTILITIES (derived by matcher).
+  accountType    String                @default("RENT") @map("account_type")
+  /// Match strength 0–100; >= 85 rows are pre-checked in the preview.
+  confidence     Int                   @default(0)
+  // Plain uuids — match pointers, not hard relationships (rows survive
+  // tenant/lease/unit deletion as history; see receivedByUserId precedent).
+  matchedTenantId String?              @map("matched_tenant_id") @db.Uuid
+  matchedLeaseId  String?              @map("matched_lease_id") @db.Uuid
+  matchedUnitId   String?              @map("matched_unit_id") @db.Uuid
+  paymentId       String?              @map("payment_id") @db.Uuid
+  createdAt       DateTime             @default(now()) @map("created_at")
+
+  batch PaymentImportBatch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@map("payment_import_rows")
+  @@index([batchId])
+  @@index([organizationId, externalId])
+  @@index([paymentId])
 }
 
 // Credits / waivers / reversals / write-offs against a charge. Approve ≠

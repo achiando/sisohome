@@ -362,6 +362,10 @@ export async function recordMultiMonthPayment(
     notes?: string | null;
     /** When the money actually arrived (payment-claim confirm keeps the tenant's paidAt). */
     receivedAt?: Date;
+    /** Receipt code stamped on the payment for import/gateway dedupe. */
+    externalId?: string | null;
+    /** Ingestion origin: MANUAL (default) | IMPORT | GATEWAY. */
+    source?: string;
   },
 ): Promise<MultiMonthResult> {
   const { propertyId } = input;
@@ -478,6 +482,8 @@ export async function recordMultiMonthPayment(
         currency: account.currency,
         method: method as PaymentMethod,
         reference: input.reference ?? null,
+        externalId: input.externalId ?? null,
+        source: input.source ?? 'MANUAL',
         receivedAt: input.receivedAt ?? new Date(),
         receivedByUserId: actor.userId,
         notes: input.notes ?? null,
