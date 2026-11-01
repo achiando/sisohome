@@ -61,6 +61,13 @@ silently skipping stranger checks below baseline).
 ## Phase 1 — M-Pesa message import + payment-source abstraction
 *Highest business value (~2–3 days).*
 
+**✅ DONE 2026-11-01** — paste → parse → match → preview (zero writes) →
+commit (payments + allocations). `smoke-payments-import` **51/51** (new) ·
+regressions payments 51 / monthly 62 / finances 135 / leasing 82 /
+people-quick 32 / units 42 / sales 77 (all at baseline) ·
+`smoke-portal-e2e.sh` **ALL PASS (9 steps)** · `tsc --noEmit` 0 · lint 0
+errors vs baselines · matrix guard ✓. Details in STATUS §3 Roadmap Phase 1.
+
 Goal: landlord pastes a batch of M-Pesa SMS confirmations → parsed →
 auto-matched to tenants/open charges → preview table → one-click commit
 creates payments + allocations.
