@@ -205,6 +205,18 @@ errors vs baselines · matrix guard ✓ · route 401 unauth / authed 200 +
 ## Phase 4 — Documents library page
 *(~1 day; dead nav entry #2)*
 
+**✅ DONE 2026-11-01** — `GET /api/documents` gains library mode (no
+`entityId` → org-wide, own-org OR `propertyScopeWhere` rows, `entityType`
+server filter, take 500; `?entityType=&entityId=` container contract
+byte-identical — `smoke-documents` 62 still green) + `/documents` page
+(`ResponsiveDataListing`: entity-type + kind filters, search, fileName →
+entity detail hrefs, View/Download via the Phase-2 download route,
+`ScopeDenied` on `document.read`). Zero new permission keys, zero schema
+change. `smoke-documents-library` **56/56** · regressions documents **62**
+/ agreement-sign **143** · typecheck 10/10 · lint 0 errors vs baselines ·
+matrix guard ✓ · HTTP 200/400/401 + page render 200. Details in STATUS §3
+Roadmap Phase 4.
+
 - `/documents`: org-wide list over existing `GET /api/documents`,
   entity-type + kind filters, search → entity detail. Phase-2 signed
   contracts become browsable here.
