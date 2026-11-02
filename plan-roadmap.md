@@ -173,6 +173,19 @@ cross-org 404. Regression: leasing **82**.
 ## Phase 3 — Landlord-attention calendar
 *(~2 days; kills dead nav entry #1)*
 
+**✅ DONE 2026-11-01** — `GET /api/calendar?from=&to=` (any authenticated
+member — route has no permission key; per-class visibility via cached
+`getUserPermissions` list keys; row scope `propertyScopeWhere` +
+`viewingScopeWhere`; MM = ACTIVE-agreement properties; 400s on
+bad/unpaired/reversed/non-calendar/>366-day ranges) + `/calendar` page
+(hand-rolled 42-cell Mon-first month grid, agenda toggle, vacant-units
+panel, legend, `ScopeDenied` on `property.read`) — dead nav entry #1 now
+live. **Deviation:** `ViewingStatus` has no `CONFIRMED` (plan assumed
+SCHEDULED/CONFIRMED) → SCHEDULED only. `smoke-calendar` **64/64** ·
+regressions sales **77** / leasing **82** · `tsc --noEmit` 0 · lint 0
+errors vs baselines · matrix guard ✓ · route 401 unauth / authed 200 +
+400 · `/calendar` renders 200. Details in STATUS §3 Roadmap Phase 3.
+
 - `GET /api/calendar?from=&to=` — any authenticated member; per-domain row
   scopes (viewings/leases/WOs/inspections each keep their own scope rules;
   MM sees only assigned/agreement properties).
