@@ -1076,7 +1076,12 @@ export async function setLeadStatus(actor: ScopeActor, id: string, raw: unknown)
 
 // ── viewings ────────────────────────────────────────────────────────────────
 
-function viewingScopeWhere(actor: ScopeActor): Prisma.PropertyViewingWhereInput {
+/**
+ * Viewing row scope: parent property in scope, rows this org owns, or rows
+ * this user booked. Exported for the calendar read model (plan-roadmap
+ * Phase 3) so the scheduler and `/api/calendar` share the same choke point.
+ */
+export function viewingScopeWhere(actor: ScopeActor): Prisma.PropertyViewingWhereInput {
   return {
     OR: [
       { property: propertyScopeWhere(actor) },
