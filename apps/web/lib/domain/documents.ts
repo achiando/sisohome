@@ -25,6 +25,7 @@ import { auditLog } from './audit';
 import { propertyScopeWhere, requirePropertyInScope, type ScopeActor } from './property-scope';
 import { tenantScopeWhere } from './tenant';
 import { DOCUMENT_ENTITY_TYPES, DOCUMENT_KIND_VALUES } from './document-constants';
+import type { LibraryDocRow } from './document-library';
 
 type Raw = Record<string, unknown>;
 
@@ -295,6 +296,48 @@ export async function listDocuments(actor: ScopeActor, opts: { entityType?: stri
     where: { entityType: entityType as DocumentEntityType, entityId, organizationId: resolved.organizationId },
     include: DOCUMENT_INCLUDE,
     orderBy: [{ isCover: 'desc' }, { sortOrder: 'asc' }, { createdAt: 'desc' }],
+  });
+}
+
+/** Newest-first cap for the org-wide library listing (roadmap Phase 4). */
+const LIBRARY_TAKE = 500;
+
+/**
+ * Org-wide library listing (roadmap Phase 4) — every document the actor can
+ * reach: own-org rows (flat parties, orphans, own properties) OR property
+ * rows whose property is in scope (agreement properties for MM/PM orgs via
+ * `propertyScopeWhere`). Optional `entityType` narrows server-side; kind +
+ * search filtering is client-side on the page.
+ */
+export async function listLibraryDocuments(
+  actor: ScopeActor,
+  opts: { entityType?: string } = {},
+): Promise<LibraryDocRow[]> {
+  const entityType = opts.entityType;
+  if (entityType && !DOCUMENT_ENTITY_TYPES.includes(entityType as DocumentEntityType)) {
+    throw new RouteError(400, 'Unsupported entity type');
+  }
+  const where: Prisma.PropertyDocumentWhereInput = {
+    OR: [{ organizationId: actor.organizationId }, { property: propertyScopeWhere(actor) }],
+    ...(entityType ? { entityType: entityType as DocumentEntityType } : {}),
+  };
+  return db.propertyDocument.findMany({
+    where,
+    select: {
+      id: true,
+      entityType: true,
+      entityId: true,
+      kind: true,
+      fileName: true,
+      caption: true,
+      mimeType: true,
+      sizeBytes: true,
+      version: true,
+      createdAt: true,
+      property: { select: { id: true, name: true } },
+    },
+    orderBy: [{ createdAt: 'desc' }, { id: 'asc' }],
+    take: LIBRARY_TAKE,
   });
 }
 
