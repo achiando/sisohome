@@ -142,6 +142,14 @@ Gates: typecheck · lint · matrix (0 new keys) · payments regression **51**.
 ## Phase 2 — Signed contracts stored as documents
 *(~1–2 days)*
 
+**✅ DONE 2026-11-01** — rendered contract HTML persisted on the baseline
+`DocumentVersion.htmlContent` at approve time (reverses evidence-only);
+`GET /api/documents/[id]/download` (inline view / attachment / storage-URL
+redirect, 401 unauthed); `SignedContractCard` on lease + agreement detail;
+portal LEASE pickup verified. `smoke-agreement-sign` **143/143** (121
+baseline + 22 new) · leasing 82 · `tsc --noEmit` 0 · lint 0 errors vs
+baselines · matrix guard ✓. Details in STATUS §3 Roadmap Phase 2.
+
 Goal: every signed lease/agreement keeps the full contract, retrievable
 forever.
 
