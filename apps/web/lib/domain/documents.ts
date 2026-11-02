@@ -209,6 +209,7 @@ async function requireScopedDocument(actor: ScopeActor, id: string) {
       isCover: true,
       version: true,
       storageKey: true,
+      fileName: true,
     },
   });
   if (!doc) throw new RouteError(404, 'Document not found');
@@ -249,6 +250,38 @@ async function clearOtherCovers(
 }
 
 // ── operations ────────────────────────────────────────────────────────────────
+
+export interface DownloadedFile {
+  fileName: string;
+  mimeType: string | null;
+  /** Stored bytes (generated documents, e.g. signed contracts) — serve directly. */
+  content?: string;
+  /** Object-storage URL when the bytes are not stored inline. */
+  url?: string;
+}
+
+/**
+ * Resolve a document's content for download (roadmap Phase 2):
+ *   - the CURRENT version's `htmlContent` when present (signed contracts —
+ *     the sha256 caption verifies against these bytes, no object storage);
+ *   - otherwise a redirect to the storage key's https URL (uploads);
+ *   - a generated pointer with no stored bytes → 404.
+ */
+export async function downloadDocument(actor: ScopeActor, id: string): Promise<DownloadedFile> {
+  const doc = await requireScopedDocument(actor, id);
+  const current = await db.documentVersion.findUnique({
+    where: { documentId_version: { documentId: doc.id, version: doc.version } },
+    select: { fileName: true, mimeType: true, storageKey: true, htmlContent: true },
+  });
+  if (current?.htmlContent != null && current.htmlContent !== '') {
+    return { fileName: current.fileName, mimeType: current.mimeType ?? 'text/html', content: current.htmlContent };
+  }
+  const storageKey = current?.storageKey ?? doc.storageKey;
+  if (/^https?:\/\//.test(storageKey)) {
+    return { fileName: current?.fileName ?? doc.fileName, mimeType: current?.mimeType ?? null, url: storageKey };
+  }
+  throw new RouteError(404, 'No stored content for this document');
+}
 
 export async function listDocuments(actor: ScopeActor, opts: { entityType?: string; entityId?: string }) {
   const entityType = opts.entityType;

@@ -1,14 +1,16 @@
 /**
- * Type-name e-sign (People plan Slice 6) — previews and signing evidence.
+ * Type-name e-sign (People plan Slice 6) — previews, signing evidence and
+ * (roadmap Phase 2) the stored contract itself.
  *
  * Flow (folded into the existing Approve dialogs):
  *   1. `preview*` renders the selected template with live entity data plus the
  *      acting user's account label — the exact text they must type back.
  *   2. `prepare*Sign` runs inside approve: validates template category and
  *      typed name, re-renders at signing time and fingerprints the HTML
- *      (sha256). The rendered text is NOT stored (evidence-only decision,
- *      STATUS §5): the PropertyDocument row carries a generated pointer
- *      (fileName/caption) and the hash + typed name land in the audit trail.
+ *      (sha256). Since Phase 2 the rendered HTML is PERSISTED on the
+ *      baseline DocumentVersion (`htmlContent`), reversing the earlier
+ *      evidence-only decision (STATUS §5): the sha256 caption verifies
+ *      against stored bytes and downloads serve the contract forever.
  *
  * Scope: leases resolve through `propertyScopeWhere`; management agreements
  * through the either-side rule (portfolio OR manager org), mirroring
@@ -200,6 +202,8 @@ export interface PreparedSign {
   typedName: string;
   signedAt: Date;
   sha256: string;
+  /** The exact rendered contract bytes — persisted, never re-derived. */
+  html: string;
   evidence: {
     entityType: DocumentEntityType;
     entityId: string;
@@ -247,6 +251,7 @@ export async function prepareLeaseSign(
     typedName,
     signedAt,
     sha256: hash,
+    html,
     evidence: {
       entityType: 'LEASE',
       entityId: lease.id,
@@ -284,6 +289,7 @@ export async function prepareAgreementSign(
     typedName,
     signedAt,
     sha256: hash,
+    html,
     evidence: {
       entityType: 'AGREEMENT',
       entityId: row.id,
@@ -297,13 +303,18 @@ export async function prepareAgreementSign(
   };
 }
 
-/** Evidence row + baseline version — created inside the approve transaction. */
+/**
+ * Contract row + baseline version — created inside the approve transaction.
+ * The rendered HTML lands on the version row (`htmlContent`); the caption's
+ * sha256 prefix verifies against exactly these stored bytes.
+ */
 export async function createSignDocument(
   tx: Prisma.TransactionClient,
   sign: PreparedSign,
   uploadedBy: string,
 ) {
   const e = sign.evidence;
+  const sizeBytes = Buffer.byteLength(sign.html, 'utf8');
   const doc = await tx.propertyDocument.create({
     data: {
       organizationId: e.organizationId,
@@ -314,6 +325,7 @@ export async function createSignDocument(
       storageKey: e.storageKey,
       fileName: e.fileName,
       mimeType: 'text/html',
+      sizeBytes,
       caption: e.caption,
     },
   });
@@ -324,6 +336,8 @@ export async function createSignDocument(
       storageKey: e.storageKey,
       fileName: e.fileName,
       mimeType: 'text/html',
+      sizeBytes,
+      htmlContent: sign.html,
       uploadedBy,
     },
   });

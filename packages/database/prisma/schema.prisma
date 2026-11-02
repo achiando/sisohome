@@ -1537,6 +1537,11 @@ model DocumentVersion {
   fileName   String   @map("file_name")
   mimeType   String?  @map("mime_type")
   sizeBytes  Int?     @map("size_bytes")
+  // Roadmap Phase 2 — generated documents (signed contracts) carry their
+  // rendered content inline so the sha256 caption verifies against stored
+  // bytes and downloads never depend on object storage. Uploaded rows keep
+  // it NULL (bytes live behind `storageKey`).
+  htmlContent String? @map("html_content") @db.Text
   uploadedBy String?  @map("uploaded_by") @db.Uuid
 
   createdAt DateTime @default(now()) @map("created_at")

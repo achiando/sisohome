@@ -2,8 +2,9 @@
 
 /**
  * Documents (plan-slice-7 §3): paperwork bound to the tenant or their
- * leases. Remote (https) files open directly; generated evidence rows are
- * caption-only — no download bytes live in this app.
+ * leases. Remote (https) files open directly; generated evidence rows —
+ * including stored signed contracts (roadmap Phase 2) — are caption-only
+ * here: the portal lists them, the org app serves their bytes.
  */
 
 import { Download, FileText, Info } from 'lucide-react'

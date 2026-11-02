@@ -5,8 +5,10 @@
  * - Templates are static markup; EVERY interpolated value is HTML-escaped.
  * - Rendering is pure — contexts are gathered by `agreement-sign.ts`.
  * - The signed HTML is fingerprinted (sha256) and the hash + typed name land
- *   in the audit trail. The text itself is NOT stored (evidence-only
- *   decision, STATUS §5): the PropertyDocument row is the durable pointer.
+ *   in the audit trail. Since roadmap Phase 2 the rendered text is ALSO
+ *   persisted on the baseline DocumentVersion (`htmlContent`), so the
+ *   caption's hash verifies against stored bytes — reversing the earlier
+ *   evidence-only decision (hash + pointer, no text).
  */
 
 import { createHash } from 'node:crypto';

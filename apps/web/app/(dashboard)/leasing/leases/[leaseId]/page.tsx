@@ -19,6 +19,7 @@ import { DetailTabs, type DetailTab } from '@/app/(dashboard)/_components/domain
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { formatDate } from '@/app/(dashboard)/_components/domain/format'
+import { SignedContractCard } from '@/app/(dashboard)/_components/domain/signed-contract-card'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { EntityDocumentsTab } from '../../_components/entity-documents-tab'
 import { LeaseLifecycleActions } from '../../_components/lease-lifecycle-actions'
@@ -132,6 +133,7 @@ export default function LeaseDetailPage() {
     label: 'Overview',
     content: (
       <div className="space-y-6">
+        <SignedContractCard entityType="LEASE" entityId={lease.id} />
         <div className="grid gap-4 sm:grid-cols-2">
           {infoRow(<Building2 size={18} />, 'Property', lease.property.name)}
           {infoRow(<Home size={18} />, 'Units', lease.units.map((u) => u.unit.label ?? u.unit.unitRef).join(', '))}

@@ -6,9 +6,12 @@
  * Covers: the six built-in templates (2 tenant / 2 manager / 2 maintainer)
  * rendering with live entity data, preview scope + category guards and HTML
  * escaping, the type-name match rule, the signed evidence (PropertyDocument
- * + DocumentVersion + audit `sign` meta with sha256), the preserved legacy
- * no-body approve path (no evidence row), portfolio-only approval and
- * re-approve races. Prints one line per case; exits 1 on any failure.
+ * + DocumentVersion + audit `sign` meta with sha256), the stored contract
+ * itself (roadmap Phase 2 — htmlContent verifies the sha256 caption, the
+ * download route's domain path, portal LEASE pickup, cross-org 404), the
+ * preserved legacy no-body approve path (no evidence row), portfolio-only
+ * approval and re-approve races. Prints one line per case; exits 1 on any
+ * failure.
  */
 
 import { prisma } from '@/lib/auth';
@@ -19,6 +22,8 @@ import * as leases from '@/lib/domain/lease';
 import * as agreements from '@/lib/domain/agreement';
 import * as ownership from '@/lib/domain/ownership';
 import * as sign from '@/lib/domain/agreement-sign';
+import * as documents from '@/lib/domain/documents';
+import * as portal from '@/lib/domain/portal';
 import { AGREEMENT_TEMPLATES, templatesForCategory } from '@/lib/domain/agreement-constants';
 import {
   type LeaseTemplateContext,
@@ -329,6 +334,74 @@ try {
   const signDocCount = await prisma.propertyDocument.count({ where: { entityId: leaseSign } });
   check('still exactly one evidence document', signDocCount === 1, `docs=${signDocCount}`);
 
+  console.log('— Phase 2: stored contract content (caption hash verifies against stored bytes)');
+  const storedVersion = signDoc?.versions[0];
+  const storedHtml = storedVersion?.htmlContent ?? '';
+  check('lease version stores signed HTML', storedHtml.length > 0, `len=${storedHtml.length}`);
+  check(
+    'stored HTML is the rendered contract',
+    storedHtml.includes('SMOKE Sign Property') && storedHtml.includes('Smoke Sign Tenant'),
+  );
+  check('sha256(stored HTML) = audit sha256', sha256Hex(storedHtml) === String(signMeta.sha256));
+  check(
+    'caption hash prefix = sha256(stored HTML)',
+    (signDoc?.caption ?? '').includes(sha256Hex(storedHtml).slice(0, 16)),
+  );
+  check(
+    'version sizeBytes matches stored bytes',
+    storedVersion?.sizeBytes === Buffer.byteLength(storedHtml, 'utf8'),
+    String(storedVersion?.sizeBytes),
+  );
+  const leaseDownload = await expectOk('download serves stored HTML', () =>
+    documents.downloadDocument(actor, signDoc!.id),
+  );
+  check('download content = stored HTML', leaseDownload?.content === storedHtml);
+  check('download fileName .html', leaseDownload?.fileName.endsWith('.html') ?? false);
+  await expectStatus('cross-org download → 404', 404, () =>
+    documents.downloadDocument(managerActor, signDoc!.id),
+  );
+
+  const signPortalActor = { userId: user.id, tenantId: tenantA, organizationId: org.id };
+  const signPortalDocs = await expectOk('portal lists tenant documents', () =>
+    portal.getPortalDocuments(signPortalActor),
+  );
+  check(
+    'portal LEASE scoping picks up the signed contract',
+    signPortalDocs?.some((d) => d.id === signDoc?.id) ?? false,
+  );
+
+  const uploadedDoc = await expectOk('register uploaded doc (storage URL)', () =>
+    documents.createDocument(actor, {
+      entityType: 'LEASE',
+      entityId: leaseSign,
+      kind: 'OTHER',
+      storageKey: 'https://res.cloudinary.com/demo/image/upload/v1/smoke-phase2.jpg',
+      fileName: 'phase2-upload.jpg',
+      mimeType: 'image/jpeg',
+    }),
+  );
+  const uploadedDownload = await expectOk('uploaded download → storage URL', () =>
+    documents.downloadDocument(actor, uploadedDoc!.id),
+  );
+  check(
+    'uploaded doc falls back to storage URL',
+    uploadedDownload?.url === 'https://res.cloudinary.com/demo/image/upload/v1/smoke-phase2.jpg',
+    uploadedDownload?.url,
+  );
+  const pointerDoc = await expectOk('register generated pointer (no stored bytes)', () =>
+    documents.createDocument(actor, {
+      entityType: 'LEASE',
+      entityId: leaseSign,
+      kind: 'OTHER',
+      storageKey: 'generated/legacy/phase2-pointer',
+      fileName: 'pointer.html',
+      mimeType: 'text/html',
+    }),
+  );
+  await expectStatus('pointer without stored bytes → 404', 404, () =>
+    documents.downloadDocument(actor, pointerDoc!.id),
+  );
+
   console.log('— lease approve: legacy path preserved (no sign)');
   const l4 = await expectOk('create lease (unit C, legacy)', () =>
     leases.createLease(actor, {
@@ -467,6 +540,20 @@ try {
   const agrMeta = ((agrAudit?.metadata ?? {}) as Record<string, unknown>).sign as Record<string, unknown> | undefined;
   check('agreement audit carries sign meta', Boolean(agrMeta));
   check('agreement audit template matches', agrMeta?.template === 'manager-full-service', String(agrMeta?.template));
+
+  console.log('— Phase 2: stored management contract');
+  const agrHtml = agrDoc?.versions[0]?.htmlContent ?? '';
+  check('agreement version stores signed HTML', agrHtml.length > 0, `len=${agrHtml.length}`);
+  check('agreement stored HTML is the rendered contract', agrHtml.includes('SMOKE Sign PM'));
+  check('agreement sha256(stored) = audit sha256', sha256Hex(agrHtml) === String(agrMeta?.sha256));
+  const agrDownload = await expectOk('agreement download serves stored HTML', () =>
+    documents.downloadDocument(actor, agrDoc!.id),
+  );
+  check('agreement download content = stored HTML', agrDownload?.content === agrHtml);
+  await expectStatus('agreement cross-org download → 404', 404, () =>
+    documents.downloadDocument(maintActor, agrDoc!.id),
+  );
+
   await expectStatus('re-approve → 409', 409, () =>
     agreements.approveAgreement(actor, agrMgr, { template: 'manager-full-service', typedName: signerLabel }),
   );

@@ -17,6 +17,7 @@ import { PageLoader } from '@workspace/ui/components/loader'
 import { toast } from '@workspace/ui/components/toast'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
+import { SignedContractCard } from '@/app/(dashboard)/_components/domain/signed-contract-card'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { AgreementStatusBadge } from '../../../../_components/agreement-status'
 import { ApproveAgreementDialog } from '../../../../_components/approve-agreement-dialog'
@@ -192,6 +193,8 @@ export default function EditAgreementPage() {
           opens.
         </p>
       ) : null}
+
+      <SignedContractCard entityType="AGREEMENT" entityId={agreementId} />
 
       <div className="rounded-2xl border border-border bg-card p-4 shadow-xs sm:p-6">
         {canEditDates ? (
