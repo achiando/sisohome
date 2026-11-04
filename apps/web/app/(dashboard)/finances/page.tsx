@@ -31,15 +31,15 @@ export default function FinancesPage() {
   return (
     <div className="space-y-6">
       <PropertyFilter
-        propertyId={selectedPropertyId}
+propertyId={selectedPropertyId ?? null}
         onPropertyChange={setSelectedPropertyId}
       />
       <DetailTabs
         defaultTab="dues"
         tabs={[
-          { id: 'dues', label: 'Dues', content: <DuesTab propertyId={selectedPropertyId} /> },
-          { id: 'charges', label: 'Charges', content: <ChargesTab propertyId={selectedPropertyId} /> },
-          { id: 'payments', label: 'Payments', content: <PaymentsTab propertyId={selectedPropertyId} /> },
+{ id: 'dues', label: 'Dues', content: <DuesTab /> },
+{ id: 'charges', label: 'Charges', content: <ChargesTab /> },
+{ id: 'payments', label: 'Payments', content: <PaymentsTab /> },
           { id: 'receipts', label: 'Receipts', content: <ReceiptsTab /> },
           { id: 'adjustments', label: 'Adjustments', content: <AdjustmentsTab /> },
         ]}

@@ -1,9 +1,10 @@
 'use client'
 
 /**
- * /maintenance — board first: OPEN / IN_PROGRESS / RESOLVED columns of
- * ticket cards (priority chip, property, age, assignee org) + overdue
- * filter; secondary tabs: Tickets list | Work orders (plan-slice-3 §4).
+ * /maintenance — maintenance board (plan-slice-3 §4).
+ * Board first: OPEN / IN_PROGRESS / RESOLVED columns of ticket cards
+ * (priority chip, property, age, assignee org) + overdue filter.
+ * Secondary tabs: Tickets list | Work orders (plan-slice-3 §4).
  * Full kanban DnD deferred — status moves happen on the ticket detail.
  */
 
@@ -18,7 +19,7 @@ import {
 } from '@workspace/ui/components/shared'
 import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
-import { Card, CardContent } from '@workspace/ui/components/card'
+import { Card, CardHeader, CardContent, CardFooter } from '@workspace/ui/components/card'
 import { Switch } from '@workspace/ui/components/switch'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@workspace/ui/components/tabs'
 import { toast } from '@workspace/ui/components/toast'
@@ -79,6 +80,17 @@ function ageInDays(iso: string): number {
 function isOverdue(t: TicketRow): boolean {
   if (t.status !== 'OPEN' && t.status !== 'IN_PROGRESS' && t.status !== 'ON_HOLD') return false
   return ageInDays(t.reportedAt) >= 7
+}
+
+function getAssigneeOrgs(t: TicketRow): string[] {
+  return [
+    ...new Set(
+      t.workOrders
+        .flatMap((w) => w.assignments)
+        .filter((a) => a.status === 'ASSIGNED' && a.assigneeOrganization)
+        .map((a) => a.assigneeOrganization!.name),
+    ),
+  ]
 }
 
 export default function MaintenanceBoardPage() {
@@ -148,7 +160,11 @@ export default function MaintenanceBoardPage() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <Switch id="overdue-only" checked={overdueOnly} onCheckedChange={setOverdueOnly} />
+          <Switch
+            id="overdue-only"
+            checked={overdueOnly}
+            onCheckedChange={setOverdueOnly}
+          />
           <label htmlFor="overdue-only" className="text-sm text-muted-foreground">
             Overdue only ({overdueCount})
           </label>
@@ -177,14 +193,7 @@ export default function MaintenanceBoardPage() {
                 </Card>
               ) : (
                 items.map((t) => {
-                  const assigneeOrgs = [
-                    ...new Set(
-                      t.workOrders
-                        .flatMap((w) => w.assignments)
-                        .filter((a) => a.status === 'ASSIGNED' && a.assigneeOrganization)
-                        .map((a) => a.assigneeOrganization!.name),
-                    ),
-                  ]
+                  const assigneeOrgs = getAssigneeOrgs(t)
                   const age = ageInDays(t.reportedAt)
                   return (
                     <Card key={t.id} variant="interactive" onClick={() => router.push(`/maintenance/tickets/${t.id}`)}>
@@ -321,6 +330,25 @@ export default function MaintenanceBoardPage() {
     ],
   }
 
+  // ── waste collection scheduling state ───────────────────────────────────────
+  const [wasteSchedule, setWasteSchedule] = useState<
+    { day: string; type: string; time: string; status: string }[]
+  >([
+    { day: 'Monday', type: 'General', time: '08:00', status: 'Due' },
+    { day: 'Thursday', type: 'Recycling', time: '08:00', status: 'Due' },
+  ])
+  const [showWasteModal, setShowWasteModal] = useState(false)
+
+  const handleWasteScheduleChange = (field: keyof { day: string; type: string; time: string; status: string }, value: string) => {
+    setWasteSchedule((prev) => prev.map((s) => s.day === field ? { ...s, [field]: value } : s))
+  }
+
+  const applyWasteSchedule = () => {
+    // In production: send to API
+    toast.success('Waste collection schedule updated')
+    setShowWasteModal(false)
+  }
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -355,6 +383,50 @@ export default function MaintenanceBoardPage() {
 
         <TabsContent value="board" className="mt-4">
           {board}
+          {/* Waste collection scheduling */}
+          <div className="mt-4 p-4 border rounded">
+            <h4 className="font-medium mb-3">Waste Collection Schedule</h4>
+            <div className="grid grid-cols-2 gap-2">
+              {wasteSchedule.map((s) => (
+                <div key={s.day} className="flex items-center gap-2">
+                  <select
+                    value={s.type}
+                    onChange={(e) => handleWasteScheduleChange('type', e.target.value)}
+                    className="flex-1 rounded border p-1"
+                  >
+                    <option value="General">General</option>
+                    <option value="Recycling">Recycling</option>
+                    <option value="Organics">Organics</option>
+                    <option value="Hazardous">Hazardous</option>
+                  </select>
+                  <select
+                    value={s.time}
+                    onChange={(e) => handleWasteScheduleChange('time', e.target.value)}
+                    className="flex-1 rounded border p-1"
+                  >
+                    <option value="08:00">08:00</option>
+                    <option value="14:00">14:00</option>
+                    <option value="16:00">16:00</option>
+                  </select>
+                  <select
+                    value={s.status}
+                    onChange={(e) => handleWasteScheduleChange('status', e.target.value)}
+                    className="flex-1 rounded border p-1">
+                    <option value="Due">Due</option>
+                    <option value="Completed">Completed</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+            <div className="mt-3">
+              <Button variant="primary" onClick={applyWasteSchedule}>
+                Apply Schedule
+              </Button>
+              <Button variant="outline" onClick={() => setShowWasteModal(true)}>
+                Manual Schedule
+              </Button>
+            </div>
+          </div>
         </TabsContent>
 
         <TabsContent value="tickets" className="mt-4">
@@ -370,15 +442,6 @@ export default function MaintenanceBoardPage() {
             searchQuery={search}
             onSearchChange={setSearch}
             searchPlaceholder="Search issue or property"
-            filters={[
-              {
-                key: 'status',
-                label: 'Status',
-                value: statusFilter,
-                onChange: setStatusFilter,
-                options: [{ value: '', label: 'All statuses' }, ...MAINTENANCE_STATUSES],
-              },
-            ]}
             filterChips
             rowKey={(t) => t.id}
             emptyState={{
