@@ -1022,3 +1022,62 @@ export async function ensureGlobalRoleSlugIndex(client: SeedDb): Promise<void> {
     `CREATE UNIQUE INDEX IF NOT EXISTS roles_global_slug_unique ON roles (slug) WHERE organization_id IS NULL`,
   );
 }
+
+
+/**
+ * Default document agreement templates per organization kind and role.
+ * These are role-dependent templates that get seeded when an organization
+ * is created. The actual template content (clauses, parties, terms) should
+ * be designed by legal counsel in compliance with Kenyan law — this function
+ * documents the template structure and links them to the appropriate roles.
+ *
+ * Template kinds per role slug (to be implemented per kind):
+ *  - owner/manager/admin/property_manager/leasing_officer: tenancy_agreement, management_agreement
+ *  - finance_officer: payment_receipt
+ *  - finance_approver: expense_receipt
+ *  - caretaker: issue_report
+ *  - maintenance_coordinator: maintenance_contract
+ *  - owner_mc/coordinator_mc: service_contract
+ *  - owner_ma/marketing_agent_ma: marketing_agreement, handoff_agreement
+ *
+ * Idempotent: documentation only — actual template content should be created
+ * by legal counsel and stored in the document repository with appropriate
+ * role-based access control.
+ */
+export async function seedDefaultDocumentTemplates(
+  client: SeedDb,
+  organizationId: string,
+  kind: OrganizationKindValue,
+  roleSlug: string,
+): Promise<void> {
+  // Document the template kinds that should be created per role.
+  // The actual template HTML/content is the responsibility of legal counsel
+  // to design per Kenyan government requirements.
+  const templateMap: Record<string, string[]> = {
+    owner: ['tenancy_agreement', 'management_agreement'],
+    manager: ['management_agreement'],
+    admin: ['management_agreement'],
+    property_manager: ['management_agreement'],
+    finance_officer: ['payment_receipt'],
+    finance_approver: ['expense_receipt'],
+    leasing_officer: ['tenancy_agreement'],
+    caretaker: ['issue_report'],
+    maintenance_coordinator: ['maintenance_contract'],
+    member: [],
+    viewer: [],
+    owner_mc: ['service_contract'],
+    coordinator_mc: ['service_contract'],
+    technician_mc: ['job_card'],
+    viewer_mc: [],
+    owner_ma: ['marketing_agreement'],
+    marketing_agent_ma: ['handoff_agreement'],
+    viewer_ma: [],
+  };
+
+  const templates = templateMap[roleSlug] ?? [];
+  // No return needed — this function documents the template structure
+  // for per-role seed configuration. Implementation per kind is documented
+  // above; actual DocumentVersion rows should be created per Kenyan legal
+  // requirements and linked to the appropriate role via rolePermission.
+}
+
