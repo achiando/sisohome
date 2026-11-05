@@ -80,14 +80,17 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
 
     // Delivery is awaited so a failure is reported — and the just-created
     // account is rolled back, so the same address can simply sign up again.
+    let issuedCode: string | undefined;
     try {
-      const token = await issueVerificationToken(user.id);
+      const { token, code } = await issueVerificationToken(user.id);
+      issuedCode = code;
       await sendEmail(
         verifyEmailTemplate({
           to: user.email,
           verifyUrl: verificationUrl(token),
           expiresInHours: EMAIL_VERIFICATION_TTL_HOURS,
           recipientName: user.displayName ?? undefined,
+          code,
         }),
       );
     } catch (error) {
@@ -102,12 +105,19 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       );
     }
 
-    // No cookies: nothing to route to until the link is clicked.
+    // No cookies: nothing to route to until the link is clicked. Under the
+    // dev outbox transport the code rides along so the UI can display it live.
+    // Never in production — see the resend route's safety note.
     return NextResponse.json({
       success: true,
       verificationRequired: true,
       onboardingRequired: true,
       email: user.email,
+      ...(process.env.EMAIL_TRANSPORT === 'outbox' &&
+      process.env.NODE_ENV !== 'production' &&
+      issuedCode
+        ? { code: issuedCode }
+        : {}),
     });
   } catch (error) {
     console.error('Sign up error:', error);
