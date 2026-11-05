@@ -11,19 +11,18 @@ import { useRouter, useParams } from 'next/navigation'
 import { Building2, Loader } from 'lucide-react'
 
 import { ResponsiveDataListing } from '@workspace/ui/components/shared'
-import { Badge } from '@workspace/ui/components/badge'
 import { Button } from '@workspace/ui/components/button'
 import { Card, CardHeader, CardContent, CardFooter, CardTitle } from '@workspace/ui/components/card'
 import { useUiPermission } from '@/components/shell/use-ui-permission'
 import { ScopeDenied } from '@/app/(dashboard)/_components/domain/scope-denied'
 import { PageHeader } from '@/app/(dashboard)/_components/domain/page-header'
-import { buildUnitColumns } from '@/app/(dashboard)/_components/domain/listing'
+import { buildUnitColumns, type UnitListRow } from '@/app/(dashboard)/_components/domain/listing'
 import { useCallback } from 'react'
 
 export default function PropertyDetailsPage() {
   const { propertyId } = useParams()
   const [property, setProperty] = useState<{ id: string; name: string; code: string | null; category: string; status: string; unitsTotal: number } | null>(null)
-  const [units, setUnits] = useState<{ id: string; unitRef: string; label: string | null; occupancy: string; property?: { name: string; code: string | null } }[]>([])
+  const [units, setUnits] = useState<UnitListRow[]>([])
   const { hasUiPermission } = useUiPermission()
 
   if (!hasUiPermission('property.list')) return <ScopeDenied />
@@ -42,7 +41,7 @@ export default function PropertyDetailsPage() {
         credentials: 'include',
       })
       if (!unitsRes.ok) throw new Error('Failed to load units')
-      setUnits((await unitsRes.json()).units ?? [])
+      setUnits(((await unitsRes.json()).units ?? []) as UnitListRow[])
     }
   }, [propertyId])
 
@@ -65,7 +64,7 @@ export default function PropertyDetailsPage() {
     [],
   )
 
-  const { columns } = buildUnitColumns({
+  const { columns, cardMapper } = buildUnitColumns({
     showProperty: true,
     showTenant: false,
     showRent: false,
@@ -114,18 +113,12 @@ ${tenantCount > 0 ? ` · ${tenantCount} tenants` : ""}
             <CardTitle>Units ({units.length})</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveDataListing
+            <ResponsiveDataListing<UnitListRow>
               title="Units"
               description="Filter by status or search below"
               items={units}
               columns={columns}
-              cardMapper={({ unit }) => ({
-                id: unit.id,
-                title: unit.unitRef,
-                subtitle: [unit.property?.name, unit.label].filter(Boolean).join(' · ') || undefined,
-                fallbackIcon: () => <Building2 className="size-4" />,
-                statusBadge: () => <Badge variant={unit.occupancy === 'OCCUPIED' ? 'default' : 'neutral'} size="sm">{unit.occupancy}</Badge>,
-              })}
+              cardMapper={cardMapper}
               rowKey={(u) => u.id}
               searchQuery=""
               searchPlaceholder="Search units..."
