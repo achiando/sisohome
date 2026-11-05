@@ -75,8 +75,10 @@ export interface AuthContextValue extends AuthState {
   verificationNeeded: boolean;
   /** Redeem the emailed signup link: verifies the address and signs in. */
   verifyEmail: (token: string) => Promise<AuthResponse>;
+  /** Redeem a 6-digit emailed code — same outcome as the link. */
+  verifyEmailByCode: (code: string) => Promise<AuthResponse>;
   /** Ask for a fresh verification link (never reveals whether the account exists). */
-  resendVerification: (email: string) => Promise<void>;
+  resendVerification: (email: string) => Promise<{ success: boolean; code?: string }>;
   logout: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   /** Set a new password with the single-use token from the reset email. */
@@ -294,13 +296,52 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   );
 
   /**
+   * Redeem a 6-digit code emailed to an unverified address — same session
+   * outcome as clicking the link.
+   */
+  const verifyEmailByCode = useCallback(
+    async (code: string): Promise<AuthResponse> => {
+      try {
+        setState((prev: AuthState) => ({ ...prev, isLoading: true, error: null }));
+        const response = await authAPI.verifyEmailByCode(code);
+        if (response.success && response.user) {
+          setVerificationNeeded(false);
+          setState({
+            user: {
+              ...response.user,
+              mustChangePassword: response.mustChangePassword,
+              needsConsent: response.needsConsent,
+              organizationId: response.session?.organizationId,
+              permissions: response.session?.permissions,
+              roles: response.session?.roles,
+            },
+            isLoading: false,
+            isAuthenticated: true,
+            error: null,
+          });
+          return response;
+        }
+        throw new AuthApiError(response.error || 'Verification failed', 400, response);
+      } catch (error) {
+        setState((prev: AuthState) => ({
+          ...prev,
+          isLoading: false,
+          error: error instanceof Error ? error.message : 'Verification failed',
+        }));
+        throw error;
+      }
+    },
+    [authAPI]
+  );
+
+  /**
    * Resend is intentionally stateless: the endpoint always answers success,
    * so there is no meaningful error state to hoist — callers surface the
    * rare network failure themselves.
    */
   const resendVerification = useCallback(
-    async (email: string): Promise<void> => {
-      await authAPI.resendVerification(email);
+    async (email: string): Promise<{ success: boolean; code?: string }> => {
+      return authAPI.resendVerification(email);
     },
     [authAPI]
   );
@@ -460,6 +501,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     verificationNeeded,
     verifyEmail,
+    verifyEmailByCode,
     resendVerification,
     logout,
     resetPassword,

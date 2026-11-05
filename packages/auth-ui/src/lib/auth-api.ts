@@ -15,6 +15,11 @@ export interface AuthResponse {
   alreadyVerified?: boolean;
   /** Echoed back after signup/resend so the UI can name the address. */
   email?: string;
+  /**
+   * 6-digit verification code — returned by signup/resend only when
+   * EMAIL_TRANSPORT=outbox, so the dev UI can show it without opening mail.
+   */
+  code?: string;
   /** True when the user must change a temporary password before proceeding. */
   mustChangePassword?: boolean;
   /** True while any required document (Terms/Privacy) is unaccepted. */
@@ -148,11 +153,18 @@ export class AuthAPI {
     });
   }
 
+  async verifyEmailByCode(code: string): Promise<AuthResponse> {
+    return this.request<AuthResponse>('/verify-email-by-code', {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+  }
+
   /**
    * Ask for a fresh verification link. The server always answers success so
    * this can't be used to discover which addresses exist.
    */
-  async resendVerification(email: string): Promise<{ success: boolean }> {
+  async resendVerification(email: string): Promise<{ success: boolean; code?: string }> {
     return this.request<{ success: boolean }>('/verify-email/resend', {
       method: 'POST',
       body: JSON.stringify({ email }),

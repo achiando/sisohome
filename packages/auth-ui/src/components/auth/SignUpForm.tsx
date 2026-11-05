@@ -28,6 +28,9 @@ export default function SignUpForm({ redirectTo = '/onboarding', showLoginLink =
   // Set when the account was created but must verify its email first —
   // the form is replaced by a "check your email" card with a resend.
   const [sentTo, setSentTo] = useState<string | null>(null);
+  // Outbox transport only — the 6-digit code echoed by signup/resend, shown
+  // so the address can be proven without opening the mail file.
+  const [issuedCode, setIssuedCode] = useState<string | null>(null);
   const [resent, setResent] = useState(false);
   const [resending, setResending] = useState(false);
 
@@ -50,6 +53,7 @@ export default function SignUpForm({ redirectTo = '/onboarding', showLoginLink =
       // Verification link is out — nothing to route to until it's clicked.
       if (response.verificationRequired) {
         setSentTo(response.email ?? data.email);
+        setIssuedCode(response.code ?? null);
         return;
       }
       router.push(redirectTo);
@@ -62,8 +66,9 @@ export default function SignUpForm({ redirectTo = '/onboarding', showLoginLink =
     if (!sentTo || resending) return;
     setResending(true);
     try {
-      await resendVerification(sentTo);
+      const response = await resendVerification(sentTo);
       setResent(true);
+      setIssuedCode(response.code ?? issuedCode);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send the email');
@@ -78,17 +83,30 @@ export default function SignUpForm({ redirectTo = '/onboarding', showLoginLink =
         <CardHeader>
           <CardTitle>Check your email</CardTitle>
           <CardDescription>
-            We sent a verification link to <span className="font-medium text-foreground">{sentTo}</span>.
-            Open it to finish creating your account.
+            We sent a verification link and a 6-digit code to{' '}
+            <span className="font-medium text-foreground">{sentTo}</span>. Open the link or
+            enter the code to finish creating your account.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
+          {issuedCode && (
+            <div className="rounded-md bg-muted p-3 text-center">
+              <p className="text-sm text-muted-foreground">Your verification code</p>
+              <p className="font-mono text-xl font-semibold tracking-[0.3em]">
+                {issuedCode}
+              </p>
+            </div>
+          )}
           <p className="text-sm text-muted-foreground">
             The link works once and expires in 24 hours. Don&apos;t see it? Check spam, or send
             it again.
           </p>
           {resent && (
-            <p className="text-sm text-emerald-600">Sent — we just emailed a fresh link.</p>
+            <p className="text-sm text-emerald-600">
+              {issuedCode
+                ? 'Sent — a fresh code is shown above.'
+                : 'Sent — we just emailed a fresh link.'}
+            </p>
           )}
           {error && (
             <div className="p-3 bg-red-50 border border-red-200 rounded-md">
@@ -96,8 +114,18 @@ export default function SignUpForm({ redirectTo = '/onboarding', showLoginLink =
             </div>
           )}
           <Button type="button" variant="outline" className="w-full" loading={resending} onClick={onResend}>
-            {resent ? 'Send another link' : 'Resend verification email'}
+            {resent ? 'Send another email' : 'Resend verification email'}
           </Button>
+          <p className="text-center text-sm">
+            <a
+              href={`/verify-email-by-code${
+                sentTo ? `?email=${encodeURIComponent(sentTo)}` : ""
+              }`}
+              className="text-blue-600 hover:underline"
+            >
+              Enter verification code instead
+            </a>
+          </p>
           {showLoginLink && (
             <p className="text-center text-sm">
               <a href="/login" className="text-blue-600 hover:underline">
