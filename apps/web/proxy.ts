@@ -18,6 +18,8 @@ const PUBLIC_PATHS = [
   '/forgot-password',
   '/reset-password',
   '/verify-email',
+  // Code-entry twin of /verify-email — email visitors arrive without a session.
+  '/verify-email-by-code',
   // Legal documents linked from the signup consent checkbox — must be
   // readable before a session exists.
   '/terms',
